@@ -1,0 +1,8 @@
+data/
+venv/
+tests/
+__pycache__/
+screenlog.0
+
+old_requirements.txt
+gpRedBNN_model.py
