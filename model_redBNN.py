@@ -1,6 +1,6 @@
 import argparse
 import os
-from directories import *
+from savedir import *
 from utils import *
 import pyro
 import torch
@@ -11,115 +11,23 @@ from pyro.infer import SVI, Trace_ELBO, TraceMeanField_ELBO
 from pyro import poutine
 from pyro.infer.mcmc import MCMC, HMC, NUTS
 from pyro.distributions import OneHotCategorical, Normal, Categorical
-from nn_model import NN
-# import pandas
-# from adversarialAttacks import attack_increasing_eps, plot_increasing_eps
+from model_baseNN import baseNN
+
 softplus = torch.nn.Softplus()
 
 
 DEBUG=False
 
-
-saved_redBNNs = {"model_0":{"dataset":"mnist", "inference":"svi", "hidden_size":512, 
-                 			"base_inputs":60000, "base_epochs":20, "base_lr":0.001,
-                 			"bnn_inputs":60000, "bnn_epochs":30, "bnn_lr":0.001, 
-                 			"activation":"leaky", "architecture":"fc2"}}
-
-
-class baseNN(NN):
-
-	def __init__(self, dataset_name, input_shape, output_size, hidden_size, activation, 
-                       architecture, epochs, lr):
-		super(baseNN, self).__init__(dataset_name, input_shape, output_size, hidden_size, activation, 
-                                 architecture)
-		self.epochs = epochs
-		self.lr = lr
-		self.savedir = str(dataset_name)+"_RedBNN_hid="+str(hidden_size)+\
-		                    "_ep="+str(self.epochs)+"_lr="+str(self.lr)
-		self.name = str(dataset_name)+"_baseRedNN_hid="+str(hidden_size)+\
-		                    "_ep="+str(self.epochs)+"_lr="+str(self.lr)
-
-	def set_model(self, architecture, activation, input_shape, output_size, hidden_size):
-
-		input_size = input_shape[0]*input_shape[1]*input_shape[2]
-		in_channels = input_shape[0]
-
-		if activation == "relu":
-			activ = nn.ReLU
-		elif activation == "leaky":
-			activ = nn.LeakyReLU
-		elif activation == "sigm":
-			activ = nn.Sigmoid
-		elif activation == "tanh":
-			activ = nn.Tanh
-		else: 
-			raise AssertionError("\nWrong activation name.")
-
-		# separating last layer from the others
-		if architecture == "fc":
-			self.model = nn.Sequential(
-				nn.Flatten(), 
-				nn.Linear(input_size, hidden_size),
-				activ())
-			self.out = nn.Linear(hidden_size, output_size)
-
-		elif architecture == "fc2":
-			self.model = nn.Sequential(
-				nn.Flatten(),
-				nn.Linear(input_size, hidden_size),
-				activ(),
-				nn.Linear(hidden_size, hidden_size),
-				activ())
-			self.out = nn.Linear(hidden_size, output_size)
-
-		elif architecture == "conv":
-			self.model = nn.Sequential(
-				nn.Conv2d(in_channels, 32, kernel_size=5),
-				activ(),
-				nn.MaxPool2d(kernel_size=2),
-				nn.Conv2d(32, hidden_size, kernel_size=5),
-				activ(),
-				nn.MaxPool2d(kernel_size=2, stride=1),
-				nn.Flatten())
-			self.out = nn.Linear(int(hidden_size/(4*4))*input_shape, output_size)
-		else:
-			raise NotImplementedError()
-
-	def train(self, train_loader, device):
-		super(baseNN, self).train(train_loader=train_loader, epochs=self.epochs, 
-			                      lr=self.lr, device=device)
-
-	def forward(self, inputs, train=False):
-		x = self.model(inputs)
-		x = self.out(x)
-		return nnf.log_softmax(x, dim=-1) if train is True else nnf.softmax(x, dim=-1)
-
-	def save(self, epochs=None, lr=None):
-		filepath, filename = (TESTS+self.savedir+"/", self.name+"_weights.pt")
-		os.makedirs(os.path.dirname(filepath), exist_ok=True)
-		print("\nSaving: ", filepath+filename)
-		torch.save(self.state_dict(),filepath+filename)
-
-		if DEBUG:
-			print("\nCheck saved weights:")
-			print("\nstate_dict()['l2.0.weight'] =", self.state_dict()["l2.0.weight"][0,0,:3])
-			print("\nstate_dict()['out.weight'] =",self.state_dict()["out.weight"][0,:3])
-
-	def load(self, rel_path, epochs=None, lr=None):
-		filepath, filename = (rel_path+self.savedir+"/", self.name+"_weights.pt")
-		print("\nLoading: ", filepath+filename)
-		self.load_state_dict(torch.load(filepath+filename))
-
-		if DEBUG:
-			print("\nCheck loaded weights:")	
-			print("\nstate_dict()['l2.0.weight'] =", self.state_dict()["l2.0.weight"][0,0,:3])
-			print("\nstate_dict()['out.weight'] =",self.state_dict()["out.weight"][0,:3])
+saved_redBNNs = {"model_0":{"dataset":"mnist", "inference":"svi", "hidden_size":128, 
+                 			"baseNN_inputs":60000, "baseNN_epochs":10, "baseNN_lr":0.001,
+                 			"BNN_inputs":60000, "BNN_epochs":30, "BNN_lr":0.001, 
+                 			"activation":"leaky", "architecture":"conv"}}
 
 
 def get_hyperparams(model_dict):
 
 	if model_dict["inference"] == "svi":
-		return {"epochs":model_dict["bnn_epochs"], "lr":model_dict["bnn_lr"]}
+		return {"epochs":model_dict["BNN_epochs"], "lr":model_dict["BNN_lr"]}
 
 	elif model_dict["inference"] == "hmc":
 		return {"hmc_samples":model_dict["hmc_samples"], "warmup":model_dict["warmup"]}
@@ -129,7 +37,6 @@ class redBNN(nn.Module):
 
 	def __init__(self, dataset_name, inference, hyperparams, base_net):
 		super(redBNN, self).__init__()
-		self.dataset_name = dataset_name
 		self.inference = inference
 		self.base_net = base_net
 		self.hyperparams = hyperparams
@@ -137,12 +44,12 @@ class redBNN(nn.Module):
 	def get_filename(self, n_inputs):
 
 		if self.inference == "svi":
-			return str(self.dataset_name)+"_redBNN_inp="+str(n_inputs)+"_ep="+\
+			return str(self.base_net.dataset_name)+"_redBNN_inp="+str(n_inputs)+"_ep="+\
 			       str(self.hyperparams["epochs"])+"_lr="+str(self.hyperparams["lr"])+"_"+\
 			       str(self.inference)
 
 		elif self.inference == "hmc":
-			return str(self.dataset_name)+"_redBNN_inp="+str(n_inputs)+"_samp="+\
+			return str(self.base_net.dataset_name)+"_redBNN_inp="+str(n_inputs)+"_samp="+\
 			       str(self.hyperparams["hmc_samples"])+"_warm="+str(self.hyperparams["warmup"])+\
 			       "_"+str(self.inference)
 
@@ -161,7 +68,7 @@ class redBNN(nn.Module):
 		
 		priors = {'out.weight': outw_prior, 'out.bias': outb_prior}
 		lifted_module = pyro.random_module("module", net, priors)()
-		lhat = nnf.log_softmax(lifted_module(x_data), dim=-1)
+		lhat = nnf.softmax(lifted_module(x_data), dim=-1)
 		cond_model = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
 		return cond_model
 
@@ -182,7 +89,7 @@ class redBNN(nn.Module):
 
 		priors = {'out.weight': outw_prior, 'out.bias': outb_prior}
 		lifted_module = pyro.random_module("module", net, priors)()
-		logits = nnf.log_softmax(lifted_module(x_data), dim=-1)
+		logits = nnf.softmax(lifted_module(x_data), dim=-1)
 		return logits
  
 	def save(self, n_inputs):
@@ -219,7 +126,7 @@ class redBNN(nn.Module):
 
 		self.base_net.to(device)
 
-	def forward(self, inputs, n_samples=100, seeds=None):
+	def forward(self, inputs, n_samples, seeds=None):
 
 		if seeds:
 			if len(seeds) != n_samples:
@@ -274,7 +181,6 @@ class redBNN(nn.Module):
 		print("\n == redBNN HMC training ==")
 
 		num_samples, warmup_steps = (self.hyperparams["hmc_samples"], self.hyperparams["warmup"])
-
 		# kernel = HMC(self.model, step_size=0.0855, num_steps=4)
 		kernel = NUTS(self.model)
 		batch_samples = int(num_samples*train_loader.batch_size/len(train_loader.dataset))+1
@@ -378,64 +284,48 @@ class redBNN(nn.Module):
 
 
 def main(args):
-	"""
-	Train, load and evaluate redBNN.
-	"""
 
 	m = saved_redBNNs["model_"+str(args.model_idx)]
-
-	rel_path = DATA if args.load_from=="DATA" else TESTS
+	rel_path = DATA if args.savedir=="DATA" else TESTS
 
 	if args.device=="cuda":
 		torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
-	# === baseNN ===
+	### baseNN 
 	train_loader, test_loader, inp_shape, out_size = \
 							data_loaders(dataset_name=m["dataset"], batch_size=64, 
-										 n_inputs=m["base_inputs"], shuffle=True)
+										 n_inputs=m["baseNN_inputs"], shuffle=True)
 
 	nn = baseNN(dataset_name=m["dataset"], input_shape=inp_shape, output_size=out_size,
-		        epochs=m["base_epochs"], lr=m["base_lr"], hidden_size=m["hidden_size"], 
+		        epochs=m["baseNN_epochs"], lr=m["baseNN_lr"], hidden_size=m["hidden_size"], 
 		        activation=m["activation"], architecture=m["architecture"])
-
-	if args.train is True:
-		nn.train(train_loader=train_loader, device=args.device)
-	else:
-		nn.load(rel_path=rel_path)
+	nn.load(rel_path=rel_path, device=args.device)
 	
 	if args.test is True:
 		nn.evaluate(test_loader=test_loader, device=args.device)
 
-	# === redBNN ===
+	### redBNN
 	train_loader, test_loader, inp_shape, out_size = \
 							data_loaders(dataset_name=m["dataset"], batch_size=128, 
-										 n_inputs=m["bnn_inputs"], shuffle=True)
+										 n_inputs=m["BNN_inputs"], shuffle=True)
 	hyp = get_hyperparams(m)
 	bnn = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=nn, hyperparams=hyp)
 
 	if args.train is True:
 		bnn.train(train_loader=train_loader, device=args.device)
 	else:
-		bnn.load(n_inputs=m["bnn_inputs"], device=args.device, rel_path=rel_path)
+		bnn.load(n_inputs=m["BNN_inputs"], device=args.device, rel_path=rel_path)
 	
 	if args.test is True:
 		bnn.evaluate(test_loader=test_loader, device=args.device)
-
-	# todo: remove
-	# === multiple attacks ===
-	# bnn_samples = 100
-	# df = attack_increasing_eps(nn=nn, bnn=bnn, dataset=m["dataset"], device=args.device, 
-	# 	                       method=args.attack, n_samples=bnn_samples)
-	# # df = pandas.read_csv(TESTS+nn.savedir+"/"+str(m["dataset"])+"_increasing_eps_"+str(args.attack)+"_samp="+str(bnn_samples)+".csv")
-	# plot_increasing_eps(df, dataset=m["dataset"], method=args.attack, n_samples=bnn_samples)
 
 
 if __name__ == "__main__":
     assert pyro.__version__.startswith('1.3.0')
     parser = argparse.ArgumentParser()
-    parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")	
     parser.add_argument("--model_idx", default=0, type=int, help="choose idx from saved_BNNs dict")
     parser.add_argument("--train", default=True, type=eval, help="if True train else load")
-    parser.add_argument("--load_from", default="DATA", type=str, help="DATA, TESTS")
     parser.add_argument("--test", default=True, type=eval, help="test set evaluation")
+    parser.add_argument("--savedir", default="DATA", type=str, help="DATA, TESTS")
+    parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")	
     main(args=parser.parse_args())
