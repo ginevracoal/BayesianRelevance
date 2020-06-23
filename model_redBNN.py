@@ -1,26 +1,30 @@
-import argparse
+"""
+Neural network with bayesian last layer.
+"""
+
 import os
-from savedir import *
-from utils import *
-import pyro
+import argparse
+import numpy as np
+from utils_data import *
+from model_baseNN import baseNN
+
 import torch
 from torch import nn
 import torch.nn.functional as nnf
-import numpy as np
+softplus = torch.nn.Softplus()
+
+import pyro
 from pyro.infer import SVI, Trace_ELBO, TraceMeanField_ELBO
 from pyro import poutine
 from pyro.infer.mcmc import MCMC, HMC, NUTS
 from pyro.distributions import OneHotCategorical, Normal, Categorical
-from model_baseNN import baseNN
-
-softplus = torch.nn.Softplus()
 
 
 DEBUG=False
 
-saved_redBNNs = {"model_0":{"dataset":"mnist", "inference":"svi", "hidden_size":128, 
+saved_redBNNs = {"model_0":{"dataset":"mnist", "inference":"svi", "hidden_size":512, 
                  			"baseNN_inputs":60000, "baseNN_epochs":10, "baseNN_lr":0.001,
-                 			"BNN_inputs":60000, "BNN_epochs":30, "BNN_lr":0.001, 
+                 			"BNN_inputs":60000, "BNN_epochs":20, "BNN_lr":0.01, 
                  			"activation":"leaky", "architecture":"conv"}}
 
 
@@ -40,16 +44,17 @@ class redBNN(nn.Module):
 		self.inference = inference
 		self.base_net = base_net
 		self.hyperparams = hyperparams
+		self.name = self.set_name()
 
-	def get_filename(self, n_inputs):
+	def set_name(self):
 
 		if self.inference == "svi":
-			return str(self.base_net.dataset_name)+"_redBNN_inp="+str(n_inputs)+"_ep="+\
+			return str(self.base_net.dataset_name)+"_redBNN_ep="+\
 			       str(self.hyperparams["epochs"])+"_lr="+str(self.hyperparams["lr"])+"_"+\
 			       str(self.inference)
 
 		elif self.inference == "hmc":
-			return str(self.base_net.dataset_name)+"_redBNN_inp="+str(n_inputs)+"_samp="+\
+			return str(self.base_net.dataset_name)+"_redBNN_samp="+\
 			       str(self.hyperparams["hmc_samples"])+"_warm="+str(self.hyperparams["warmup"])+\
 			       "_"+str(self.inference)
 
@@ -68,9 +73,11 @@ class redBNN(nn.Module):
 		
 		priors = {'out.weight': outw_prior, 'out.bias': outb_prior}
 		lifted_module = pyro.random_module("module", net, priors)()
-		lhat = nnf.softmax(lifted_module(x_data), dim=-1)
-		cond_model = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
-		return cond_model
+
+		with pyro.plate("data", len(x_data)):
+			logits = lifted_module(x_data)
+			lhat = nnf.log_softmax(logits, dim=0)
+			cond_model = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
 
 	def guide(self, x_data, y_data=None):
 		net = self.base_net 
@@ -79,22 +86,26 @@ class redBNN(nn.Module):
 		outw_sigma = torch.randn_like(net.out.weight)
 		outw_mu_param = pyro.param("outw_mu", outw_mu)
 		outw_sigma_param = softplus(pyro.param("outw_sigma", outw_sigma))
-		outw_prior = Normal(loc=outw_mu_param, scale=outw_sigma_param).independent(1)
+		outw_prior = Normal(loc=outw_mu_param, scale=outw_sigma_param)
 
 		outb_mu = torch.randn_like(net.out.	bias)
 		outb_sigma = torch.randn_like(net.out.bias)
 		outb_mu_param = pyro.param("outb_mu", outb_mu)
 		outb_sigma_param = softplus(pyro.param("outb_sigma", outb_sigma))
-		outb_prior = Normal(loc=outb_mu_param, scale=outb_sigma_param).independent(1)
+		outb_prior = Normal(loc=outb_mu_param, scale=outb_sigma_param)
 
 		priors = {'out.weight': outw_prior, 'out.bias': outb_prior}
 		lifted_module = pyro.random_module("module", net, priors)()
-		logits = nnf.softmax(lifted_module(x_data), dim=-1)
-		return logits
+
+		with pyro.plate("data", len(x_data)):
+			logits = lifted_module(x_data)
+			probs = nnf.softmax(logits, dim=0)
+
+		return probs
  
 	def save(self, n_inputs):
 
-		filepath, filename = (TESTS+self.base_net.savedir+"/", self.get_filename(n_inputs)+"_weights")
+		filepath, filename = (TESTS+self.name+"/", self.name+"_weights")
 		os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
 		if self.inference == "svi":
@@ -112,7 +123,7 @@ class redBNN(nn.Module):
 
 	def load(self, n_inputs, device, rel_path=TESTS):
 
-		filepath, filename = (TESTS+self.base_net.savedir+"/", self.get_filename(n_inputs)+"_weights")
+		filepath, filename = (TESTS+self.name+"/", self.name+"_weights")
 
 		if self.inference == "svi":
 			param_store = pyro.get_param_store()
@@ -126,7 +137,7 @@ class redBNN(nn.Module):
 
 		self.base_net.to(device)
 
-	def forward(self, inputs, n_samples, seeds=None):
+	def forward(self, inputs, n_samples=10, seeds=None, training=False):
 
 		if seeds:
 			if len(seeds) != n_samples:
@@ -140,18 +151,24 @@ class redBNN(nn.Module):
 				print("\nguide_trace =", 
 					list(poutine.trace(self.guide).get_trace(inputs).nodes.keys()))
 
-			preds = []
-			for i in range(n_samples):
-				pyro.set_rng_seed(seeds[i])
-				guide_trace = poutine.trace(self.guide).get_trace(inputs)			
+			preds = []  
+
+			if training:
+				guide_trace = poutine.trace(self.guide).get_trace(inputs)   
 				preds.append(guide_trace.nodes['_RETURN']['value'])
 
-				if DEBUG:
-					print("\nmodule$$$l2.0.weight shoud be fixed:\n", 
-						  guide_trace.nodes['module$$$l2.0.weight']['value'][0,0,:3])
-					print("\noutw_mu shoud be fixed:\n", guide_trace.nodes['outw_mu']['value'][:3])
-					print("\nmodule$$$out.weight shoud change:\n", 
-						  guide_trace.nodes['module$$$out.weight']['value'][0][:3]) 
+			else:
+				for seed in seeds:
+					pyro.set_rng_seed(seed)
+					guide_trace = poutine.trace(self.guide).get_trace(inputs)   
+					preds.append(guide_trace.nodes['_RETURN']['value'])
+
+			if DEBUG:
+				print("\nmodule$$$model.0.weight shoud be fixed:\n", 
+					  guide_trace.nodes['module$$$model.0.weight']['value'][0,0,:3])
+				print("\noutw_mu shoud be fixed:\n", guide_trace.nodes['outw_mu']['value'][:3])
+				print("\nmodule$$$out.weight shoud change:\n", 
+					  guide_trace.nodes['module$$$out.weight']['value'][0][:3]) 
 
 		elif self.inference == "hmc":
 
@@ -161,11 +178,13 @@ class redBNN(nn.Module):
 			preds = []
 			n_samples = min(n_samples, len(self.posterior_samples["module$$$out.weight"]))
 			for i in range(n_samples):
+
 				state_dict = self.base_net.state_dict()
 				out_w = self.posterior_samples["module$$$out.weight"][i]
 				out_b = self.posterior_samples["module$$$out.bias"][i]
 				state_dict.update({"out.weight":out_w, "out.bias":out_b})
 				self.base_net.load_state_dict(state_dict)
+				
 				preds.append(self.base_net.forward(inputs))
 
 				if DEBUG:
@@ -173,9 +192,7 @@ class redBNN(nn.Module):
 						  self.base_net.state_dict()["l2.0.weight"][0,0,:3])
 					print("\nout.weight should change:\n", self.base_net.state_dict()["out.weight"][0][:3])	
 		
-		stacked_preds = torch.stack(preds, dim=0)
-		logits = nnf.softmax(stacked_preds.mean(0), dim=-1)
-		return logits
+		return torch.stack(preds)
 
 	def _train_hmc(self, train_loader, device):
 		print("\n == redBNN HMC training ==")
@@ -216,33 +233,28 @@ class redBNN(nn.Module):
 
 		start = time.time()
 		for epoch in range(epochs):
-			total_loss = 0.0
+			loss = 0.0
 			correct_predictions = 0.0
-			accuracy = 0.0
-			total = 0.0
 
-			n_inputs = 0
 			for x_batch, y_batch in train_loader:
-				n_inputs += len(x_batch)
+
 				x_batch = x_batch.to(device)
 				y_batch = y_batch.to(device).argmax(-1)
-				total += y_batch.size(0)
+				loss += svi.step(x_data=x_batch, y_data=y_batch)
 
-				outputs = self.forward(x_batch).to(device)
-				loss = svi.step(x_data=x_batch, y_data=y_batch)
-
-				predictions = outputs.argmax(dim=1)
-				total_loss += loss / len(train_loader.dataset)
+				probs = self.forward(x_batch, n_samples=1, training=True).mean(0).to(device)
+				predictions = probs.argmax(-1)
 				correct_predictions += (predictions == y_batch).sum()
-				accuracy = 100 * correct_predictions / len(train_loader.dataset)
-
-			if DEBUG:
-				print("\nmodule$$$l2.0.weight should be fixed:\n",
-					  pyro.get_param_store()["module$$$l2.0.weight"][0][0][:3])
-				print("\noutw_mu should change:\n", pyro.get_param_store()["outw_mu"][:3])
-
+			
+			total_loss = loss / len(train_loader.dataset)
+			accuracy = 100 * correct_predictions / len(train_loader.dataset)
 			print(f"\n[Epoch {epoch + 1}]\t loss: {total_loss:.8f} \t accuracy: {accuracy:.2f}", 
 				  end="\t")
+
+			if DEBUG:
+				print("\nmodule$$$model.0.weight should be fixed:\n",
+					  pyro.get_param_store()["module$$$model.0.weight"][0][0][:3])
+				print("\noutw_mu should change:\n", pyro.get_param_store()["outw_mu"][:3])
 
 		execution_time(start=start, end=time.time())
 		hyperparams = {"epochs":epochs, "lr":lr}	
@@ -260,7 +272,7 @@ class redBNN(nn.Module):
 		elif self.inference == "hmc":
 			self._train_hmc(train_loader, device)
 
-	def evaluate(self, test_loader, device, n_samples=100):
+	def evaluate(self, test_loader, device, n_samples):
 		self.to(device)
 		self.base_net.to(device)
 		random.seed(0)
@@ -274,8 +286,9 @@ class redBNN(nn.Module):
 
 				x_batch = x_batch.to(device)
 				y_batch = y_batch.to(device).argmax(-1)
-				outputs = self.forward(x_batch, n_samples=n_samples)
-				predictions = outputs.argmax(dim=1)
+				probs = self.forward(x_batch, n_samples=n_samples)
+				# print(probs.max())
+				predictions = probs.mean(0).argmax(-1)
 				correct_predictions += (predictions == y_batch).sum()
 
 			accuracy = 100 * correct_predictions / len(test_loader.dataset)
@@ -286,14 +299,14 @@ class redBNN(nn.Module):
 def main(args):
 
 	m = saved_redBNNs["model_"+str(args.model_idx)]
-	rel_path = DATA if args.savedir=="DATA" else TESTS
+	rel_path = DATA if args.load_dir=="DATA" else TESTS
 
 	if args.device=="cuda":
 		torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 	### baseNN 
 	train_loader, test_loader, inp_shape, out_size = \
-							data_loaders(dataset_name=m["dataset"], batch_size=64, 
+							data_loaders(dataset_name=m["dataset"], batch_size=128, 
 										 n_inputs=m["baseNN_inputs"], shuffle=True)
 
 	nn = baseNN(dataset_name=m["dataset"], input_shape=inp_shape, output_size=out_size,
@@ -317,7 +330,7 @@ def main(args):
 		bnn.load(n_inputs=m["BNN_inputs"], device=args.device, rel_path=rel_path)
 	
 	if args.test is True:
-		bnn.evaluate(test_loader=test_loader, device=args.device)
+		bnn.evaluate(test_loader=test_loader, device=args.device, n_samples=100)
 
 
 if __name__ == "__main__":
@@ -326,6 +339,6 @@ if __name__ == "__main__":
     parser.add_argument("--model_idx", default=0, type=int, help="choose idx from saved_BNNs dict")
     parser.add_argument("--train", default=True, type=eval, help="if True train else load")
     parser.add_argument("--test", default=True, type=eval, help="test set evaluation")
-    parser.add_argument("--savedir", default="DATA", type=str, help="DATA, TESTS")
+    parser.add_argument("--load_dir", default="TESTS", type=str, help="DATA, TESTS")
     parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")	
     main(args=parser.parse_args())
