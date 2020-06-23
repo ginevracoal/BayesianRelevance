@@ -1,20 +1,22 @@
+import os
+import math
+import time
+import random
 import numpy as np
+import pickle as pkl
+from savedir import *
+
+import torch
 import keras
+import tensorflow as tf
 from keras import backend as K
 from keras.datasets import mnist, fashion_mnist
-import pickle as pkl
-import time
-import os
-import matplotlib.pyplot as plt
-import seaborn as sns
-import math
-import tensorflow as tf
-import torch
-from directories import *
+from sklearn.datasets import make_moons
 from pandas import DataFrame
 from torch.utils.data import DataLoader
-import random
-from sklearn.datasets import make_moons
+
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 def execution_time(start, end):

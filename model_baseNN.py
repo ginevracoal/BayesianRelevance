@@ -1,22 +1,22 @@
 """
 Deterministic Neural Network model.
-Last layer is separated from the rest to make it bayesian.
+Last layer is separated from the others.
 """
 
-import argparse
 import os
-from savedir import *
-from utils import *
+import argparse
+import numpy as np
+from utils_data import *
+
 import torch
 from torch import nn
 import torch.nn.functional as nnf
-import numpy as np
 import torch.optim as torchopt
 import torch.nn.functional as F
 
 DEBUG = False
 
-saved_baseNNs = {"model_0":{"dataset":"mnist", "hidden_size":128, "activation":"leaky",
+saved_baseNNs = {"model_0":{"dataset":"mnist", "hidden_size":1024, "activation":"leaky",
                             "architecture":"conv", "epochs":10, "lr":0.001}}
 
 
@@ -98,27 +98,23 @@ class baseNN(nn.Module):
         for epoch in range(self.epochs):
             total_loss = 0.0
             correct_predictions = 0.0
-            accuracy = 0.0
-            total = 0.0
-            n_inputs = 0
 
             for x_batch, y_batch in train_loader:
-                n_inputs += len(x_batch)
+
                 x_batch = x_batch.to(device)
                 y_batch = y_batch.to(device).argmax(-1)
-                total += y_batch.size(0)
-
-                optimizer.zero_grad()
                 outputs = self.forward(x_batch)
+                
+                optimizer.zero_grad()
                 loss = self.loss_func(outputs, y_batch)
                 loss.backward()
                 optimizer.step()
 
                 predictions = outputs.argmax(dim=1)
-                total_loss += loss.data.item() / len(train_loader.dataset)
                 correct_predictions += (predictions == y_batch).sum()
-                accuracy = 100 * correct_predictions / len(train_loader.dataset)
-
+                total_loss += loss.data.item() / len(train_loader.dataset)
+            
+            accuracy = 100 * correct_predictions / len(train_loader.dataset)
             print(f"\n[Epoch {epoch + 1}]\t loss: {total_loss:.8f} \t accuracy: {accuracy:.2f}", 
                   end="\t")
 
@@ -128,7 +124,7 @@ class baseNN(nn.Module):
     def forward(self, inputs, *args, **kwargs):
         x = self.model(inputs)
         x = self.out(x)
-        return nn.Softmax(dim=-1)(x)
+        return nn.LogSoftmax(dim=-1)(x)
 
     def save(self):
         filepath, filename = (TESTS+self.savedir+"/", self.name+"_weights.pt")
@@ -197,7 +193,7 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Base NN")
+    parser = argparse.ArgumentParser()
     parser.add_argument("--n_inputs", default=60000, type=int, help="number of input points")
     parser.add_argument("--model_idx", default=0, type=int, help="choose idx from saved_NNs")
     parser.add_argument("--train", default=True, type=eval)
