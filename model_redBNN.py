@@ -24,7 +24,7 @@ DEBUG=False
 
 saved_redBNNs = {"model_0":{"dataset":"mnist", "inference":"svi", "hidden_size":512, 
                  			"baseNN_inputs":60000, "baseNN_epochs":10, "baseNN_lr":0.001,
-                 			"BNN_inputs":60000, "BNN_epochs":20, "BNN_lr":0.01, 
+                 			"BNN_inputs":60000, "BNN_epochs":5, "BNN_lr":0.01, 
                  			"activation":"leaky", "architecture":"conv"}}
 
 
@@ -41,6 +41,7 @@ class redBNN(nn.Module):
 
 	def __init__(self, dataset_name, inference, hyperparams, base_net):
 		super(redBNN, self).__init__()
+		self.dataset_name = dataset_name
 		self.inference = inference
 		self.base_net = base_net
 		self.hyperparams = hyperparams
@@ -76,7 +77,7 @@ class redBNN(nn.Module):
 
 		with pyro.plate("data", len(x_data)):
 			logits = lifted_module(x_data)
-			lhat = nnf.log_softmax(logits, dim=0)
+			lhat = nnf.log_softmax(logits, dim=-1)
 			cond_model = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
 
 	def guide(self, x_data, y_data=None):
@@ -99,7 +100,7 @@ class redBNN(nn.Module):
 
 		with pyro.plate("data", len(x_data)):
 			logits = lifted_module(x_data)
-			probs = nnf.softmax(logits, dim=0)
+			probs = nnf.softmax(logits, dim=-1)
 
 		return probs
  
@@ -242,10 +243,13 @@ class redBNN(nn.Module):
 				y_batch = y_batch.to(device).argmax(-1)
 				loss += svi.step(x_data=x_batch, y_data=y_batch)
 
-				probs = self.forward(x_batch, n_samples=1, training=True).mean(0).to(device)
+				probs = self.forward(x_batch, n_samples=1, training=True).to(device).mean(0)
 				predictions = probs.argmax(-1)
 				correct_predictions += (predictions == y_batch).sum()
 			
+				if probs.mean(0).sum().abs() < 0.9:
+					raise ValueError("Error in softmax probs")
+
 			total_loss = loss / len(train_loader.dataset)
 			accuracy = 100 * correct_predictions / len(train_loader.dataset)
 			print(f"\n[Epoch {epoch + 1}]\t loss: {total_loss:.8f} \t accuracy: {accuracy:.2f}", 
@@ -287,7 +291,6 @@ class redBNN(nn.Module):
 				x_batch = x_batch.to(device)
 				y_batch = y_batch.to(device).argmax(-1)
 				probs = self.forward(x_batch, n_samples=n_samples)
-				# print(probs.max())
 				predictions = probs.mean(0).argmax(-1)
 				correct_predictions += (predictions == y_batch).sum()
 
@@ -339,6 +342,6 @@ if __name__ == "__main__":
     parser.add_argument("--model_idx", default=0, type=int, help="choose idx from saved_BNNs dict")
     parser.add_argument("--train", default=True, type=eval, help="if True train else load")
     parser.add_argument("--test", default=True, type=eval, help="test set evaluation")
-    parser.add_argument("--load_dir", default="TESTS", type=str, help="DATA, TESTS")
+    parser.add_argument("--load_dir", default="DATA", type=str, help="DATA, TESTS")
     parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")	
     main(args=parser.parse_args())
