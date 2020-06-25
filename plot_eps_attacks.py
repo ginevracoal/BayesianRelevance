@@ -7,11 +7,12 @@ from adversarialAttacks import *
 from model_bnn import *
 from model_redBNN import *
 from utils_models import load_test_net 
+import pandas as pd
 
 def build_eps_attacks_df(bnn, device, method, x_test, y_test, epsilon_list, 
                          attack_samples_list, defence_samples_list):
 
-    df = pandas.DataFrame(columns=["attack_method", "epsilon", "test_acc", "adv_acc", 
+    df = pd.DataFrame(columns=["attack_method", "epsilon", "test_acc", "adv_acc", 
                                    "softmax_rob", "attack_samples", "defence_samples"])
 
     row_count = 0
@@ -65,10 +66,11 @@ def lineplot_increasing_eps(df, model_type, bnn, method):
         data = df[df["attack_samples"]==attack_samp]
 
         for (i,y) in [(0,"adv_acc"), (1,"softmax_rob")]:
-            ax[i,j].set(xlabel='', ylabel='')
             sns.lineplot(data=data, x="epsilon", y=y,  style="defence_samples", ax=ax[i,j],
                          palette=["darkorange","darkred","black"],
                          hue="defence_samples", legend="full" if i==0 and j==0 else False)
+            
+            ax[i,j].set(xlabel='', ylabel='')
 
         ax[1,0].set(xlabel='attack strength', ylabel='softmax robustness')
         ax[0,0].set(xlabel='', ylabel='adversarial accuracy')
@@ -82,7 +84,7 @@ def lineplot_increasing_eps(df, model_type, bnn, method):
 def main(args):
 
     epsilon_list=[0.1, 0.15, 0.2, 0.25, 0.3]
-    n_samples_list=[1, 10, 50]
+    n_samples_list=[1, 100, 500]
 
     if args.device=="cuda":
         torch.set_default_tensor_type('torch.cuda.FloatTensor')

@@ -67,19 +67,45 @@ def softmax_robustness(original_outputs, adversarial_outputs):
 # adversarial attacks #
 #######################
 
+def loss_gradient_sign(net, n_samples, image, label):
+
+    if n_samples is None:
+
+        image.requires_grad = True
+        output = net.forward(inputs=image, out_prob=True)
+        
+        loss = torch.nn.CrossEntropyLoss()(output, label)
+        net.zero_grad()
+        loss.backward()
+        gradient_sign = image.grad.data.sign()
+
+    else:
+
+        loss_gradients=[]
+
+        for i in range(n_samples):
+            x_copy = copy.deepcopy(image)
+            x_copy.requires_grad = True
+
+            output = net.forward(inputs=x_copy, n_samples=1, seeds=[i], out_prob=True)[0]
+
+            loss = torch.nn.CrossEntropyLoss()(output.to(dtype=torch.double), label)
+            net.zero_grad()
+            loss.backward()
+            loss_gradient = copy.deepcopy(x_copy.grad.data[0])
+            loss_gradients.append(loss_gradient)
+
+        gradient_sign = torch.stack(loss_gradients,0).sign().mean(0)
+
+    return gradient_sign
+
+
 def fgsm_attack(net, image, label, hyperparams=None, n_samples=None, avg_posterior=False):
 
     epsilon = hyperparams["epsilon"] if hyperparams is not None else 0.3
-
-    image.requires_grad = True
-    output = net.forward(inputs=image, n_samples=n_samples, 
-                         avg_posterior=avg_posterior, out_prob=False)
-    loss = torch.nn.CrossEntropyLoss()(output, label)
-    net.zero_grad()
-    loss.backward()
-    image_grad = image.grad.data
-
-    perturbed_image = image + epsilon * image_grad.sign()
+    
+    gradient_sign = loss_gradient_sign(net, n_samples, image, label)
+    perturbed_image = image + epsilon * gradient_sign
     perturbed_image = torch.clamp(perturbed_image, 0, 1)
 
     return perturbed_image
@@ -90,20 +116,14 @@ def pgd_attack(net, image, label, hyperparams=None, n_samples=None, avg_posterio
     if hyperparams is not None: 
         epsilon, alpha, iters = (hyperparams["epsilon"], 2/image.max(), 40)
     else:
-        epsilon, alpha, iters = (0.5, 2/225, 40)
+        epsilon, alpha, iters = (0.3, 2/225, 40)
 
     original_image = copy.deepcopy(image)
     
     for i in range(iters):
-        image.requires_grad = True  
-        output = net.forward(inputs=image, n_samples=n_samples, avg_posterior=avg_posterior,
-                            out_prob=False)
 
-        loss = torch.nn.CrossEntropyLoss()(output, label)
-        net.zero_grad()
-        loss.backward()
-
-        perturbed_image = image + alpha * image.grad.data.sign()
+        gradient_sign = loss_gradient_sign(net, n_samples, image, label)
+        perturbed_image = image + alpha * gradient_sign
         eta = torch.clamp(perturbed_image - original_image, min=-epsilon, max=epsilon)
         image = torch.clamp(original_image + eta, min=0, max=1).detach()
 
@@ -114,7 +134,9 @@ def pgd_attack(net, image, label, hyperparams=None, n_samples=None, avg_posterio
 def attack(net, x_test, y_test, device, method, filename, savedir=None,
            hyperparams=None, n_samples=None, avg_posterior=False):
 
-    print(f"\nProducing {method} attacks")
+    print(f"\n\nProducing {method} attacks", end="\t")
+    if n_samples:
+        print(f"with {n_samples} attack samples")
 
     x_test, y_test = x_test.to(device), y_test.to(device)
 
@@ -203,7 +225,7 @@ def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None):
 
 def main(args):
 
-    bayesian_attack_samples=[1,10,50]
+    bayesian_attack_samples=[1,20,50]
 
     if args.device=="cuda":
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
