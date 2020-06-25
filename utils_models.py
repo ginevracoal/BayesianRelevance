@@ -8,9 +8,9 @@ def load_test_net(model_idx, model_type, n_inputs, device, load_dir, return_data
 
     if model_type=="baseNN":
 
-        dataset_name, model = saved_baseNNs["model_"+str(model_idx)]
+        model = saved_baseNNs["model_"+str(args.model_idx)]
 
-        x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=dataset_name, 
+        x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], 
                                                            n_inputs=n_inputs)[2:]
 
         net = baseNN(inp_shape, out_size, *list(model.values()))
