@@ -42,6 +42,9 @@ class redBNN(nn.Module):
 	def __init__(self, dataset_name, inference, hyperparams, base_net):
 		super(redBNN, self).__init__()
 		self.dataset_name = dataset_name
+		self.hidden_size=base_net.hidden_size
+		self.architecture=base_net.architecture
+		self.activation=base_net.activation
 		self.inference = inference
 		self.base_net = base_net
 		self.hyperparams = hyperparams
@@ -49,15 +52,16 @@ class redBNN(nn.Module):
 
 	def set_name(self):
 
+		name = str(self.base_net.dataset_name)+"_redBNN_hid="+str(self.hidden_size)+\
+					"_arch="+str(self.architecture)+"_act="+str(self.activation)
+
 		if self.inference == "svi":
-			return str(self.base_net.dataset_name)+"_redBNN_ep="+\
-			       str(self.hyperparams["epochs"])+"_lr="+str(self.hyperparams["lr"])+"_"+\
-			       str(self.inference)
+			return name+"_ep="+str(self.hyperparams["epochs"])+"_lr="+\
+			       str(self.hyperparams["lr"])+"_"+str(self.inference)
 
 		elif self.inference == "hmc":
-			return str(self.base_net.dataset_name)+"_redBNN_samp="+\
-			       str(self.hyperparams["hmc_samples"])+"_warm="+str(self.hyperparams["warmup"])+\
-			       "_"+str(self.inference)
+			return name+"_samp="+str(self.hyperparams["hmc_samples"])+\
+			       "_warm="+str(self.hyperparams["warmup"])+"_"+str(self.inference)
 
 	def model(self, x_data, y_data):
 		net = self.base_net
