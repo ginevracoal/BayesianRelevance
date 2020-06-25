@@ -3,21 +3,23 @@ FGSM and PGD classic & bayesian adversarial attacks + robustness measures
 """
 
 import sys
-from savedir import *
-from utils import *
 import argparse
 from tqdm import tqdm
 import pyro
 import random
 import copy
 import torch
-from model_nn import NN, saved_NNs
-from model_bnn import BNN, saved_BNNs
 import numpy as np
 from torch.utils.data import DataLoader
 import torch.nn.functional as nnf
 import pandas
 import os
+from savedir import *
+from utils_data import *
+from utils_models import *
+from model_baseNN import *
+from model_bnn import *
+
 
 DEBUG=False
 
@@ -51,7 +53,7 @@ def softmax_difference(original_predictions, adversarial_predictions):
 
 def softmax_robustness(original_outputs, adversarial_outputs):
     """ 
-    This robustness measure is global and it is stricly dependent on the epsilon chosen for the 
+    This robustness measure is global and it is strictly dependent on the epsilon chosen for the 
     perturbations.
     """
 
@@ -70,7 +72,7 @@ def fgsm_attack(net, image, label, hyperparams=None, n_samples=None, avg_posteri
     epsilon = hyperparams["epsilon"] if hyperparams is not None else 0.3
 
     image.requires_grad = True
-    output = net.forward(inputs=image, n_samples=n_samples, avg_posterior=avg_posterior)
+    output = net.forward(inputs=image, n_samples=n_samples, avg_posterior=avg_posterior).mean(0)
 
     loss = torch.nn.CrossEntropyLoss()(output, label)
     net.zero_grad()
@@ -94,7 +96,7 @@ def pgd_attack(net, image, label, hyperparams=None, n_samples=None, avg_posterio
     
     for i in range(iters):
         image.requires_grad = True  
-        output = net.forward(inputs=image, n_samples=n_samples, avg_posterior=avg_posterior)
+        output = net.forward(inputs=image, n_samples=n_samples, avg_posterior=avg_posterior).mean(0)
 
         loss = torch.nn.CrossEntropyLoss()(output, label)
         net.zero_grad()
@@ -108,16 +110,18 @@ def pgd_attack(net, image, label, hyperparams=None, n_samples=None, avg_posterio
     return perturbed_image
 
 
-def attack(net, x_test, y_test, dataset_name, device, method, filename, savedir=None,
+def attack(net, x_test, y_test, device, method, filename, savedir=None,
            hyperparams=None, n_samples=None, avg_posterior=False):
 
-    print(f"\nProducing {method} attacks on {dataset_name}:")
+    print(f"\nProducing {method} attacks")
+
+    x_test, y_test = x_test.to(device), y_test.to(device)
 
     adversarial_attack = []
     
     for idx in tqdm(range(len(x_test))):
-        image = x_test[idx].unsqueeze(0).to(device)
-        label = y_test[idx].argmax(-1).unsqueeze(0).to(device)
+        image = x_test[idx].unsqueeze(0)
+        label = y_test[idx].argmax(-1).unsqueeze(0)
 
         if method == "fgsm":
             perturbed_image = fgsm_attack(net=net, image=image, label=label, 
@@ -202,78 +206,30 @@ def main(args):
 
     bayesian_attack_samples=[1,10,50]
 
-    rel_path=DATA if args.savedir=="DATA" else TESTS
-    train_inputs = 100 if DEBUG else None
-
     if args.device=="cuda":
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
-    if args.deterministic:
+    load_dir = DATA if args.load_dir=="DATA" else TESTS
+    (x_test, y_test), net = load_test_net(model_idx=args.model_idx, model_type=args.model_type, 
+                        device=args.device, load_dir=load_dir, n_inputs=args.n_inputs,
+                        return_data_loader=False)
 
-        ### NN model
-        dataset, hid, activ, arch, ep, lr = saved_NNs["model_"+str(args.model_idx)].values()
+    if args.model_type=="baseNN":
 
-        x_train, y_train, x_test, y_test, inp_shape, out_size = \
-            load_dataset(dataset_name=dataset, n_inputs=train_inputs)
-        train_loader = DataLoader(dataset=list(zip(x_train, y_train)), shuffle=True)
-        test_loader = DataLoader(dataset=list(zip(x_test, y_test)))
+        x_attack = attack(net=net, x_test=x_test, y_test=y_test, dataset_name=dataset, 
+                          device=args.device, method=args.attack_method, filename=net.name)
 
-        nn = NN(dataset_name=dataset, input_shape=inp_shape, output_size=out_size, 
-                hidden_size=hid, activation=activ, architecture=arch, epochs=ep, lr=lr)
-
-        if args.train:
-            nn.train(train_loader=train_loader, device=args.device)
-        else:
-            nn.load(device=args.device, rel_path=rel_path)
-        
-        if args.test:
-            nn.evaluate(test_loader=test_loader, device=args.device)
-
-        ### attack NN
-        if args.attack:
-            x_test, y_test = (torch.from_numpy(x_test[:args.attack_inputs]), 
-                              torch.from_numpy(y_test[:args.attack_inputs]))
-            x_attack = attack(net=nn, x_test=x_test, y_test=y_test, dataset_name=dataset, 
-                              device=args.device, method=args.attack_method, filename=nn.name)
-        else:
-            x_attack = load_attack(net=nn, method=args.attack_method, rel_path=DATA, filename=nn.name)
-
-        attack_evaluation(net=nn, x_test=x_test, x_attack=x_attack, y_test=y_test, 
+        attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
                             device=args.device)
 
     else:
 
-        ### BNN model
-        dataset, model = saved_BNNs["model_"+str(args.model_idx)]
-        batch_size = 5000 if model["inference"] == "hmc" else 128
-
-        x_train, y_train, x_test, y_test, inp_shape, out_size = \
-            load_dataset(dataset_name=dataset, n_inputs=train_inputs)
-        train_loader = DataLoader(dataset=list(zip(x_train, y_train)), batch_size=batch_size, 
-                                  shuffle=True)
-        test_loader = DataLoader(dataset=list(zip(x_test, y_test)))
-
-        bnn = BNN(dataset, *list(model.values()), inp_shape, out_size)
-
-        if args.train:
-            bnn.train(train_loader=train_loader, device=args.device)
-        else:
-            bnn.load(device=args.device, rel_path=rel_path)
-
-        if args.test:
-            bnn.evaluate(test_loader=test_loader, device=args.device, n_samples=10)
-
-        ### attack BNN
-        x_test, y_test = (torch.from_numpy(x_test[:args.n_inputs]), 
-                          torch.from_numpy(y_test[:args.n_inputs]))
-
         for attack_samples in bayesian_attack_samples:
-            x_attack = attack(net=bnn, x_test=x_test, y_test=y_test, dataset_name=dataset, 
-                              device=args.device, method=args.attack_method, filename=bnn.name, 
-                              n_samples=attack_samples)
+            x_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device, 
+                            method=args.attack_method, filename=net.name, n_samples=attack_samples)
 
             for defence_samples in [attack_samples]:
-                attack_evaluation(net=bnn, x_test=x_test, x_attack=x_attack, y_test=y_test, 
+                attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
                                   device=args.device, n_samples=defence_samples)
 
 
@@ -281,12 +237,10 @@ if __name__ == "__main__":
     assert pyro.__version__.startswith('1.3.0')
     parser = argparse.ArgumentParser()
     parser.add_argument("--n_inputs", default=100, type=int, help="inputs to be attacked")
-    parser.add_argument("--deterministic", default=False, type=eval, help="choose NN or BNN model")
     parser.add_argument("--model_idx", default=0, type=int, help="choose idx from saved_NNs")
-    parser.add_argument("--train", default=True, type=eval)
-    parser.add_argument("--test", default=True, type=eval)
-    parser.add_argument("--attack", default=True, type=eval)
+    parser.add_argument("--model_type", default="fullBNN", type=str, 
+                        help="baseNN, fullBNN, redBNN, laplBNN")
     parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-    parser.add_argument("--savedir", default='DATA', type=str, help="DATA, TESTS")  
+    parser.add_argument("--load_dir", default='DATA', type=str, help="DATA, TESTS")  
     parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")   
     main(args=parser.parse_args())
