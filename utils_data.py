@@ -239,7 +239,8 @@ def load_dataset(dataset_name, n_inputs=None, channels="first", shuffle=False):
         idxs = np.random.permutation(len(x_test))
         x_test, y_test = (x_test[idxs], y_test[idxs])
 
-    return x_train, y_train, x_test, y_test, input_shape, num_classes
+    return torch.from_numpy(x_train), torch.from_numpy(y_train), \
+           torch.from_numpy(x_test), torch.from_numpy(y_test), input_shape, num_classes
 
 ############
 # pickling #

@@ -4,26 +4,23 @@ from model_bnn import BNN, saved_BNNs
 from model_baseNN import baseNN, saved_baseNNs
 
 
-def get_networks_dataset_name(model_idx, model_type):
+def load_test_net(model_idx, model_type, n_inputs, device, load_dir, return_data_loader=True):
 
-    if model_type=="fullBNN":
-        dataset_name = saved_BNNs["model_"+str(model_idx)][0]
+    if model_type=="baseNN":
 
-    elif model_type=="redBNN":
-        dataset_name = saved_redBNNs["model_"+str(model_idx)]["dataset"]
+        dataset_name, model = saved_baseNNs["model_"+str(model_idx)]
 
-    else:
-        raise AssertionError("Wrong model name.")
+        x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=dataset_name, 
+                                                           n_inputs=n_inputs)[2:]
 
-    return dataset_name
-
-def load_test_net(model_idx, model_type, n_inputs, device, load_dir):
+        net = baseNN(inp_shape, out_size, *list(model.values()))
+        net.load(device=device, rel_path=load_dir)
 
     if model_type=="fullBNN":
         
         dataset_name, model = saved_BNNs["model_"+str(model_idx)]
-        _, test_loader, inp_shape, out_size = data_loaders(dataset_name=dataset_name, batch_size=128, 
-                                                           n_inputs=n_inputs, shuffle=True)
+        x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=dataset_name, 
+                                                           n_inputs=n_inputs)[2:]
                         
         net = BNN(dataset_name, *list(model.values()), inp_shape, out_size)
         net.load(device=device, rel_path=load_dir)
@@ -32,8 +29,8 @@ def load_test_net(model_idx, model_type, n_inputs, device, load_dir):
 
         m = saved_redBNNs["model_"+str(model_idx)]
         dataset_name = m["dataset"]
-        _, test_loader, inp_shape, out_size = data_loaders(dataset_name=m["dataset"], batch_size=128, 
-                                                 n_inputs=n_inputs, shuffle=True)
+        x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=dataset_name, 
+                                                           n_inputs=n_inputs)[2:]
 
         nn = baseNN(dataset_name=m["dataset"], input_shape=inp_shape, output_size=out_size,
                     epochs=m["baseNN_epochs"], lr=m["baseNN_lr"], hidden_size=m["hidden_size"], 
@@ -47,4 +44,9 @@ def load_test_net(model_idx, model_type, n_inputs, device, load_dir):
     else:
         raise AssertionError("Wrong model name.")
 
-    return test_loader, net
+    if return_data_loader:
+        test_loader = DataLoader(dataset=list(zip(x_test, y_test)), batch_size=128, shuffle=True)
+        return test_loader, net
+
+    else:
+        return (x_test, y_test), net
