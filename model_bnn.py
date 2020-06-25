@@ -164,7 +164,8 @@ class BNN(PyroModule):
         self.to(device)
         self.basenet.to(device)
 
-    def forward(self, inputs, n_samples=10, avg_posterior=False, seeds=None, training=False):
+    def forward(self, inputs, n_samples=10, avg_posterior=False, seeds=None, training=False,
+                out_prob=True):
         
         if seeds:
             if len(seeds) != n_samples:
@@ -218,7 +219,7 @@ class BNN(PyroModule):
                 preds.append(net.forward(inputs))
         
         output_probs = torch.stack(preds)
-        return output_probs 
+        return output_probs if out_prob else output_probs.mean(0)
 
     def _train_hmc(self, train_loader, n_samples, warmup, step_size, num_steps, device):
         print("\n == HMC training ==")
@@ -331,8 +332,8 @@ class BNN(PyroModule):
             for x_batch, y_batch in test_loader:
 
                 x_batch = x_batch.to(device)
-                outputs = self.forward(x_batch, n_samples=n_samples).to(device).mean(0)
-                predictions = outputs.argmax(-1)
+                outputs = self.forward(x_batch, n_samples=n_samples, out_prob=False)
+                predictions = outputs.to(device).argmax(-1)
                 labels = y_batch.to(device).argmax(-1)
                 correct_predictions += (predictions == labels).sum().item()
 

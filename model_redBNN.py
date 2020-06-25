@@ -122,9 +122,9 @@ class redBNN(nn.Module):
 			self.to("cpu")
 			save_to_pickle(data=self.posterior_samples, path=filepath, filename=filename+".pkl")
 
-	def load(self, n_inputs, device, rel_path=TESTS):
+	def load(self, n_inputs, device, rel_path):
 
-		filepath, filename = (TESTS+self.name+"/", self.name+"_weights")
+		filepath, filename = (rel_path+self.name+"/", self.name+"_weights")
 
 		if self.inference == "svi":
 			param_store = pyro.get_param_store()
@@ -138,7 +138,8 @@ class redBNN(nn.Module):
 
 		self.base_net.to(device)
 
-	def forward(self, inputs, n_samples=10, seeds=None, training=False):
+	def forward(self, inputs, n_samples, seeds=None, training=False, out_prob=True, 
+		        *args, **kwargs):
 
 		if seeds:
 			if len(seeds) != n_samples:
@@ -193,7 +194,9 @@ class redBNN(nn.Module):
 						  self.base_net.state_dict()["l2.0.weight"][0,0,:3])
 					print("\nout.weight should change:\n", self.base_net.state_dict()["out.weight"][0][:3])	
 		
-		return torch.stack(preds)
+		output_probs = torch.stack(preds)
+		return output_probs if out_prob else output_probs.mean(0)
+
 
 	def _train_hmc(self, train_loader, device):
 		print("\n == redBNN HMC training ==")
@@ -290,8 +293,7 @@ class redBNN(nn.Module):
 
 				x_batch = x_batch.to(device)
 				y_batch = y_batch.to(device).argmax(-1)
-				probs = self.forward(x_batch, n_samples=n_samples)
-				predictions = probs.mean(0).argmax(-1)
+				predictions = self.forward(x_batch, n_samples=n_samples, out_prob=False).argmax(-1)
 				correct_predictions += (predictions == y_batch).sum()
 
 			accuracy = 100 * correct_predictions / len(test_loader.dataset)

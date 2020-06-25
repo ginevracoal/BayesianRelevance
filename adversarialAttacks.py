@@ -72,8 +72,8 @@ def fgsm_attack(net, image, label, hyperparams=None, n_samples=None, avg_posteri
     epsilon = hyperparams["epsilon"] if hyperparams is not None else 0.3
 
     image.requires_grad = True
-    output = net.forward(inputs=image, n_samples=n_samples, avg_posterior=avg_posterior).mean(0)
-
+    output = net.forward(inputs=image, n_samples=n_samples, 
+                         avg_posterior=avg_posterior, out_prob=False)
     loss = torch.nn.CrossEntropyLoss()(output, label)
     net.zero_grad()
     loss.backward()
@@ -96,7 +96,8 @@ def pgd_attack(net, image, label, hyperparams=None, n_samples=None, avg_posterio
     
     for i in range(iters):
         image.requires_grad = True  
-        output = net.forward(inputs=image, n_samples=n_samples, avg_posterior=avg_posterior).mean(0)
+        output = net.forward(inputs=image, n_samples=n_samples, avg_posterior=avg_posterior,
+                            out_prob=False)
 
         loss = torch.nn.CrossEntropyLoss()(output, label)
         net.zero_grad()
@@ -160,9 +161,7 @@ def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None):
     random.seed(0)
     pyro.set_rng_seed(0)
     
-    x_test = x_test.to(device)
-    x_attack = x_attack.to(device)
-    y_test = y_test.to(device)
+    x_test, x_attack, y_test = x_test.to(device), x_attack.to(device), y_test.to(device)
 
     if hasattr(net, 'net'):
         net.basenet.to(device) # fixed layers in BNN
@@ -175,14 +174,14 @@ def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None):
         original_outputs = []
         original_correct = 0.0
         for images, labels in test_loader:
-            out = net.forward(images, n_samples)
+            out = net.forward(images, n_samples, out_prob=False)
             original_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
             original_outputs.append(out)
 
         adversarial_outputs = []
         adversarial_correct = 0.0
         for attacks, labels in attack_loader:
-            out = net.forward(attacks, n_samples)
+            out = net.forward(attacks, n_samples, out_prob=False)
             adversarial_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
             adversarial_outputs.append(out)
 
@@ -210,13 +209,14 @@ def main(args):
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
     load_dir = DATA if args.load_dir=="DATA" else TESTS
+
     (x_test, y_test), net = load_test_net(model_idx=args.model_idx, model_type=args.model_type, 
                         device=args.device, load_dir=load_dir, n_inputs=args.n_inputs,
                         return_data_loader=False)
 
     if args.model_type=="baseNN":
 
-        x_attack = attack(net=net, x_test=x_test, y_test=y_test, dataset_name=dataset, 
+        x_attack = attack(net=net, x_test=x_test, y_test=y_test,
                           device=args.device, method=args.attack_method, filename=net.name)
 
         attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 

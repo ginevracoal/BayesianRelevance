@@ -16,7 +16,7 @@ import torch.nn.functional as F
 
 DEBUG = False
 
-saved_baseNNs = {"model_0":{"dataset":"mnist", "hidden_size":1024, "activation":"leaky",
+saved_baseNNs = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
                             "architecture":"conv", "epochs":10, "lr":0.001}}
 
 
