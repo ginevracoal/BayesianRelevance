@@ -84,18 +84,19 @@ def loss_gradient_sign(net, n_samples, image, label):
         loss_gradients=[]
 
         for i in range(n_samples):
+
             x_copy = copy.deepcopy(image)
             x_copy.requires_grad = True
-
             output = net.forward(inputs=x_copy, n_samples=1, seeds=[i], out_prob=True)[0]
 
             loss = torch.nn.CrossEntropyLoss()(output.to(dtype=torch.double), label)
             net.zero_grad()
             loss.backward()
-            loss_gradient = copy.deepcopy(x_copy.grad.data[0])
+            loss_gradient = copy.deepcopy(x_copy.grad.data[0].sign())
             loss_gradients.append(loss_gradient)
 
-        gradient_sign = torch.stack(loss_gradients,0).sign().mean(0)
+        # gradient_sign = torch.stack(loss_gradients,0).sign().mean(0)
+        gradient_sign = torch.stack(loss_gradients,0).mean(0)
 
     return gradient_sign
 
@@ -107,7 +108,6 @@ def fgsm_attack(net, image, label, hyperparams=None, n_samples=None, avg_posteri
     gradient_sign = loss_gradient_sign(net, n_samples, image, label)
     perturbed_image = image + epsilon * gradient_sign
     perturbed_image = torch.clamp(perturbed_image, 0, 1)
-
     return perturbed_image
 
 
@@ -125,11 +125,10 @@ def pgd_attack(net, image, label, hyperparams=None, n_samples=None, avg_posterio
         gradient_sign = loss_gradient_sign(net, n_samples, image, label)
         perturbed_image = image + alpha * gradient_sign
         eta = torch.clamp(perturbed_image - original_image, min=-epsilon, max=epsilon)
-        image = torch.clamp(original_image + eta, min=0, max=1).detach()
+        image = torch.clamp(original_image + eta, min=0, max=1)
 
-    perturbed_image = image
+    perturbed_image = image.detach()
     return perturbed_image
-
 
 def attack(net, x_test, y_test, device, method, filename, savedir=None,
            hyperparams=None, n_samples=None, avg_posterior=False):
@@ -196,14 +195,14 @@ def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None):
         original_outputs = []
         original_correct = 0.0
         for images, labels in test_loader:
-            out = net.forward(images, n_samples, out_prob=False)
+            out = net.forward(images, n_samples)
             original_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
             original_outputs.append(out)
 
         adversarial_outputs = []
         adversarial_correct = 0.0
         for attacks, labels in attack_loader:
-            out = net.forward(attacks, n_samples, out_prob=False)
+            out = net.forward(attacks, n_samples)
             adversarial_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
             adversarial_outputs.append(out)
 
@@ -217,7 +216,6 @@ def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None):
         softmax_rob = softmax_robustness(original_outputs, adversarial_outputs)
 
     return original_accuracy, adversarial_accuracy, softmax_rob
-
 
 ########
 # main #
