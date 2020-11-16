@@ -51,7 +51,7 @@ def load_data(dataset_name):
         }
 
         img_size = 224
-        batch_size = 32
+        batch_size = 128
         num_classes = 10
 
         class TransformDataset(Dataset):
@@ -73,10 +73,11 @@ def load_data(dataset_name):
                                                                 transforms.ToTensor(),
                                                                 ]))
 
+        print("\ndataset lenght =", len(dataset))
         print("\nimg_size =",dataset[0][0].shape," img_label =", dataset[0][1])
 
         if TEST:
-            dataset = torch.utils.data.Subset(dataset, np.random.choice(len(dataset), 100, replace=False))
+            dataset = torch.utils.data.Subset(dataset, np.random.choice(len(dataset), 1000, replace=False))
 
         val_size = int(0.1 * len(dataset))
         test_size = int(0.1 * len(dataset))
@@ -90,7 +91,7 @@ def load_data(dataset_name):
 
         train_set = TransformDataset(train_subset, transform = transforms.Compose([
                 transforms.ToPILImage(),
-                transforms.RandomCrop(250, padding=50, padding_mode='reflect'),
+                transforms.RandomCrop(224, padding=None),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize(*stats, inplace=True),
@@ -105,46 +106,47 @@ def load_data(dataset_name):
         val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=True)
         test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=True)
 
-        dataloadersdict = {'train': train_dataloader, 
+        dataloaders_dict = {'train': train_dataloader, 
                            'val':val_dataloader,
                            'test':test_dataloader}
 
     elif dataset_name=="hymenoptera":
 
+        data_dir = "./data/hymenoptera_data"
+        num_classes = 2
+        batch_size = 64
+        img_size = 224
+
+        # Data augmentation and normalization for training
+        # Just normalization for validation
+        data_transforms = {
+            'train': transforms.Compose([
+                transforms.RandomResizedCrop(img_size),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            ]),
+            'val': transforms.Compose([
+                transforms.Resize(img_size),
+                transforms.CenterCrop(img_size),
+                transforms.ToTensor(),
+                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            ]),
+        }
+
+        print("Initializing Datasets and Dataloaders...")
+
+        # Create training and validation datasets
+        image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x])
+                             for x in ['train', 'val']}
+        # Create training and validation dataloaders
+        dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, 
+                            shuffle=True, num_workers=4) for x in ['train', 'val']}
+
+    else:
         raise NotImplementedError
 
-        # data_dir = "./data/hymenoptera_data"
-        # num_classes = 2
-        # batch_size = 64
-        # img_size = 224
-
-        # # Data augmentation and normalization for training
-        # # Just normalization for validation
-        # data_transforms = {
-        #     'train': transforms.Compose([
-        #         transforms.RandomResizedCrop(img_size),
-        #         transforms.RandomHorizontalFlip(),
-        #         transforms.ToTensor(),
-        #         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        #     ]),
-        #     'val': transforms.Compose([
-        #         transforms.Resize(img_size),
-        #         transforms.CenterCrop(img_size),
-        #         transforms.ToTensor(),
-        #         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        #     ]),
-        # }
-
-        # print("Initializing Datasets and Dataloaders...")
-
-        # # Create training and validation datasets
-        # image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x])
-        #                      for x in ['train', 'val']}
-        # # Create training and validation dataloaders
-        # dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, 
-        #                     shuffle=True, num_workers=4) for x in ['train', 'val']}
-
-    return dataloadersdict, batch_size, num_classes
+    return dataloaders_dict, batch_size, num_classes
 
 
 def plot_grid_attacks(original_images, perturbed_images, filename, savedir):

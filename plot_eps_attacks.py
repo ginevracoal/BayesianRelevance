@@ -46,7 +46,7 @@ def load_eps_attacks_df(bnn, method, load_dir):
     return pandas.read_csv(load_dir+"/"+str(bnn.name)+"/increasing_eps_"+str(method)+"_attack.csv")
 
 
-def lineplot_increasing_eps(df, model_type, bnn, method):
+def lineplot_increasing_eps(df, model_type, bnn, method, n_inputs):
     print(df.head())
     import seaborn as sns
     import matplotlib
@@ -76,15 +76,15 @@ def lineplot_increasing_eps(df, model_type, bnn, method):
         ax[0,0].set(xlabel='', ylabel='adversarial accuracy')
         ax[1,j].set(xlabel='attack strength', ylabel='')
 
-    filename = bnn.name+"/"+bnn.name+"_increasing_eps_"+str(method)+"_attack.png"
+    filename = bnn.name+"/"+bnn.name+"_inp="+str(n_inputs)+"_increasing_eps_"+str(method)+"_attack.png"
     os.makedirs(os.path.dirname(TESTS), exist_ok=True)
     plt.savefig(TESTS + filename)
 
 
 def main(args):
 
-    epsilon_list=[0.1, 0.15, 0.2, 0.25, 0.3]
-    n_samples_list=[1, 100, 500]
+    epsilon_list=[0.3, 0.4, 0.5, 0.6]
+    n_samples_list=[1, 10, 50]
 
     if args.device=="cuda":
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -104,16 +104,17 @@ def main(args):
                                  defence_samples_list=n_samples_list, 
                                  epsilon_list=epsilon_list)
 
-    lineplot_increasing_eps(df=df, model_type=args.model_type, bnn=bnn, method=args.attack_method)
+    lineplot_increasing_eps(df=df, model_type=args.model_type, bnn=bnn, 
+                            method=args.attack_method, n_inputs=args.n_inputs)
 
 
 
 if __name__ == "__main__":
     assert pyro.__version__.startswith('1.3.0')
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n_inputs", default=100, type=int, help="inputs to be attacked")
+    parser.add_argument("--n_inputs", default=500, type=int, help="inputs to be attacked")
     parser.add_argument("--model_idx", default=0, type=int, help="choose idx from saved_NNs")
-    parser.add_argument("--model_type", default="fullBNN", type=str, help="fullBNN, redBNN, laplBNN")
+    parser.add_argument("--model_type", default="redBNN", type=str, help="fullBNN, redBNN, laplBNN")
     parser.add_argument("--load_dir", default='DATA', type=str, help="DATA, TESTS")  
     parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
     parser.add_argument("--load_df", default=False, type=eval)

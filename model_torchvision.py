@@ -43,8 +43,8 @@ parser = ArgumentParser()
 parser.add_argument("--model", type=str, default="resnet")
 parser.add_argument("--dataset_name", type=str, default="animals10")
 parser.add_argument("--train", type=eval, default="True")
-parser.add_argument("--nn_epochs", type=int, default=10)
-parser.add_argument("--bnn_epochs", type=int, default=60)
+parser.add_argument("--nn_epochs", type=int, default=20)
+parser.add_argument("--bnn_epochs", type=int, default=20)
 parser.add_argument("--attack_method", type=str, default="fgsm")
 args = parser.parse_args()
 
@@ -319,6 +319,10 @@ class torchvisionBNN(torchvisionNN):
                                                 num_epochs, is_inception)
 
     def train_svi(self, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
+
+        print("\nLearning variational params:\n")
+        print(pyro.get_param_store().get_all_param_names())
+
         random.seed(0)
         pyro.set_rng_seed(0)
 
@@ -361,7 +365,7 @@ class torchvisionBNN(torchvisionNN):
                         #   but in testing we only consider the final output.
                         
                         loss += svi.step(x_data=inputs, y_data=labels)
-                        outputs = self.forward(inputs).mean(0)
+                        outputs = self.forward(inputs)
 
                         _, preds = torch.max(outputs, 1)
 
@@ -370,6 +374,9 @@ class torchvisionBNN(torchvisionNN):
 
                     running_loss += loss * inputs.size(0)
                     running_corrects += torch.sum(preds == labels.data)
+
+                if DEBUG:
+                    print(list(poutine.trace(self.guide).get_trace(inputs).nodes.keys()))
 
                 epoch_loss = running_loss / len(dataloaders[phase].dataset)
                 epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
@@ -458,7 +465,7 @@ class torchvisionBNN(torchvisionNN):
 
         return probs
 
-    def forward(self, inputs, n_samples=10, seeds=None, out_prob=False, *args, **kwargs):
+    def forward(self, inputs, n_samples=10, seeds=None, out_prob=False):
             
         if seeds:
             if len(seeds) != n_samples:
@@ -473,16 +480,8 @@ class torchvisionBNN(torchvisionNN):
             guide_trace = poutine.trace(self.guide).get_trace(inputs)   
             preds.append(guide_trace.nodes['_RETURN']['value'])
 
-        if DEBUG:
-            print("\nlearned variational params:\n")
-            print(pyro.get_param_store().get_all_param_names())
-            print(list(poutine.trace(self.guide).get_trace(inputs).nodes.keys()))
-            print("\n", pyro.get_param_store()["model.0.weight_loc"][0][:5])
-            print(guide_trace.nodes['module$$$model.0.weight']["fn"].loc[0][:5])
-            print("posterior sample: ", 
-              guide_trace.nodes['module$$$model.0.weight']['value'][5][0][0])
-        
         output_probs = torch.stack(preds)
+        # print(output_probs.mean(0).sum(1))
         return output_probs if out_prob else output_probs.mean(0)
 
     def save(self):
@@ -580,7 +579,7 @@ model_nn.initialize_model(model_name=args.model, num_classes=num_classes,
                                             feature_extract=True, use_pretrained=True)
 # Initialize the model for this run
 model_bnn.initialize_model(model_name=args.model, num_classes=num_classes, 
-                                                feature_extract=True, use_pretrained=True)
+                                            feature_extract=True, use_pretrained=True)
 
 # Print the model we just instantiated
 # print(model_nn.basenet, model_bnn.basenet)
@@ -595,30 +594,30 @@ model_bnn.to(device)
 nn_name = model_nn.name
 bnn_name = model_bnn.name
 
-params_to_update = set_params_updates(model_nn.basenet, feature_extract=True)
-set_params_updates(model_bnn.basenet, feature_extract=True)
-
-optimizer_nn = optim.Adam(params_to_update, lr=0.001)
+params_nn = set_params_updates(model_nn.basenet, feature_extract=True)
+optimizer_nn = optim.Adam(params_nn, lr=0.001)
 optimizer_bnn = pyro.optim.Adam({"lr":0.001})
 criterion = nn.CrossEntropyLoss()
 
 # Train and evaluate
 if args.train is True:
 
-    model_nn.train(dataloaders_dict, criterion, optimizer_nn, 
-                                 num_epochs=args.nn_epochs)
-    model_bnn.train_svi(dataloaders_dict, criterion, optimizer_bnn, 
-                                 num_epochs=args.bnn_epochs)
+    # model_nn.train(dataloaders_dict, criterion, optimizer_nn, num_epochs=args.nn_epochs)
+    model_bnn.train_svi(dataloaders_dict, criterion, optimizer_bnn, num_epochs=args.bnn_epochs)
 
-    model_nn.save()
+    # model_nn.save()
     model_bnn.save()
 
 else:
     model_nn.load()
     model_bnn.load()
 
-nn_attack = model_nn.attack(dataloader=dataloaders_dict["test"], method=args.attack_method, device=device)
-bnn_attack = model_bnn.attack(dataloader=dataloaders_dict["test"], method=args.attack_method, n_samples=10, device=device)
+nn_attack = model_nn.attack(dataloader=dataloaders_dict["test"], 
+    method=args.attack_method, device=device)
+bnn_attack = model_bnn.attack(dataloader=dataloaders_dict["test"], 
+    method=args.attack_method, n_samples=10, device=device)
 
-model_nn.evaluate_attack(dataloader=dataloaders_dict["test"], attack=nn_attack, device=device)
-model_bnn.evaluate_attack(dataloader=dataloaders_dict["test"], attack=bnn_attack, n_samples=10, device=device)
+model_nn.evaluate_attack(dataloader=dataloaders_dict["test"], 
+    attack=nn_attack, device=device)
+model_bnn.evaluate_attack(dataloader=dataloaders_dict["test"], 
+    attack=bnn_attack, n_samples=10, device=device)
