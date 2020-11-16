@@ -23,6 +23,7 @@ import pyro.optim as pyroopt
 from pyro.infer.mcmc import MCMC, HMC, NUTS
 from pyro.distributions import OneHotCategorical, Normal, Categorical, Uniform
 from pyro.nn import PyroModule
+from utils_torchvision import load_data 
 softplus = torch.nn.Softplus()
 
 DEBUG=False
@@ -33,16 +34,16 @@ print("Torchvision Version: ",torchvision.__version__)
 resnet18 = models.resnet18(pretrained=True)
 alexnet = models.alexnet(pretrained=True)
 vgg11_bn = models.vgg11_bn(pretrained=True)
-data_dir = "./data/hymenoptera_data"
-num_classes = 2
-batch_size = 64
 
 parser = ArgumentParser()
 parser.add_argument("--model", type=str, default="resnet")
+parser.add_argument("--dataset_name", type=str, default="animals10")
+parser.add_argument("--train", type=eval, default="True")
 parser.add_argument("--nn_epochs", type=int, default=10)
 parser.add_argument("--bnn_epochs", type=int, default=60)
 args = parser.parse_args()
 
+dataloaders_dict, batch_size, num_classes = load_data(dataset_name=args.dataset_name)
 
 class torchvisionNN():
 
@@ -132,6 +133,7 @@ class torchvisionNN():
         #   variables is model specific.
         model_ft = None
         input_size = 0
+        self.name = "finetuned_"+str(args.model)
 
         if model_name == "resnet":
             """ Resnet18
@@ -186,6 +188,7 @@ class torchvisionBNN(PyroModule):
 
         self.model_name = model_name
         self.basenet = model_ft
+        self.name = "finetuned_"+str(args.model)+"_svi"
         return model_ft, input_size
 
     def train_model(self, model, dataloaders, criterion, optimizer, num_epochs=25, 
@@ -393,30 +396,6 @@ model_bnn, input_size = BNN.initialize_model(model_name=args.model, num_classes=
 # Print the model we just instantiated
 # print(model_ft)
 
-# Data augmentation and normalization for training
-# Just normalization for validation
-data_transforms = {
-    'train': transforms.Compose([
-        transforms.RandomResizedCrop(input_size),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ]),
-    'val': transforms.Compose([
-        transforms.Resize(input_size),
-        transforms.CenterCrop(input_size),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ]),
-}
-
-print("Initializing Datasets and Dataloaders...")
-
-# Create training and validation datasets
-image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'val']}
-# Create training and validation dataloaders
-dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4) for x in ['train', 'val']}
-
 # Detect if we have a GPU available
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -427,16 +406,29 @@ model_bnn = model_bnn.to(device)
 params_to_update = set_params_updates(model_nn, feature_extract=True)
 set_params_updates(model_bnn, feature_extract=True)
 
-# Observe that all parameters are being optimized
 optimizer_nn = optim.Adam(params_to_update, lr=0.001)
 optimizer_bnn = pyro.optim.Adam({"lr":0.001})
-
-# Setup the loss fxn
 criterion = nn.CrossEntropyLoss()
 
 # Train and evaluate
-model_nn, hist = NN.train_model(model_nn, dataloaders_dict, criterion, optimizer_nn, 
-                             num_epochs=args.nn_epochs)
-model_bnn, hist = BNN.train_svi(model_bnn, dataloaders_dict, criterion, optimizer_bnn, 
-                             num_epochs=args.bnn_epochs)
 
+if args.train is True:
+
+    model_nn, hist = NN.train_model(model_nn, dataloaders_dict, criterion, optimizer_nn, 
+                                 num_epochs=args.nn_epochs)
+    model_bnn, hist = BNN.train_svi(model_bnn, dataloaders_dict, criterion, optimizer_bnn, 
+                                 num_epochs=args.bnn_epochs)
+
+    save_weights_nn(model=model_nn, path=model_nn.name+"/", filename=model_nn.name+"_weights.pt")
+    save_weights_bnn(model=model_bnn, path=model_bnn.name+"/", filename=model_bnn.name+"_svi_weights.pt")
+
+else:
+    load_weights_nn(model=model_nn, path=model_nn.name+"/", filename=model_nn.name+"_weights.pt")
+    load_weights_bnn(model=model_bnn, path=model_bnn.name+"/", filename=model_bnn.name+"_svi_weights.pt")
+
+
+x_attack = attack(net=model_nn, x_test=x_test, y_test=y_test,
+                  device=args.device, method=args.attack_method, filename=net.name)
+
+attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
+                    device=args.device)
