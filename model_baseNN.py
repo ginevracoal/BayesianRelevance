@@ -17,7 +17,11 @@ import torch.nn.functional as F
 DEBUG = False
 
 saved_baseNNs = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
-                            "architecture":"conv", "epochs":10, "lr":0.001}}
+                            "architecture":"conv", "epochs":10, "lr":0.001},
+                 "model_1":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
+                            "architecture":"conv", "epochs":15, "lr":0.001},
+                 "model_2":{"dataset":"cifar", "hidden_size":512, "activation":"leaky",
+                            "architecture":"conv", "epochs":20, "lr":0.01}}
 
 
 class baseNN(nn.Module):
@@ -74,16 +78,35 @@ class baseNN(nn.Module):
                 activ())
             self.out = nn.Linear(hidden_size, output_size)
 
-        elif architecture == "conv":
+        elif architecture == "fc4":
             self.model = nn.Sequential(
-                nn.Conv2d(in_channels, 16, kernel_size=5),
+                nn.Flatten(),
+                nn.Linear(input_size, hidden_size),
                 activ(),
-                nn.MaxPool2d(kernel_size=2),
-                nn.Conv2d(16, hidden_size, kernel_size=5),
+                nn.Linear(hidden_size, hidden_size),
                 activ(),
-                nn.MaxPool2d(kernel_size=2, stride=1),
-                nn.Flatten())
-            self.out = nn.Linear(int(hidden_size/(4*4))*input_size, output_size)
+                nn.Linear(hidden_size, hidden_size),
+                activ(),
+                nn.Linear(hidden_size, hidden_size),
+                activ())
+            self.out = nn.Linear(hidden_size, output_size)
+
+        elif architecture == "conv":
+
+            if self.dataset_name in ["mnist","fashion_mnist"]:
+                self.model = nn.Sequential(
+                    nn.Conv2d(in_channels, 16, kernel_size=5),
+                    activ(),
+                    nn.MaxPool2d(kernel_size=2),
+                    nn.Conv2d(16, hidden_size, kernel_size=5),
+                    activ(),
+                    nn.MaxPool2d(kernel_size=2, stride=1),
+                    nn.Flatten())
+                self.out = nn.Linear(int(hidden_size/(4*4))*input_size, output_size)
+
+            else:
+                raise NotImplementedError()
+
         else:
             raise NotImplementedError()
 

@@ -15,7 +15,7 @@ from savedir import *
 import pyro
 import matplotlib.pyplot as plt
 
-TEST=True
+TEST=False
 torch.manual_seed(0)
 
 
@@ -69,7 +69,7 @@ def load_data(dataset_name):
                 return len(self.subset)
 
         dataset = datasets.ImageFolder(data_dir, transform = transforms.Compose([
-                                                                transforms.Resize((224,224)), 
+                                                                transforms.Resize((250,250)), 
                                                                 transforms.ToTensor(),
                                                                 ]))
 
@@ -91,7 +91,7 @@ def load_data(dataset_name):
 
         train_set = TransformDataset(train_subset, transform = transforms.Compose([
                 transforms.ToPILImage(),
-                transforms.RandomCrop(224, padding=None),
+                transforms.RandomCrop(img_size, padding=None),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize(*stats, inplace=True),

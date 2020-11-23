@@ -25,6 +25,10 @@ DEBUG=False
 saved_redBNNs = {"model_0":{"dataset":"mnist", "inference":"svi", "hidden_size":512, 
                  			"baseNN_inputs":60000, "baseNN_epochs":10, "baseNN_lr":0.001,
                  			"BNN_inputs":60000, "BNN_epochs":5, "BNN_lr":0.01, 
+                 			"activation":"leaky", "architecture":"conv"},
+     			 "model_1":{"dataset":"fashion_mnist", "inference":"svi", "hidden_size":1024, 
+                 			"baseNN_inputs":60000, "baseNN_epochs":15, "baseNN_lr":0.001,
+                 			"BNN_inputs":60000, "BNN_epochs":5, "BNN_lr":0.01, 
                  			"activation":"leaky", "architecture":"conv"}}
 
 

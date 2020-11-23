@@ -1,33 +1,34 @@
-
-
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
+
+import os
+import time
+import copy
+import random
 import numpy as np
 import matplotlib.pyplot as plt
-import time
-import os
-import copy
 from argparse import ArgumentParser
-import random
 
 import torch
+import torchvision
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as nnf
-import torchvision
 import torchvision.models as models
 from torchvision import datasets, models, transforms
 
 import pyro
 from pyro import poutine
-from pyro.infer import SVI, Trace_ELBO, TraceMeanField_ELBO, Predictive
 import pyro.optim as pyroopt
-from pyro.infer.mcmc import MCMC, HMC, NUTS
-from pyro.distributions import OneHotCategorical, Normal, Categorical, Uniform
 from pyro.nn import PyroModule
+from pyro.infer.mcmc import MCMC, HMC, NUTS
+from pyro.contrib.autoguide import AutoLaplaceApproximation
+from pyro.infer import SVI, Trace_ELBO, TraceMeanField_ELBO, Predictive
+from pyro.distributions import OneHotCategorical, Normal, Categorical, Uniform
 softplus = torch.nn.Softplus()
 
 from utils_torchvision import * 
+from utils_data import load_from_pickle
 from adversarialAttacks import *
 
 DEBUG=False
@@ -43,8 +44,9 @@ parser = ArgumentParser()
 parser.add_argument("--model", type=str, default="resnet")
 parser.add_argument("--dataset_name", type=str, default="animals10")
 parser.add_argument("--train", type=eval, default="True")
+parser.add_argument("--attack", type=eval, default="True")
 parser.add_argument("--nn_epochs", type=int, default=20)
-parser.add_argument("--bnn_epochs", type=int, default=20)
+parser.add_argument("--bnn_epochs", type=int, default=30)
 parser.add_argument("--attack_method", type=str, default="fgsm")
 args = parser.parse_args()
 
@@ -52,8 +54,7 @@ dataloaders_dict, batch_size, num_classes = load_data(dataset_name=args.dataset_
 
 class torchvisionNN(PyroModule):
 
-    def train(self, dataloaders, criterion, optimizer, num_epochs=25, 
-                    is_inception=False):
+    def train(self, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
         since = time.time()
         model = self.basenet
 
@@ -136,14 +137,13 @@ class torchvisionNN(PyroModule):
 
     def initialize_model(self, model_name, num_classes, feature_extract, use_pretrained=True):
         # Initialize these variables which will be set in this if statement. Each of these
-        #   variables is model specific.
+        #   variables is model specific. 
         model_ft = None
         input_size = 0
         self.name = "finetuned_"+str(model_name)
 
         if model_name == "resnet":
-            """ Resnet18
-            """
+
             model_ft = models.resnet18(pretrained=use_pretrained)
             self.set_parameter_requires_grad(model_ft, feature_extract)
             num_ftrs = model_ft.fc.in_features
@@ -151,8 +151,7 @@ class torchvisionNN(PyroModule):
             input_size = 224
 
         elif model_name == "alexnet":
-            """ Alexnet
-            """
+
             model_ft = models.alexnet(pretrained=use_pretrained)
             self.set_parameter_requires_grad(model_ft, feature_extract)
             num_ftrs = model_ft.classifier[6].in_features
@@ -160,8 +159,7 @@ class torchvisionNN(PyroModule):
             input_size = 224
 
         elif model_name == "vgg":
-            """ VGG11_bn
-            """
+
             model_ft = models.vgg11_bn(pretrained=use_pretrained)
             self.set_parameter_requires_grad(model_ft, feature_extract)
             num_ftrs = model_ft.classifier[6].in_features
@@ -295,12 +293,17 @@ class torchvisionNN(PyroModule):
 
         return original_accuracy, adversarial_accuracy, softmax_rob
 
+    def load_attack(self, method):
+        path = TESTS+self.name+"/" 
+        filename = self.name+"_"+str(method)+"_attack.pkl"
+        return load_from_pickle(path+filename)
+
 
 class torchvisionBNN(torchvisionNN):
 
     def __init__(self):
         super(torchvisionBNN, self).__init__()
-        self.inference = "svi"
+        self.inference = "Laplace" # Laplace, SVI
 
     def initialize_model(self, model_name, num_classes, feature_extract, use_pretrained=True):
 
@@ -309,32 +312,29 @@ class torchvisionBNN(torchvisionNN):
 
         self.model_name = model_name
         self.basenet = model_ft
-        self.name = "finetuned_"+str(model_name)+"_svi"
+        self.input_size = input_size
+        self.name = "finetuned_"+str(model_name)+"_"+str(self.inference)
+        self.rednet = nn.Sequential(*list(model_ft.children())[:-1])
+
         return model_ft, input_size
 
-    def train_model(self, model, dataloaders, criterion, optimizer, num_epochs=25, 
-                    is_inception=False):
-
-        return self.torchvisionNN.train_model(model, dataloaders, criterion, optimizer, 
-                                                num_epochs, is_inception)
-
-    def train_svi(self, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
-
-        print("\nLearning variational params:\n")
-        print(pyro.get_param_store().get_all_param_names())
+    def train(self, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
 
         random.seed(0)
         pyro.set_rng_seed(0)
 
-        model = self.basenet
+        network = self.basenet
+
+        if self.inference=="Laplace":
+            self.delta_guide = AutoLaplaceApproximation(self.model)
 
         since = time.time()
         elbo = TraceMeanField_ELBO()
-        svi = SVI(self.model, self.guide, optimizer, loss=elbo)
+        svi = SVI(self.model, self.delta_guide, optimizer, loss=elbo)
 
         val_acc_history = []
 
-        best_model_wts = copy.deepcopy(model.state_dict())
+        best_network_wts = copy.deepcopy(network.state_dict())
         best_acc = 0.0
 
         for epoch in range(num_epochs):
@@ -346,9 +346,9 @@ class torchvisionBNN(torchvisionNN):
 
             for phase in ['train', 'val']:
                 if phase == 'train':
-                    model.train()  # Set model to training mode
+                    network.train()  # Set model to training mode
                 else:
-                    model.eval()  # Set model to evaluate mode
+                    network.eval()  # Set model to evaluate mode
 
                 running_loss = 0.0
                 running_corrects = 0
@@ -365,8 +365,8 @@ class torchvisionBNN(torchvisionNN):
                         #   but in testing we only consider the final output.
                         
                         loss += svi.step(x_data=inputs, y_data=labels)
-                        outputs = self.forward(inputs)
 
+                        outputs = self.forward(inputs)
                         _, preds = torch.max(outputs, 1)
 
                         if DEBUG:
@@ -386,13 +386,13 @@ class torchvisionBNN(torchvisionNN):
                 # deep copy the model
                 if phase == 'val' and epoch_acc > best_acc:
                     best_acc = epoch_acc
-                    best_model_wts = copy.deepcopy(model.state_dict())
+                    best_network_wts = copy.deepcopy(network.state_dict())
                 if phase == 'val':
                     val_acc_history.append(epoch_acc)
 
             print()
 
-        print("\nlearned variational params:\n")
+        print("\nLearned variational params:\n")
         print(pyro.get_param_store().get_all_param_names())
 
         time_elapsed = time.time() - since
@@ -400,9 +400,9 @@ class torchvisionBNN(torchvisionNN):
         print('Best val Acc: {:4f}'.format(best_acc))
 
         # load best model weights
-        model.load_state_dict(best_model_wts)
-        return model, val_acc_history
-   
+        network.load_state_dict(best_model_wts)
+        self.basenet = network
+        return network, val_acc_history
 
     def _last_layer(self, net):
 
@@ -425,64 +425,114 @@ class torchvisionBNN(torchvisionNN):
         net = self.basenet
         w, b, w_name, b_name = self._last_layer(net)
 
-        for weights_name in ["outw_mu","outw_sigma","outb_mu","outb_sigma"]:
-            pyro.get_param_store()[weights_name].requires_grad=True
+        if self.inference=="Laplace":
 
-        outw_prior = Normal(loc=torch.zeros_like(w), scale=torch.ones_like(w))
-        outb_prior = Normal(loc=torch.zeros_like(b), scale=torch.ones_like(b))
-        
-        priors = {w_name: outw_prior, b_name: outb_prior}
-        lifted_module = pyro.random_module("module", net, priors)()
+            outw_prior = Normal(loc=torch.zeros_like(w), scale=torch.ones_like(w))
+            outb_prior = Normal(loc=torch.zeros_like(b), scale=torch.ones_like(b))
 
-        with pyro.plate("data", len(x_data)):
-            logits = lifted_module(x_data)
-            lhat = nnf.log_softmax(logits, dim=-1)
-            cond_model = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
+            outw = pyro.sample(w_name, outw_prior)
+            outb = pyro.sample(b_name, outb_prior)
+
+            with pyro.plate("data", len(x_data)):
+                output = self.rednet(x_data).squeeze()
+                yhat = torch.matmul(output, outw.t()) + outb 
+                lhat = nnf.log_softmax(yhat, dim=-1)
+                cond_model = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
+                return cond_model
+
+        elif self.inference=="SVI":
+
+            for weights_name in ["outw_mu","outw_sigma","outb_mu","outb_sigma"]:
+                pyro.get_param_store()[weights_name].requires_grad=True
+
+            outw_prior = Normal(loc=torch.zeros_like(w), scale=torch.ones_like(w))
+            outb_prior = Normal(loc=torch.zeros_like(b), scale=torch.ones_like(b))
+
+            priors = {w_name: outw_prior, b_name: outb_prior}
+            lifted_module = pyro.random_module("module", net, priors)()
+
+            with pyro.plate("data", len(x_data)):
+                logits = lifted_module(x_data)
+                lhat = nnf.log_softmax(logits, dim=-1)
+                cond_model = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
+                return cond_model
+
+        else:
+            raise AssertionError("Wrong inference method")
+
 
     def guide(self, x_data, y_data=None):
 
-        net = self.basenet 
-        w, b, w_name, b_name = self._last_layer(net)
-
-        outw_mu = torch.randn_like(w)
-        outw_sigma = torch.randn_like(w)
-        outw_mu_param = pyro.param("outw_mu", outw_mu)
-        outw_sigma_param = softplus(pyro.param("outw_sigma", outw_sigma))
-        outw_prior = Normal(loc=outw_mu_param, scale=outw_sigma_param)
-
-        outb_mu = torch.randn_like(b)
-        outb_sigma = torch.randn_like(b)
-        outb_mu_param = pyro.param("outb_mu", outb_mu)
-        outb_sigma_param = softplus(pyro.param("outb_sigma", outb_sigma))
-        outb_prior = Normal(loc=outb_mu_param, scale=outb_sigma_param)
-
-        priors = {w_name: outw_prior, b_name: outb_prior}
-        lifted_module = pyro.random_module("module", net, priors)()
-
-        with pyro.plate("data", len(x_data)):
-            logits = lifted_module(x_data)
-            probs = nnf.softmax(logits, dim=-1)
-
-        return probs
-
-    def forward(self, inputs, n_samples=10, seeds=None, out_prob=False):
+        if self.inference=="Laplace":
             
-        if seeds:
-            if len(seeds) != n_samples:
-                raise ValueError("Number of seeds should match number of samples.")
+            return self.delta_guide.laplace_approximation(x_data, y_data)
+
+        elif self.inference=="SVI":
+
+            w, b, w_name, b_name = self._last_layer(self.basenet)
+
+            outw_mu = torch.randn_like(w)
+            outw_sigma = torch.randn_like(w)
+            outw_mu_param = pyro.param("outw_mu", outw_mu)
+            outw_sigma_param = softplus(pyro.param("outw_sigma", outw_sigma))
+            outw_prior = Normal(loc=outw_mu_param, scale=outw_sigma_param)
+
+            outb_mu = torch.randn_like(b)
+            outb_sigma = torch.randn_like(b)
+            outb_mu_param = pyro.param("outb_mu", outb_mu)
+            outb_sigma_param = softplus(pyro.param("outb_sigma", outb_sigma))
+            outb_prior = Normal(loc=outb_mu_param, scale=outb_sigma_param)
+
+            priors = {w_name: outw_prior, b_name: outb_prior}
+            lifted_module = pyro.random_module("module", self.basenet , priors)()
+
+            with pyro.plate("data", len(x_data)):
+                logits = lifted_module(x_data)
+                probs = nnf.softmax(logits, dim=-1)
+
+            return probs
+
+    # TODO solve out_prob issue
+    def forward(self, inputs, n_samples=10, seeds=None, out_prob=False):
+    
+        if self.inference=="Laplace":
+
+            _, _, w_name, b_name = self._last_layer(self.basenet)
+
+            predictive = Predictive(model=self.model, guide=self.delta_guide, 
+                                    num_samples=n_samples, return_sites=(w_name,b_name))
+            out_w = predictive(inputs, None)[w_name].mean(0)
+            out_b = predictive(inputs, None)[b_name].mean(0)
+
+
+            out_batch = self.rednet(inputs).squeeze()
+            yhat = torch.matmul(out_batch, out_w.t()) + out_b
+            preds = nnf.softmax(yhat, dim=-1)
+
+            return preds
+
+        elif self.inference=="SVI":
+
+            if seeds:
+                if len(seeds) != n_samples:
+                    raise ValueError("Number of seeds should match number of samples.")
+            else:
+                seeds = list(range(n_samples))
+
+            preds = []  
+
+            for seed in seeds:
+                pyro.set_rng_seed(seed)
+                guide_trace = poutine.trace(self.guide).get_trace(inputs)   
+                preds.append(guide_trace.nodes['_RETURN']['value'])
+
+            output_probs = torch.stack(preds)
+            # print(output_probs.mean(0).sum(1))
+
+            return output_probs if out_prob else output_probs.mean(0)
+
         else:
-            seeds = list(range(n_samples))
-
-        preds = []  
-
-        for seed in seeds:
-            pyro.set_rng_seed(seed)
-            guide_trace = poutine.trace(self.guide).get_trace(inputs)   
-            preds.append(guide_trace.nodes['_RETURN']['value'])
-
-        output_probs = torch.stack(preds)
-        # print(output_probs.mean(0).sum(1))
-        return output_probs if out_prob else output_probs.mean(0)
+            raise AssertionError("Wrong inference method")
 
     def save(self):
         path=TESTS+self.name+"/"
@@ -550,6 +600,11 @@ class torchvisionBNN(torchvisionNN):
         super(torchvisionBNN, self).evaluate_attack(dataloader=dataloader, attack=attack, 
                                                      device=device, n_samples=n_samples)
 
+    def load_attack(self, method, n_samples):
+        path = TESTS+self.name+"/" 
+        filename = self.name+"_"+str(method)+"_attackSamp="+str(n_samples)+"_attack.pkl"
+        return load_from_pickle(path+filename)
+
 
 def set_params_updates(model, feature_extract):
     # Gather the parameters to be optimized/updated in this run. If we are
@@ -602,22 +657,25 @@ criterion = nn.CrossEntropyLoss()
 # Train and evaluate
 if args.train is True:
 
-    # model_nn.train(dataloaders_dict, criterion, optimizer_nn, num_epochs=args.nn_epochs)
-    model_bnn.train_svi(dataloaders_dict, criterion, optimizer_bnn, num_epochs=args.bnn_epochs)
+    model_nn.train(dataloaders_dict, criterion, optimizer_nn, num_epochs=args.nn_epochs)
+    model_bnn.train(dataloaders_dict, criterion, optimizer_bnn, num_epochs=args.bnn_epochs)
 
-    # model_nn.save()
+    model_nn.save()
     model_bnn.save()
 
 else:
     model_nn.load()
     model_bnn.load()
 
-nn_attack = model_nn.attack(dataloader=dataloaders_dict["test"], 
-    method=args.attack_method, device=device)
-bnn_attack = model_bnn.attack(dataloader=dataloaders_dict["test"], 
-    method=args.attack_method, n_samples=10, device=device)
+if args.attack is True:
+    nn_attack = model_nn.attack(dataloader=dataloaders_dict["test"], 
+        method=args.attack_method, device=device)
+    bnn_attack = model_bnn.attack(dataloader=dataloaders_dict["test"], 
+        method=args.attack_method, n_samples=10, device=device)
 
-model_nn.evaluate_attack(dataloader=dataloaders_dict["test"], 
-    attack=nn_attack, device=device)
-model_bnn.evaluate_attack(dataloader=dataloaders_dict["test"], 
-    attack=bnn_attack, n_samples=10, device=device)
+else:
+    nn_attack = model_nn.load_attack(args.attack_method)
+    bnn_attack = model_bnn.load_attack(args.attack_method, n_samples=10)
+
+model_nn.evaluate_attack(dataloader=dataloaders_dict["test"], attack=nn_attack, device=device)
+model_bnn.evaluate_attack(dataloader=dataloaders_dict["test"], attack=bnn_attack, n_samples=10, device=device)
