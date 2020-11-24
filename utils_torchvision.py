@@ -14,10 +14,24 @@ from torchvision import datasets, transforms
 from savedir import *
 import pyro
 import matplotlib.pyplot as plt
-from fastai.vision.all import *
+# from fastai.vision.all import *
 
 torch.manual_seed(0)
+    
 
+class TransformDataset(Dataset):
+    def __init__(self, subset, transform=None):
+        self.subset = subset
+        self.transform = transform
+        
+    def __getitem__(self, index):
+        x, y = self.subset[index]
+        if self.transform:
+            x = self.transform(x)
+        return x, y
+    
+    def __len__(self):
+        return len(self.subset)
 
 def load_data(dataset_name, debug=False):
 
@@ -53,20 +67,6 @@ def load_data(dataset_name, debug=False):
         img_size = 224
         batch_size = 64
         num_classes = 10
-
-        class TransformDataset(Dataset):
-            def __init__(self, subset, transform=None):
-                self.subset = subset
-                self.transform = transform
-                
-            def __getitem__(self, index):
-                x, y = self.subset[index]
-                if self.transform:
-                    x = self.transform(x)
-                return x, y
-            
-            def __len__(self):
-                return len(self.subset)
 
         dataset = datasets.ImageFolder(data_dir, transform = transforms.Compose([
                                                                 transforms.Resize((250,250)), 
@@ -145,36 +145,27 @@ def load_data(dataset_name, debug=False):
         batch_size = 128
         num_classes = 10
 
-        fnames = get_image_files(data_dir)
-        splits = GrandparentSplitter(valid_name='test')(fnames)
-        lbl_dict = dict(
-            n01440764='tench',
-            n02102040='English springer',
-            n02979186='cassette player',
-            n03000684='chain saw',
-            n03028079='church',
-            n03394916='French horn',
-            n03417042='garbage truck',
-            n03425413='gas pump',
-            n03445777='golf ball',
-            n03888257='parachute'
-        )
-        dsets = Datasets(fnames, [[PILImage.create], [parent_label, lbl_dict.__getitem__, Categorize]], 
-                        splits=splits)
+        transform = transforms.Compose([transforms.Resize((250,250)), transforms.ToTensor()])
+        train_set = datasets.ImageFolder(data_dir+"/train", transform=transform)
+        test_set = datasets.ImageFolder(data_dir+"/test", transform=transform)
 
-        item_tfms = transforms.Compose([
-            transforms.ToTensor(), 
-            transforms.RandomResizedCrop(img_size)
-            ])
-        batch_tfms = Normalize.from_stats(*imagenet_stats)
-        # transforms.Compose([
-        #     # transforms.IntToFloatTensor(), 
-        #     transforms.Normalize.from_stats(*imagenet_stats)
-        #     ])        
+        stats = [0.,0.,0.],[1.,1.,1.]
 
-        dls = dsets.dataloaders(after_item=item_tfms, after_batch=batch_tfms, bs=batch_size, num_workers=8)
+        train_set = TransformDataset(train_set, transform = transforms.Compose([
+                transforms.ToPILImage(),
+                transforms.RandomCrop(img_size, padding=None),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(*stats, inplace=True),
+            ]))
 
-        dataloaders_dict = {'train': dls[0], 'test': dls[1]}
+        test_set = TransformDataset(test_set, transform = transforms.Normalize(*stats, inplace=True))
+
+        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True, num_workers=4)
+        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=True, num_workers=4)
+
+        dataloaders_dict = {'train': train_dataloader, 'test':test_dataloader}
+
 
     elif dataset_name=="imagewoof":
 
@@ -183,25 +174,26 @@ def load_data(dataset_name, debug=False):
         batch_size = 128
         num_classes = 10
 
-        fnames = get_image_files(data_dir)
-        splits = GrandparentSplitter(valid_name='test')(fnames)
-        lbl_dict = dict(
-        )
-        dsets = Datasets(fnames, [[PILImage.create], [parent_label, lbl_dict.__getitem__, Categorize]], 
-                        splits=splits)
+        transform = transforms.Compose([transforms.Resize((250,250)), transforms.ToTensor()])
+        train_set = datasets.ImageFolder(data_dir+"/train", transform=transform)
+        test_set = datasets.ImageFolder(data_dir+"/test", transform=transform)
 
-        item_tfms = transforms.Compose([
-            transforms.ToTensor(), 
-            transforms.RandomResizedCrop(img_size, min_scale=0.35)
-            ])
-        batch_tfms = transforms.Compose([
-            transforms.IntToFloatTensor(), 
-            transforms.Normalize.from_stats(*imagenet_stats)
-            ])
+        stats = [0.,0.,0.],[1.,1.,1.]
 
-        dls = dsets.dataloaders(after_item=item_tfms, after_batch=batch_tfms, bs=batch_size, num_workers=8)
+        train_set = TransformDataset(train_set, transform = transforms.Compose([
+                transforms.ToPILImage(),
+                transforms.RandomCrop(img_size, padding=None),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(*stats, inplace=True),
+            ]))
 
-        dataloaders_dict = {'train': dls[0], 'test': dls[1]}
+        test_set = TransformDataset(test_set, transform = transforms.Normalize(*stats, inplace=True))
+
+        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True, num_workers=4)
+        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=True, num_workers=4)
+
+        dataloaders_dict = {'train': train_dataloader, 'test':test_dataloader}
 
     else:
         raise NotImplementedError
