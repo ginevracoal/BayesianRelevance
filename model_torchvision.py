@@ -23,8 +23,8 @@ import pyro.optim as pyroopt
 from pyro.nn import PyroModule
 from pyro.infer.mcmc import MCMC, HMC, NUTS
 from pyro.contrib.autoguide import AutoLaplaceApproximation
-from pyro.infer import SVI, Trace_ELBO, TraceMeanField_ELBO, Predictive
-from pyro.distributions import OneHotCategorical, Normal, Categorical, Uniform
+from pyro.infer import svi, Trace_ELBO, TraceMeanField_ELBO, Predictive
+from pyro.distributions import OneHotCategorical, Normal, Categorical, Uniform, Delta
 softplus = torch.nn.Softplus()
 
 from utils_torchvision import * 
@@ -33,6 +33,20 @@ from adversarialAttacks import *
 
 DEBUG=False
 
+parser = ArgumentParser()
+parser.add_argument("--model_name", type=str, default="resnet", help="resnet, alexnet, vgg")
+parser.add_argument("--dataset_name", type=str, default="animals10", 
+                    help="imagenette, imagewoof, animals10, hymenoptera")
+parser.add_argument("--inference", type=str, default="laplace", help="laplace, svi")
+parser.add_argument("--train", type=eval, default="True")
+parser.add_argument("--attack", type=eval, default="True")
+parser.add_argument("--debug", type=eval, default="False")
+parser.add_argument("--nn_iters", type=int, default=5)
+parser.add_argument("--bnn_iters", type=int, default=16)
+parser.add_argument("--attack_method", type=str, default="fgsm")
+parser.add_argument("--device", type=str, default="cuda")
+args = parser.parse_args()
+
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
 
@@ -40,21 +54,18 @@ resnet18 = models.resnet18(pretrained=True)
 alexnet = models.alexnet(pretrained=True)
 vgg11_bn = models.vgg11_bn(pretrained=True)
 
-parser = ArgumentParser()
-parser.add_argument("--model", type=str, default="resnet")
-parser.add_argument("--dataset_name", type=str, default="animals10")
-parser.add_argument("--train", type=eval, default="True")
-parser.add_argument("--attack", type=eval, default="True")
-parser.add_argument("--nn_epochs", type=int, default=20)
-parser.add_argument("--bnn_epochs", type=int, default=30)
-parser.add_argument("--attack_method", type=str, default="fgsm")
-args = parser.parse_args()
-
-dataloaders_dict, batch_size, num_classes = load_data(dataset_name=args.dataset_name)
+dataloaders_dict, batch_size, num_classes = load_data(dataset_name=args.dataset_name, debug=args.debug)
 
 class torchvisionNN(PyroModule):
 
-    def train(self, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
+    def __init__(self, model_name, dataset_name):
+        super(torchvisionNN, self).__init__()
+
+        self.model_name = model_name
+        self.dataset_name = dataset_name
+        self.name = "finetuned_"+str(model_name)+"_"+str(dataset_name)
+
+    def train(self, dataloaders, criterion, optimizer, num_iters=25, is_inception=False):
         since = time.time()
         model = self.basenet
 
@@ -63,12 +74,12 @@ class torchvisionNN(PyroModule):
         best_model_wts = copy.deepcopy(model.state_dict())
         best_acc = 0.0
 
-        for epoch in range(num_epochs):
-            print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+        for epoch in range(num_iters):
+            print('Epoch {}/{}'.format(epoch, num_iters - 1))
             print('-' * 10)
 
             # Each epoch has a training and validation phase
-            for phase in ['train', 'val']:
+            for phase in ['train']:#, 'val']:
                 if phase == 'train':
                     model.train()  # Set model to training mode
                 else:
@@ -140,7 +151,7 @@ class torchvisionNN(PyroModule):
         #   variables is model specific. 
         model_ft = None
         input_size = 0
-        self.name = "finetuned_"+str(model_name)
+        self.num_classes=num_classes
 
         if model_name == "resnet":
 
@@ -183,20 +194,20 @@ class torchvisionNN(PyroModule):
     def to(self, device):
         self.basenet = self.basenet.to(device)
 
-    def save(self):
+    def save(self, num_iters):
    
         path=TESTS+self.name+"/"
-        filename=self.name+"_weights.pt"
+        filename=self.name+"_iters="+str(num_iters)+"_weights.pt"
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
         print("\nSaving: ", path + filename)
         # print(f"\nlearned params = {self.basenets.state_dict().keys()}")
         torch.save(self.basenet.state_dict(), path + filename)
 
-    def load(self):
+    def load(self, num_iters):
 
         path=TESTS+self.name+"/"
-        filename=self.name+"_weights.pt"
+        filename=self.name+"_iters="+str(num_iters)+"_weights.pt"
         print("\nLoading ", path + filename)
 
         self.basenet.load_state_dict(torch.load(path + filename))
@@ -301,50 +312,51 @@ class torchvisionNN(PyroModule):
 
 class torchvisionBNN(torchvisionNN):
 
-    def __init__(self):
-        super(torchvisionBNN, self).__init__()
-        self.inference = "Laplace" # Laplace, SVI
+    def __init__(self, model_name, dataset_name, inference):
+        super(torchvisionBNN, self).__init__(model_name, dataset_name)
+
+        self.inference = inference
+        self.name = "finetuned_"+str(model_name)+"_"+str(inference)+"_"+str(dataset_name)
 
     def initialize_model(self, model_name, num_classes, feature_extract, use_pretrained=True):
+
 
         model_ft, input_size = super(torchvisionBNN, self).initialize_model(model_name, num_classes,
                                                      feature_extract, use_pretrained)
 
-        self.model_name = model_name
-        self.basenet = model_ft
-        self.input_size = input_size
-        self.name = "finetuned_"+str(model_name)+"_"+str(self.inference)
         self.rednet = nn.Sequential(*list(model_ft.children())[:-1])
-
         return model_ft, input_size
 
-    def train(self, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
+    def train(self, dataloaders, criterion, optimizer, num_iters=25, is_inception=False):
 
         random.seed(0)
         pyro.set_rng_seed(0)
 
         network = self.basenet
 
-        if self.inference=="Laplace":
-            self.delta_guide = AutoLaplaceApproximation(self.model)
+        if self.inference=="svi":
+            guide = self.guide
+
+        if self.inference=="laplace":
+            guide = AutoLaplaceApproximation(self.model)
 
         since = time.time()
         elbo = TraceMeanField_ELBO()
-        svi = SVI(self.model, self.delta_guide, optimizer, loss=elbo)
+        svi = SVI(self.model, guide, optimizer, loss=elbo)
 
         val_acc_history = []
 
         best_network_wts = copy.deepcopy(network.state_dict())
         best_acc = 0.0
 
-        for epoch in range(num_epochs):
+        for epoch in range(num_iters):
 
             loss=0.0
 
-            print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+            print('Epoch {}/{}'.format(epoch, num_iters - 1))
             print('-' * 10)
 
-            for phase in ['train', 'val']:
+            for phase in ['train']:#, 'val']:
                 if phase == 'train':
                     network.train()  # Set model to training mode
                 else:
@@ -366,6 +378,9 @@ class torchvisionBNN(torchvisionNN):
                         
                         loss += svi.step(x_data=inputs, y_data=labels)
 
+                        if self.inference=="laplace":
+                            self.delta_guide = pyro.sample("delta_posterior", guide.get_posterior())
+
                         outputs = self.forward(inputs)
                         _, preds = torch.max(outputs, 1)
 
@@ -384,11 +399,11 @@ class torchvisionBNN(torchvisionNN):
                 print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
 
                 # deep copy the model
-                if phase == 'val' and epoch_acc > best_acc:
-                    best_acc = epoch_acc
-                    best_network_wts = copy.deepcopy(network.state_dict())
-                if phase == 'val':
-                    val_acc_history.append(epoch_acc)
+                # if phase == 'val' and epoch_acc > best_acc:
+                #     best_acc = epoch_acc
+                #     best_network_wts = copy.deepcopy(network.state_dict())
+                # if phase == 'val':
+                #     val_acc_history.append(epoch_acc)
 
             print()
 
@@ -397,11 +412,11 @@ class torchvisionBNN(torchvisionNN):
 
         time_elapsed = time.time() - since
         print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-        print('Best val Acc: {:4f}'.format(best_acc))
+        # print('Best val Acc: {:4f}'.format(best_acc))
 
         # load best model weights
-        network.load_state_dict(best_model_wts)
-        self.basenet = network
+        # network.load_state_dict(best_network_wts)
+        # self.basenet = network
         return network, val_acc_history
 
     def _last_layer(self, net):
@@ -425,7 +440,7 @@ class torchvisionBNN(torchvisionNN):
         net = self.basenet
         w, b, w_name, b_name = self._last_layer(net)
 
-        if self.inference=="Laplace":
+        if self.inference=="laplace":
 
             outw_prior = Normal(loc=torch.zeros_like(w), scale=torch.ones_like(w))
             outb_prior = Normal(loc=torch.zeros_like(b), scale=torch.ones_like(b))
@@ -433,14 +448,14 @@ class torchvisionBNN(torchvisionNN):
             outw = pyro.sample(w_name, outw_prior)
             outb = pyro.sample(b_name, outb_prior)
 
-            with pyro.plate("data", len(x_data)):
-                output = self.rednet(x_data).squeeze()
-                yhat = torch.matmul(output, outw.t()) + outb 
-                lhat = nnf.log_softmax(yhat, dim=-1)
-                cond_model = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
-                return cond_model
+            # with pyro.plate("data", len(x_data)):
+            output = self.rednet(x_data).squeeze()
+            yhat = torch.matmul(output, outw.t()) + outb 
+            lhat = nnf.log_softmax(yhat, dim=-1)
+            cond_model = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
+            return cond_model
 
-        elif self.inference=="SVI":
+        elif self.inference=="svi":
 
             for weights_name in ["outw_mu","outw_sigma","outb_mu","outb_sigma"]:
                 pyro.get_param_store()[weights_name].requires_grad=True
@@ -462,12 +477,8 @@ class torchvisionBNN(torchvisionNN):
 
 
     def guide(self, x_data, y_data=None):
-
-        if self.inference=="Laplace":
-            
-            return self.delta_guide.laplace_approximation(x_data, y_data)
-
-        elif self.inference=="SVI":
+ 
+        if self.inference=="svi":
 
             w, b, w_name, b_name = self._last_layer(self.basenet)
 
@@ -492,26 +503,23 @@ class torchvisionBNN(torchvisionNN):
 
             return probs
 
-    # TODO solve out_prob issue
-    def forward(self, inputs, n_samples=10, seeds=None, out_prob=False):
+    def forward(self, inputs, n_samples=5, seeds=None, out_prob=False):
     
-        if self.inference=="Laplace":
+        if self.inference=="laplace":
 
-            _, _, w_name, b_name = self._last_layer(self.basenet)
+            out_batch = self.rednet(inputs)
+            layer_size = out_batch.shape[1]
 
-            predictive = Predictive(model=self.model, guide=self.delta_guide, 
-                                    num_samples=n_samples, return_sites=(w_name,b_name))
-            out_w = predictive(inputs, None)[w_name].mean(0)
-            out_b = predictive(inputs, None)[b_name].mean(0)
+            posterior = self.delta_guide
 
+            out_w = posterior[:self.num_classes*layer_size]
+            out_w = out_w.reshape(self.num_classes, layer_size)
+            out_b = posterior[self.num_classes*layer_size:]
 
-            out_batch = self.rednet(inputs).squeeze()
-            yhat = torch.matmul(out_batch, out_w.t()) + out_b
-            preds = nnf.softmax(yhat, dim=-1)
+            output_probs = torch.matmul(out_batch.squeeze(), out_w.t()) + out_b
+            output_probs = output_probs.unsqueeze(0)
 
-            return preds
-
-        elif self.inference=="SVI":
+        elif self.inference=="svi":
 
             if seeds:
                 if len(seeds) != n_samples:
@@ -527,38 +535,56 @@ class torchvisionBNN(torchvisionNN):
                 preds.append(guide_trace.nodes['_RETURN']['value'])
 
             output_probs = torch.stack(preds)
-            # print(output_probs.mean(0).sum(1))
 
-            return output_probs if out_prob else output_probs.mean(0)
+            # print(output_probs.mean(0).sum(1))
 
         else:
             raise AssertionError("Wrong inference method")
+        
+        return output_probs if out_prob else output_probs.mean(0)
 
-    def save(self):
+    def save(self, num_iters):
         path=TESTS+self.name+"/"
-        filename=self.name+"_weights.pt"
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        
+        if self.inference=="svi":
 
-        param_store = pyro.get_param_store()
+            filename=self.name+"_iters="+str(num_iters)+"_"+str(num_iters)+"_weights.pt"
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+
+            param_store = pyro.get_param_store()
+            print(f"\nlearned params = {param_store.get_all_param_names()}")
+            param_store.save(path + filename)
+
+        elif self.inference=="laplace":
+
+            filename=self.name+"_iters="+str(num_iters)+"_delta_guide.pkl"
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+
+            save_to_pickle(self.delta_guide, path, filename)
+
         print("\nSaving: ", path + filename)
-        print(f"\nlearned params = {param_store.get_all_param_names()}")
-        param_store.save(path + filename)
 
-    def load(self):
-  
+    def load(self, num_iters):
         path=TESTS+self.name+"/"
-        filename=self.name+"_weights.pt"
-        print("\nLoading ", path + filename)
 
-        param_store = pyro.get_param_store()
-        param_store.load(path + filename)
-        for key, value in param_store.items():
-            param_store.replace_param(key, value, value)
+        if self.inference=="svi":
+            filename=self.name+"_iters="+str(num_iters)+"_weights.pt"
+            param_store = pyro.get_param_store()
+            param_store.load(path + filename)
+            for key, value in param_store.items():
+                param_store.replace_param(key, value, value)
+
+        elif self.inference=="laplace":
+
+            filename=self.name+"_iters="+str(num_iters)+"_delta_guide.pkl"
+            self.delta_guide = load_from_pickle(path+filename)
+
+        print("\nLoading: ", path + filename)
 
     def attack(self, dataloader, method, device, hyperparams=None, n_samples=10):
 
         net = self
-        print(f"\n\nProducing {method} attacks with {n_samples} attack samples")
+        print(f"\n\nProducing {method} attacks")
         adversarial_attack = []
         original_images_list = []
         
@@ -581,7 +607,12 @@ class torchvisionBNN(torchvisionNN):
         adversarial_attack = torch.cat(adversarial_attack)
 
         path = TESTS+self.name+"/" 
-        filename = self.name+"_"+str(method)+"_attackSamp="+str(n_samples)+"_attack.pkl"
+
+        if n_samples:
+            filename = self.name+"_"+str(method)+"_attackSamp="+str(n_samples)+"_attack.pkl"
+        else:
+            filename = self.name+"_"+str(method)+"_attack.pkl"
+
         save_to_pickle(data=adversarial_attack, path=path, filename=filename)
 
         idxs = np.random.choice(len(original_images_list), 10, replace=False)
@@ -602,7 +633,12 @@ class torchvisionBNN(torchvisionNN):
 
     def load_attack(self, method, n_samples):
         path = TESTS+self.name+"/" 
-        filename = self.name+"_"+str(method)+"_attackSamp="+str(n_samples)+"_attack.pkl"
+
+        if n_samples:
+            filename = self.name+"_"+str(method)+"_attackSamp="+str(n_samples)+"_attack.pkl"
+        else:
+            filename = self.name+"_"+str(method)+"_attack.pkl"
+
         return load_from_pickle(path+filename)
 
 
@@ -627,20 +663,18 @@ def set_params_updates(model, feature_extract):
 
     return params_to_update
 
-model_nn = torchvisionNN()
-model_bnn = torchvisionBNN()
+model_nn = torchvisionNN(model_name=args.model_name, dataset_name=args.dataset_name)
+model_bnn = torchvisionBNN(model_name=args.model_name, dataset_name=args.dataset_name, inference=args.inference)
 
-model_nn.initialize_model(model_name=args.model, num_classes=num_classes, 
+model_nn.initialize_model(model_name=args.model_name, num_classes=num_classes, 
                                             feature_extract=True, use_pretrained=True)
 # Initialize the model for this run
-model_bnn.initialize_model(model_name=args.model, num_classes=num_classes, 
+model_bnn.initialize_model(model_name=args.model_name, num_classes=num_classes, 
                                             feature_extract=True, use_pretrained=True)
 
-# Print the model we just instantiated
 # print(model_nn.basenet, model_bnn.basenet)
 
-# Detect if we have a GPU available
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device(args.device)
 
 # Send the model to GPU
 model_nn.to(device)
@@ -655,27 +689,39 @@ optimizer_bnn = pyro.optim.Adam({"lr":0.001})
 criterion = nn.CrossEntropyLoss()
 
 # Train and evaluate
-if args.train is True:
+nn_iters = 2 if args.debug else args.nn_iters
+bnn_iters = 2 if args.debug else args.bnn_iters
 
-    model_nn.train(dataloaders_dict, criterion, optimizer_nn, num_epochs=args.nn_epochs)
-    model_bnn.train(dataloaders_dict, criterion, optimizer_bnn, num_epochs=args.bnn_epochs)
+if args.train:
 
-    model_nn.save()
-    model_bnn.save()
+    # model_nn.train(dataloaders_dict, criterion, optimizer_nn, num_iters=nn_iters)
+    # model_nn.save(nn_iters)
+
+    model_bnn.train(dataloaders_dict, criterion, optimizer_bnn, num_iters=bnn_iters)
+    model_bnn.save(bnn_iters)
 
 else:
-    model_nn.load()
-    model_bnn.load()
+    model_nn.load(nn_iters)
+    model_bnn.load(bnn_iters)
 
-if args.attack is True:
-    nn_attack = model_nn.attack(dataloader=dataloaders_dict["test"], 
+n_samples = None if args.inference=="laplace" else 10
+
+if args.attack:
+
+    subset = 100 if args.debug else 1000
+
+    test_set = dataloaders_dict["test"].dataset
+    test_set = torch.utils.data.Subset(test_set, np.random.choice(len(test_set), subset, replace=False))
+    testloader = DataLoader(dataset=test_set, batch_size=1, shuffle=True)
+    
+    nn_attack = model_nn.attack(dataloader=testloader, 
         method=args.attack_method, device=device)
-    bnn_attack = model_bnn.attack(dataloader=dataloaders_dict["test"], 
-        method=args.attack_method, n_samples=10, device=device)
+    bnn_attack = model_bnn.attack(dataloader=testloader, 
+        method=args.attack_method, n_samples=n_samples, device=device)
 
 else:
     nn_attack = model_nn.load_attack(args.attack_method)
-    bnn_attack = model_bnn.load_attack(args.attack_method, n_samples=10)
+    bnn_attack = model_bnn.load_attack(args.attack_method, n_samples=n_samples)
 
 model_nn.evaluate_attack(dataloader=dataloaders_dict["test"], attack=nn_attack, device=device)
-model_bnn.evaluate_attack(dataloader=dataloaders_dict["test"], attack=bnn_attack, n_samples=10, device=device)
+model_bnn.evaluate_attack(dataloader=dataloaders_dict["test"], attack=bnn_attack, n_samples=n_samples, device=device)

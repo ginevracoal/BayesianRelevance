@@ -14,12 +14,12 @@ from torchvision import datasets, transforms
 from savedir import *
 import pyro
 import matplotlib.pyplot as plt
+from fastai.vision.all import *
 
-TEST=False
 torch.manual_seed(0)
 
 
-def load_data(dataset_name):
+def load_data(dataset_name, debug=False):
 
     if dataset_name=="animals10":
         data_dir = "./data/animals10/"
@@ -51,7 +51,7 @@ def load_data(dataset_name):
         }
 
         img_size = 224
-        batch_size = 128
+        batch_size = 64
         num_classes = 10
 
         class TransformDataset(Dataset):
@@ -73,11 +73,6 @@ def load_data(dataset_name):
                                                                 transforms.ToTensor(),
                                                                 ]))
 
-        print("\ndataset lenght =", len(dataset))
-        print("\nimg_size =",dataset[0][0].shape," img_label =", dataset[0][1])
-
-        if TEST:
-            dataset = torch.utils.data.Subset(dataset, np.random.choice(len(dataset), 1000, replace=False))
 
         val_size = int(0.1 * len(dataset))
         test_size = int(0.1 * len(dataset))
@@ -114,7 +109,7 @@ def load_data(dataset_name):
 
         data_dir = "./data/hymenoptera_data"
         num_classes = 2
-        batch_size = 64
+        batch_size = 128
         img_size = 224
 
         # Data augmentation and normalization for training
@@ -126,7 +121,7 @@ def load_data(dataset_name):
                 transforms.ToTensor(),
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             ]),
-            'val': transforms.Compose([
+            'test': transforms.Compose([
                 transforms.Resize(img_size),
                 transforms.CenterCrop(img_size),
                 transforms.ToTensor(),
@@ -138,13 +133,92 @@ def load_data(dataset_name):
 
         # Create training and validation datasets
         image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x])
-                             for x in ['train', 'val']}
+                             for x in ['train', 'test']}
         # Create training and validation dataloaders
         dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, 
-                            shuffle=True, num_workers=4) for x in ['train', 'val']}
+                            shuffle=True, num_workers=4) for x in ['train', 'test']}
+
+    elif dataset_name=="imagenette":
+
+        data_dir = "./data/imagenette2-320"
+        img_size = 224
+        batch_size = 128
+        num_classes = 10
+
+        fnames = get_image_files(data_dir)
+        splits = GrandparentSplitter(valid_name='test')(fnames)
+        lbl_dict = dict(
+            n01440764='tench',
+            n02102040='English springer',
+            n02979186='cassette player',
+            n03000684='chain saw',
+            n03028079='church',
+            n03394916='French horn',
+            n03417042='garbage truck',
+            n03425413='gas pump',
+            n03445777='golf ball',
+            n03888257='parachute'
+        )
+        dsets = Datasets(fnames, [[PILImage.create], [parent_label, lbl_dict.__getitem__, Categorize]], 
+                        splits=splits)
+
+        item_tfms = transforms.Compose([
+            transforms.ToTensor(), 
+            transforms.RandomResizedCrop(img_size)
+            ])
+        batch_tfms = Normalize.from_stats(*imagenet_stats)
+        # transforms.Compose([
+        #     # transforms.IntToFloatTensor(), 
+        #     transforms.Normalize.from_stats(*imagenet_stats)
+        #     ])        
+
+        dls = dsets.dataloaders(after_item=item_tfms, after_batch=batch_tfms, bs=batch_size, num_workers=8)
+
+        dataloaders_dict = {'train': dls[0], 'test': dls[1]}
+
+    elif dataset_name=="imagewoof":
+
+        data_dir = "./data/imagewoof2-320"
+        img_size = 224
+        batch_size = 128
+        num_classes = 10
+
+        fnames = get_image_files(data_dir)
+        splits = GrandparentSplitter(valid_name='test')(fnames)
+        lbl_dict = dict(
+        )
+        dsets = Datasets(fnames, [[PILImage.create], [parent_label, lbl_dict.__getitem__, Categorize]], 
+                        splits=splits)
+
+        item_tfms = transforms.Compose([
+            transforms.ToTensor(), 
+            transforms.RandomResizedCrop(img_size, min_scale=0.35)
+            ])
+        batch_tfms = transforms.Compose([
+            transforms.IntToFloatTensor(), 
+            transforms.Normalize.from_stats(*imagenet_stats)
+            ])
+
+        dls = dsets.dataloaders(after_item=item_tfms, after_batch=batch_tfms, bs=batch_size, num_workers=8)
+
+        dataloaders_dict = {'train': dls[0], 'test': dls[1]}
 
     else:
         raise NotImplementedError
+
+    print("\ntrain dataset lenght =", len(dataloaders_dict['train'].dataset), end="\t")
+    print("test dataset lenght =", len(dataloaders_dict['test'].dataset), end="\t")
+    print("img_size =", dataloaders_dict['train'].dataset[0][0].shape, end="\n")
+
+    if debug:
+
+        train_set = dataloaders_dict["train"].dataset
+        train_set = torch.utils.data.Subset(train_set, np.random.choice(len(train_set), 100, replace=False))
+        trainloader = DataLoader(dataset=train_set, batch_size=100, shuffle=True)
+        test_set = dataloaders_dict["test"].dataset
+        test_set = torch.utils.data.Subset(test_set, np.random.choice(len(test_set), 100, replace=False))
+        testloader = DataLoader(dataset=test_set, batch_size=100, shuffle=True)
+        dataloaders_dict = {'train': trainloader, 'test': testloader}
 
     return dataloaders_dict, batch_size, num_classes
 
