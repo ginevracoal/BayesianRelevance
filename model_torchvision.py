@@ -41,7 +41,7 @@ parser.add_argument("--inference", type=str, default="laplace", help="laplace, s
 parser.add_argument("--train", type=eval, default="True")
 parser.add_argument("--attack", type=eval, default="True")
 parser.add_argument("--debug", type=eval, default="False")
-parser.add_argument("--nn_iters", type=int, default=5)
+parser.add_argument("--nn_iters", type=int, default=3)
 parser.add_argument("--bnn_iters", type=int, default=16)
 parser.add_argument("--attack_method", type=str, default="fgsm")
 parser.add_argument("--device", type=str, default="cuda")
@@ -65,9 +65,10 @@ class torchvisionNN(PyroModule):
         self.dataset_name = dataset_name
         self.name = "finetuned_"+str(model_name)+"_"+str(dataset_name)
 
-    def train(self, dataloaders, criterion, optimizer, num_iters=25, is_inception=False):
+    def train(self, dataloaders, criterion, optimizer, device, num_iters=25, is_inception=False):
         since = time.time()
         model = self.basenet
+        self.to(device)
 
         val_acc_history = []
 
@@ -79,7 +80,7 @@ class torchvisionNN(PyroModule):
             print('-' * 10)
 
             # Each epoch has a training and validation phase
-            for phase in ['train']:#, 'val']:
+            for phase in ['train', 'val']:
                 if phase == 'train':
                     model.train()  # Set model to training mode
                 else:
@@ -143,8 +144,8 @@ class torchvisionNN(PyroModule):
         print('Best val Acc: {:4f}'.format(best_acc))
 
         # load best model weights
-        model.load_state_dict(best_model_wts)
-        return model, val_acc_history
+        self.basenet.load_state_dict(best_model_wts)
+        return self.basenet, val_acc_history
 
     def initialize_model(self, model_name, num_classes, feature_extract, use_pretrained=True):
         # Initialize these variables which will be set in this if statement. Each of these
@@ -204,13 +205,14 @@ class torchvisionNN(PyroModule):
         # print(f"\nlearned params = {self.basenets.state_dict().keys()}")
         torch.save(self.basenet.state_dict(), path + filename)
 
-    def load(self, num_iters):
+    def load(self, num_iters, device):
 
         path=TESTS+self.name+"/"
         filename=self.name+"_iters="+str(num_iters)+"_weights.pt"
         print("\nLoading ", path + filename)
 
         self.basenet.load_state_dict(torch.load(path + filename))
+        self.to(device)
 
     def forward(self, inputs, *args, **kwargs):
         return self.basenet.forward(inputs)
@@ -220,7 +222,7 @@ class torchvisionNN(PyroModule):
 
     def attack(self, dataloader, method, device, hyperparams=None):
 
-        net = self
+        self.to(device)
         adversarial_attack = []
         original_images_list = []
         print(f"\n\nProducing {method} attacks", end="\t")
@@ -233,10 +235,10 @@ class torchvisionNN(PyroModule):
                 label = labels[idx].argmax(-1).unsqueeze(0)
 
                 if method == "fgsm":
-                    perturbed_image = fgsm_attack(net=net, image=image, label=label, 
+                    perturbed_image = fgsm_attack(net=self, image=image, label=label, 
                                                   hyperparams=hyperparams)
                 elif method == "pgd":
-                    perturbed_image = pgd_attack(net=net, image=image, label=label, 
+                    perturbed_image = pgd_attack(net=self, image=image, label=label, 
                                                   hyperparams=hyperparams)
 
                 original_images_list.append(image.squeeze(0))
@@ -246,7 +248,6 @@ class torchvisionNN(PyroModule):
         filename = self.name+"_"+str(method)+"_attack.pkl"
 
         adversarial_attack = torch.cat(adversarial_attack)
-
         save_to_pickle(data=adversarial_attack, path=path, filename=filename)
 
         idxs = np.random.choice(len(original_images_list), 10, replace=False)
@@ -258,14 +259,12 @@ class torchvisionNN(PyroModule):
 
         return adversarial_attack
 
-    def evaluate_attack(self, dataloader, attack, device, n_samples=None):
+    def evaluate_attack(self, dataloader, attack, device):
 
         if device=="cuda":
             torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
-        print(f"\nEvaluating against the attacks", end="")
-        if n_samples:
-            print(f" with {n_samples} defence samples")
+        print(f"\nEvaluating against the attacks.")
 
         random.seed(0)
         torch.manual_seed(0)
@@ -283,12 +282,12 @@ class torchvisionNN(PyroModule):
                 images, labels = images.to(device), labels.to(device)
                 attacks = attack[idx:idx+len(images)]
 
-                out = self.forward(images, n_samples)
-                original_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
+                out = self(images)
+                original_correct += torch.sum(out.argmax(-1) == labels).item()
                 original_outputs.append(out)
 
-                out = self.forward(attacks, n_samples)
-                adversarial_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
+                out = self(attacks)
+                adversarial_correct += torch.sum(out.argmax(-1) == labels).item()
                 adversarial_outputs.append(out)
 
             original_accuracy = 100 * original_correct / len(dataloader.dataset)
@@ -318,6 +317,13 @@ class torchvisionBNN(torchvisionNN):
         self.inference = inference
         self.name = "finetuned_"+str(model_name)+"_"+str(inference)+"_"+str(dataset_name)
 
+    def to(self, device):
+        self.basenet = self.basenet.to(device)
+        self.rednet = self.rednet.to(device)
+
+        if hasattr(self, "delta_guide"):
+            self.delta_guide = self.delta_guide.to(device)
+
     def initialize_model(self, model_name, num_classes, feature_extract, use_pretrained=True):
 
 
@@ -327,10 +333,11 @@ class torchvisionBNN(torchvisionNN):
         self.rednet = nn.Sequential(*list(model_ft.children())[:-1])
         return model_ft, input_size
 
-    def train(self, dataloaders, criterion, optimizer, num_iters=25, is_inception=False):
+    def train(self, dataloaders, criterion, optimizer, device, num_iters=25, is_inception=False):
 
         random.seed(0)
         pyro.set_rng_seed(0)
+        self.to(device)
 
         network = self.basenet
 
@@ -356,7 +363,7 @@ class torchvisionBNN(torchvisionNN):
             print('Epoch {}/{}'.format(epoch, num_iters - 1))
             print('-' * 10)
 
-            for phase in ['train']:#, 'val']:
+            for phase in ['train', 'val']:
                 if phase == 'train':
                     network.train()  # Set model to training mode
                 else:
@@ -399,11 +406,11 @@ class torchvisionBNN(torchvisionNN):
                 print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
 
                 # deep copy the model
-                # if phase == 'val' and epoch_acc > best_acc:
-                #     best_acc = epoch_acc
-                #     best_network_wts = copy.deepcopy(network.state_dict())
-                # if phase == 'val':
-                #     val_acc_history.append(epoch_acc)
+                if phase == 'val' and epoch_acc > best_acc:
+                    best_acc = epoch_acc
+                    best_network_wts = copy.deepcopy(network.state_dict())
+                if phase == 'val':
+                    val_acc_history.append(epoch_acc)
 
             print()
 
@@ -415,9 +422,8 @@ class torchvisionBNN(torchvisionNN):
         # print('Best val Acc: {:4f}'.format(best_acc))
 
         # load best model weights
-        # network.load_state_dict(best_network_wts)
-        # self.basenet = network
-        return network, val_acc_history
+        self.basenet.load_state_dict(best_network_wts)
+        return self.basenet, val_acc_history
 
     def _last_layer(self, net):
 
@@ -448,12 +454,14 @@ class torchvisionBNN(torchvisionNN):
             outw = pyro.sample(w_name, outw_prior)
             outb = pyro.sample(b_name, outb_prior)
 
-            # with pyro.plate("data", len(x_data)):
-            output = self.rednet(x_data).squeeze()
-            yhat = torch.matmul(output, outw.t()) + outb 
-            lhat = nnf.log_softmax(yhat, dim=-1)
-            cond_model = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
-            return cond_model
+            # print(outw.shape, outb.shape)
+
+            with pyro.plate("data", len(x_data)):
+                output = self.rednet(x_data).squeeze()
+                yhat = torch.matmul(output, outw.t()) + outb 
+                lhat = nnf.log_softmax(yhat, dim=-1)
+                cond_model = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
+                return cond_model
 
         elif self.inference=="svi":
 
@@ -516,6 +524,7 @@ class torchvisionBNN(torchvisionNN):
             out_w = out_w.reshape(self.num_classes, layer_size)
             out_b = posterior[self.num_classes*layer_size:]
 
+            # print(out_batch, out_w, out_b)
             output_probs = torch.matmul(out_batch.squeeze(), out_w.t()) + out_b
             output_probs = output_probs.unsqueeze(0)
 
@@ -548,7 +557,7 @@ class torchvisionBNN(torchvisionNN):
         
         if self.inference=="svi":
 
-            filename=self.name+"_iters="+str(num_iters)+"_"+str(num_iters)+"_weights.pt"
+            filename=self.name+"_iters="+str(num_iters)+"_weights.pt"
             os.makedirs(os.path.dirname(path), exist_ok=True)
 
             param_store = pyro.get_param_store()
@@ -564,7 +573,7 @@ class torchvisionBNN(torchvisionNN):
 
         print("\nSaving: ", path + filename)
 
-    def load(self, num_iters):
+    def load(self, num_iters, device):
         path=TESTS+self.name+"/"
 
         if self.inference=="svi":
@@ -579,11 +588,13 @@ class torchvisionBNN(torchvisionNN):
             filename=self.name+"_iters="+str(num_iters)+"_delta_guide.pkl"
             self.delta_guide = load_from_pickle(path+filename)
 
+        self.to(device)
+
         print("\nLoading: ", path + filename)
 
     def attack(self, dataloader, method, device, hyperparams=None, n_samples=10):
 
-        net = self
+        self.to(device)
         print(f"\n\nProducing {method} attacks")
         adversarial_attack = []
         original_images_list = []
@@ -595,10 +606,10 @@ class torchvisionBNN(torchvisionNN):
                 label = labels[idx].argmax(-1).unsqueeze(0)
 
                 if method == "fgsm":
-                    perturbed_image = fgsm_attack(net=net, image=image, label=label, 
+                    perturbed_image = fgsm_attack(net=self, image=image, label=label, 
                                                   hyperparams=hyperparams, n_samples=n_samples)
                 elif method == "pgd":
-                    perturbed_image = pgd_attack(net=net, image=image, label=label, 
+                    perturbed_image = pgd_attack(net=self, image=image, label=label, 
                                                   hyperparams=hyperparams, n_samples=n_samples)
 
                 original_images_list.append(image.squeeze(0))
@@ -626,10 +637,49 @@ class torchvisionBNN(torchvisionNN):
 
     def evaluate_attack(self, dataloader, attack, device, n_samples=10):
 
-        self.basenet.to(device) # fixed layers in BNN
+        self.to(device)
 
-        super(torchvisionBNN, self).evaluate_attack(dataloader=dataloader, attack=attack, 
-                                                     device=device, n_samples=n_samples)
+        if device=="cuda":
+            torch.set_default_tensor_type('torch.cuda.FloatTensor')
+
+        print(f"\nEvaluating against the attacks.")
+
+        random.seed(0)
+        torch.manual_seed(0)
+        pyro.set_rng_seed(0)
+        
+        with torch.no_grad():
+
+            original_outputs = []
+            original_correct = 0.0
+            adversarial_outputs = []
+            adversarial_correct = 0.0
+
+            for idx, (images, labels) in enumerate(dataloader):
+
+                images, labels = images.to(device), labels.to(device)
+                attacks = attack[idx:idx+len(images)]
+
+                out = self(images, n_samples)
+                original_correct += torch.sum(out.argmax(-1) == labels).item()
+                original_outputs.append(out)
+
+                out = self(attacks, n_samples)
+                adversarial_correct += torch.sum(out.argmax(-1) == labels).item()
+                adversarial_outputs.append(out)
+
+            original_accuracy = 100 * original_correct / len(dataloader.dataset)
+            adversarial_accuracy = 100 * adversarial_correct / len(dataloader.dataset)
+            print(f"\ntest accuracy = {original_accuracy}\tadversarial accuracy = {adversarial_accuracy}",
+                  end="\t")
+
+            original_outputs = torch.cat(original_outputs)
+            adversarial_outputs = torch.cat(adversarial_outputs)
+            softmax_rob = softmax_robustness(original_outputs, adversarial_outputs)
+
+            # print(original_outputs.shape, adversarial_outputs.shape)
+
+        return original_accuracy, adversarial_accuracy, softmax_rob
 
     def load_attack(self, method, n_samples):
         path = TESTS+self.name+"/" 
@@ -676,9 +726,8 @@ model_bnn.initialize_model(model_name=args.model_name, num_classes=num_classes,
 
 device = torch.device(args.device)
 
-# Send the model to GPU
-model_nn.to(device)
-model_bnn.to(device)
+# model_nn.to(device)
+# model_bnn.to(device)
 
 nn_name = model_nn.name
 bnn_name = model_bnn.name
@@ -689,39 +738,48 @@ optimizer_bnn = pyro.optim.Adam({"lr":0.001})
 criterion = nn.CrossEntropyLoss()
 
 # Train and evaluate
-nn_iters = 2 if args.debug else args.nn_iters
-bnn_iters = 2 if args.debug else args.bnn_iters
+nn_iters = 1 if args.debug else args.nn_iters
+bnn_iters = 1 if args.debug else args.bnn_iters
 
 if args.train:
 
-    # model_nn.train(dataloaders_dict, criterion, optimizer_nn, num_iters=nn_iters)
+    # model_nn.train(dataloaders_dict, criterion, optimizer_nn, num_iters=nn_iters, device=device)
     # model_nn.save(nn_iters)
 
-    model_bnn.train(dataloaders_dict, criterion, optimizer_bnn, num_iters=bnn_iters)
+    model_bnn.train(dataloaders_dict, criterion, optimizer_bnn, num_iters=bnn_iters, device=device)
     model_bnn.save(bnn_iters)
 
 else:
-    model_nn.load(nn_iters)
-    model_bnn.load(bnn_iters)
+    model_nn.load(nn_iters, device)
+    model_bnn.load(bnn_iters, device)
 
 n_samples = None if args.inference=="laplace" else 10
 
+subset = 10 if args.debug else 1000
+
+test_set = dataloaders_dict["test"].dataset
+test_set = torch.utils.data.Subset(test_set, np.random.choice(len(test_set), subset, replace=False))
+testloader = DataLoader(dataset=test_set, batch_size=128, shuffle=True)
+
 if args.attack:
-
-    subset = 100 if args.debug else 1000
-
-    test_set = dataloaders_dict["test"].dataset
-    test_set = torch.utils.data.Subset(test_set, np.random.choice(len(test_set), subset, replace=False))
-    testloader = DataLoader(dataset=test_set, batch_size=1, shuffle=True)
     
-    nn_attack = model_nn.attack(dataloader=testloader, 
-        method=args.attack_method, device=device)
+    # nn_attack = model_nn.attack(dataloader=testloader, 
+    #     method=args.attack_method, device=device)
+    # model_nn.evaluate_attack(dataloader=testloader, attack=nn_attack, device=device)
+    # del nn_attack
+
     bnn_attack = model_bnn.attack(dataloader=testloader, 
         method=args.attack_method, n_samples=n_samples, device=device)
+    model_bnn.evaluate_attack(dataloader=testloader, attack=bnn_attack, n_samples=n_samples, 
+                                device=device)
+    del bnn_attack
 
 else:
     nn_attack = model_nn.load_attack(args.attack_method)
-    bnn_attack = model_bnn.load_attack(args.attack_method, n_samples=n_samples)
+    model_nn.evaluate_attack(dataloader=testloader, attack=nn_attack, device=device)
+    del nn_attack
 
-model_nn.evaluate_attack(dataloader=dataloaders_dict["test"], attack=nn_attack, device=device)
-model_bnn.evaluate_attack(dataloader=dataloaders_dict["test"], attack=bnn_attack, n_samples=n_samples, device=device)
+    bnn_attack = model_bnn.load_attack(args.attack_method, n_samples=n_samples)
+    model_bnn.evaluate_attack(dataloader=testloader, attack=bnn_attack, n_samples=n_samples, 
+                                device=device)
+    del bnn_attack

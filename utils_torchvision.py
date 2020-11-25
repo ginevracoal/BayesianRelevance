@@ -69,7 +69,7 @@ def load_data(dataset_name, debug=False):
         num_classes = 10
 
         dataset = datasets.ImageFolder(data_dir, transform = transforms.Compose([
-                                                                transforms.Resize((250,250)), 
+                                                                transforms.Resize((224,224)), 
                                                                 transforms.ToTensor(),
                                                                 ]))
 
@@ -145,26 +145,33 @@ def load_data(dataset_name, debug=False):
         batch_size = 128
         num_classes = 10
 
-        transform = transforms.Compose([transforms.Resize((250,250)), transforms.ToTensor()])
+        transform = transforms.Compose([transforms.Resize((img_size,img_size)), transforms.ToTensor()])
         train_set = datasets.ImageFolder(data_dir+"/train", transform=transform)
         test_set = datasets.ImageFolder(data_dir+"/test", transform=transform)
 
+        val_size = int(0.1 * len(train_set))
+        train_size = len(train_set) - val_size
+        train_subset, val_subset = random_split(train_set, [train_size, val_size])
+        
         stats = [0.,0.,0.],[1.,1.,1.]
 
-        train_set = TransformDataset(train_set, transform = transforms.Compose([
+        train_set = TransformDataset(train_subset, transform = transforms.Compose([
                 transforms.ToPILImage(),
                 transforms.RandomCrop(img_size, padding=None),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize(*stats, inplace=True),
+
             ]))
 
+        val_set = TransformDataset(val_subset, transform = transforms.Normalize(*stats, inplace=True))
         test_set = TransformDataset(test_set, transform = transforms.Normalize(*stats, inplace=True))
 
         train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True, num_workers=4)
+        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=True, num_workers=4)
         test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=True, num_workers=4)
 
-        dataloaders_dict = {'train': train_dataloader, 'test':test_dataloader}
+        dataloaders_dict = {'train': train_dataloader, 'val':val_dataloader, 'test':test_dataloader}
 
 
     elif dataset_name=="imagewoof":
@@ -174,7 +181,7 @@ def load_data(dataset_name, debug=False):
         batch_size = 128
         num_classes = 10
 
-        transform = transforms.Compose([transforms.Resize((250,250)), transforms.ToTensor()])
+        transform = transforms.Compose([transforms.Resize((img_size,img_size)), transforms.ToTensor()])
         train_set = datasets.ImageFolder(data_dir+"/train", transform=transform)
         test_set = datasets.ImageFolder(data_dir+"/test", transform=transform)
 
@@ -182,8 +189,8 @@ def load_data(dataset_name, debug=False):
 
         train_set = TransformDataset(train_set, transform = transforms.Compose([
                 transforms.ToPILImage(),
-                transforms.RandomCrop(img_size, padding=None),
-                transforms.RandomHorizontalFlip(),
+                # transforms.RandomCrop(img_size, padding=None),
+                # transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize(*stats, inplace=True),
             ]))
@@ -199,6 +206,7 @@ def load_data(dataset_name, debug=False):
         raise NotImplementedError
 
     print("\ntrain dataset lenght =", len(dataloaders_dict['train'].dataset), end="\t")
+    print("val dataset lenght =", len(dataloaders_dict['val'].dataset), end="\t")
     print("test dataset lenght =", len(dataloaders_dict['test'].dataset), end="\t")
     print("img_size =", dataloaders_dict['train'].dataset[0][0].shape, end="\n")
 
