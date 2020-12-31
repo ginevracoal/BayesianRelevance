@@ -3,6 +3,5 @@ venv/
 tests/
 __pycache__/
 screenlog.0
+old/
 
-old_requirements.txt
-gpRedBNN_model.py

@@ -14,9 +14,33 @@ from torchvision import datasets, transforms
 from savedir import *
 import pyro
 import matplotlib.pyplot as plt
-# from fastai.vision.all import *
+from fastai.vision.all import *
 
 torch.manual_seed(0)
+
+
+def set_params_updates(model, feature_extract):
+    # Gather the parameters to be optimized/updated in this run. If we are
+    #  finetuning we will be updating all parameters. However, if we are
+    #  doing feature extract method, we will only update the parameters
+    #  that we have just initialized, i.e. the parameters with requires_grad
+    #  is True.
+    params_to_update = model.parameters()
+    print("\nParams to learn:")
+
+    count = 0
+    params_to_update = []
+
+    for name,param in model.named_parameters():
+        if param.requires_grad == True:
+            if feature_extract:
+                params_to_update.append(param)
+            print("\t", name)
+            count += param.numel()
+
+    print("Total n. of params =", count)
+
+    return params_to_update
     
 
 class TransformDataset(Dataset):
@@ -33,7 +57,11 @@ class TransformDataset(Dataset):
     def __len__(self):
         return len(self.subset)
 
-def load_data(dataset_name, debug=False):
+def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
+    """
+    Builds a dictionary of torch training, validation and test dataloaders from the chosen dataset.
+    In debugging mode all dataloaders are cut to 100 randomly chosen points.
+    """
 
     if dataset_name=="animals10":
         data_dir = "./data/animals10/"
@@ -64,8 +92,6 @@ def load_data(dataset_name, debug=False):
             "horse":9
         }
 
-        img_size = 224
-        batch_size = 64
         num_classes = 10
 
         dataset = datasets.ImageFolder(data_dir, transform = transforms.Compose([
@@ -97,6 +123,9 @@ def load_data(dataset_name, debug=False):
 
         test_set = TransformDataset(test_set, transform = transforms.Normalize(*stats, inplace=True))
 
+        if batch_size is None:
+            batch_size = len(train_set)
+
         train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True)
         val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=True)
         test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=True)
@@ -109,8 +138,6 @@ def load_data(dataset_name, debug=False):
 
         data_dir = "./data/hymenoptera_data"
         num_classes = 2
-        batch_size = 128
-        img_size = 224
 
         # Data augmentation and normalization for training
         # Just normalization for validation
@@ -134,6 +161,10 @@ def load_data(dataset_name, debug=False):
         # Create training and validation datasets
         image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x])
                              for x in ['train', 'test']}
+
+        if batch_size is None:
+            batch_size = len(train_set)     
+
         # Create training and validation dataloaders
         dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, 
                             shuffle=True, num_workers=4) for x in ['train', 'test']}
@@ -141,8 +172,6 @@ def load_data(dataset_name, debug=False):
     elif dataset_name=="imagenette":
 
         data_dir = "./data/imagenette2-320"
-        img_size = 224
-        batch_size = 128
         num_classes = 10
 
         transform = transforms.Compose([transforms.Resize((img_size,img_size)), transforms.ToTensor()])
@@ -167,6 +196,8 @@ def load_data(dataset_name, debug=False):
         val_set = TransformDataset(val_subset, transform = transforms.Normalize(*stats, inplace=True))
         test_set = TransformDataset(test_set, transform = transforms.Normalize(*stats, inplace=True))
 
+        if batch_size is None:
+            batch_size = len(train_set)
         train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True, num_workers=4)
         val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=True, num_workers=4)
         test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=True, num_workers=4)
@@ -177,8 +208,6 @@ def load_data(dataset_name, debug=False):
     elif dataset_name=="imagewoof":
 
         data_dir = "./data/imagewoof2-320"
-        img_size = 224
-        batch_size = 128
         num_classes = 10
 
         transform = transforms.Compose([transforms.Resize((img_size,img_size)), transforms.ToTensor()])
@@ -197,6 +226,8 @@ def load_data(dataset_name, debug=False):
 
         test_set = TransformDataset(test_set, transform = transforms.Normalize(*stats, inplace=True))
 
+        if batch_size is None:
+            batch_size = len(train_set)
         train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True, num_workers=4)
         test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=True, num_workers=4)
 
@@ -205,22 +236,20 @@ def load_data(dataset_name, debug=False):
     else:
         raise NotImplementedError
 
-    print("\ntrain dataset lenght =", len(dataloaders_dict['train'].dataset), end="\t")
-    print("val dataset lenght =", len(dataloaders_dict['val'].dataset), end="\t")
-    print("test dataset lenght =", len(dataloaders_dict['test'].dataset), end="\t")
-    print("img_size =", dataloaders_dict['train'].dataset[0][0].shape, end="\n")
-
     if debug:
 
-        train_set = dataloaders_dict["train"].dataset
-        train_set = torch.utils.data.Subset(train_set, np.random.choice(len(train_set), 100, replace=False))
-        trainloader = DataLoader(dataset=train_set, batch_size=100, shuffle=True)
-        test_set = dataloaders_dict["test"].dataset
-        test_set = torch.utils.data.Subset(test_set, np.random.choice(len(test_set), 100, replace=False))
-        testloader = DataLoader(dataset=test_set, batch_size=100, shuffle=True)
-        dataloaders_dict = {'train': trainloader, 'test': testloader}
+        for phase in ['train','val','test']:
+            dataset = dataloaders_dict[phase].dataset
+            dataset = torch.utils.data.Subset(dataset, np.random.choice(len(dataset), 100, replace=False))
+            dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
+            dataloaders_dict[phase]=dataloader
 
-    return dataloaders_dict, batch_size, num_classes
+    print("\ntrain dataset length =", len(dataloaders_dict['train'].dataset), end="\t")
+    print("val dataset length =", len(dataloaders_dict['val'].dataset), end="\t")
+    print("test dataset length =", len(dataloaders_dict['test'].dataset), end="\t")
+    print("img_size =", dataloaders_dict['train'].dataset[0][0].shape, end="\n")
+
+    return dataloaders_dict, num_classes
 
 
 def plot_grid_attacks(original_images, perturbed_images, filename, savedir):
