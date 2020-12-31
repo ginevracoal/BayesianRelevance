@@ -3,18 +3,19 @@ import pickle
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from tensorflow.keras.preprocessing.image import load_img
-from sklearn.model_selection import train_test_split
+
 from sklearn.metrics import accuracy_score
-from tensorflow.keras.preprocessing.image import img_to_array
+from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
-from torch.utils.data import DataLoader, random_split, Dataset
-import torch
-from torchvision import datasets, transforms
-from savedir import *
+from tensorflow.keras.preprocessing.image import img_to_array
+
 import pyro
-import matplotlib.pyplot as plt
-from fastai.vision.all import *
+import torch
+from torch.utils.data import DataLoader, random_split, Dataset
+from torchvision import datasets, transforms
+
+from utils.savedir import *
+from attacks.plot import plot_grid_attacks
 
 torch.manual_seed(0)
 
@@ -64,7 +65,7 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
     """
 
     if dataset_name=="animals10":
-        data_dir = "./data/animals10/"
+        data_dir = DATA+"animals10/"
         dirs = os.listdir(data_dir)
 
         translate = {"cane": "dog", "cavallo": "horse", "elefante": "elephant",
@@ -136,7 +137,7 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
 
     elif dataset_name=="hymenoptera":
 
-        data_dir = "./data/hymenoptera_data"
+        data_dir = DATA+"hymenoptera_data"
         num_classes = 2
 
         # Data augmentation and normalization for training
@@ -171,7 +172,7 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
 
     elif dataset_name=="imagenette":
 
-        data_dir = "./data/imagenette2-320"
+        data_dir = DATA+"imagenette2-320"
         num_classes = 10
 
         transform = transforms.Compose([transforms.Resize((img_size,img_size)), transforms.ToTensor()])
@@ -207,7 +208,7 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
 
     elif dataset_name=="imagewoof":
 
-        data_dir = "./data/imagewoof2-320"
+        data_dir = DATA+"imagewoof2-320"
         num_classes = 10
 
         transform = transforms.Compose([transforms.Resize((img_size,img_size)), transforms.ToTensor()])
@@ -251,15 +252,3 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
 
     return dataloaders_dict, num_classes
 
-
-def plot_grid_attacks(original_images, perturbed_images, filename, savedir):
-
-    fig, axes = plt.subplots(2, len(original_images), figsize = (12,4))
-
-    for i in range(0, len(original_images)):
-        axes[0, i].imshow(original_images[i])
-        axes[1, i].imshow(perturbed_images[i])
-
-    plt.show()
-    os.makedirs(os.path.dirname(savedir+"/"), exist_ok=True)
-    plt.savefig(savedir+filename)

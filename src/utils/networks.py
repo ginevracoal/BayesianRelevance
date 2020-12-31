@@ -1,14 +1,14 @@
-from utils_data import * 
-from model_redBNN import *
-from model_bnn import *
-from model_baseNN import *
+from utils.data import * 
+from networks.baseNN import *
+from networks.fullBNN import *
+from networks.redBNN import *
 
 
 def load_test_net(model_idx, model_type, n_inputs, device, load_dir, return_data_loader=True):
 
     if model_type=="baseNN":
 
-        model = saved_baseNNs["model_"+str(model_idx)]
+        model = baseNN_settings["model_"+str(model_idx)]
 
         x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], 
                                                            n_inputs=n_inputs)[2:]
@@ -18,7 +18,7 @@ def load_test_net(model_idx, model_type, n_inputs, device, load_dir, return_data
 
     elif model_type=="fullBNN":
         
-        dataset_name, model = saved_BNNs["model_"+str(model_idx)]
+        dataset_name, model = fullBNN_settings["model_"+str(model_idx)]
         x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=dataset_name, 
                                                            n_inputs=n_inputs)[2:]
                         
@@ -27,7 +27,7 @@ def load_test_net(model_idx, model_type, n_inputs, device, load_dir, return_data
 
     elif model_type=="redBNN":
 
-        m = saved_redBNNs["model_"+str(model_idx)]
+        m = redBNN_settingss["model_"+str(model_idx)]
         dataset_name = m["dataset"]
         x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=dataset_name, 
                                                            n_inputs=n_inputs)[2:]

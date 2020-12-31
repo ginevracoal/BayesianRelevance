@@ -7,7 +7,7 @@ from pyro.contrib.autoguide import AutoLaplaceApproximation
 from pyro.infer import SVI, Trace_ELBO, TraceMeanField_ELBO, Predictive
 from pyro.distributions import OneHotCategorical, Normal, Categorical, Uniform, Delta
 
-from networks.torchvision.NN import *
+from networks.torchvision.baseNN import *
 from utils.savedir import *
 
 DEBUG=False

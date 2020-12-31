@@ -1,7 +1,7 @@
 data/
 venv/
+experiments/
+*__pycache__/
+*screenlog.0
+src/old/
 tests/
-__pycache__/
-screenlog.0
-old/
-

@@ -6,21 +6,23 @@ Last layer is separated from the others.
 import os
 import argparse
 import numpy as np
-from utils_data import *
-
 import torch
 from torch import nn
 import torch.nn.functional as nnf
 import torch.optim as torchopt
 import torch.nn.functional as F
 
+from utils.data import *
+from utils.savedir import *
+from utils.seeding import *
+
 DEBUG = False
 
-saved_baseNNs = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
+baseNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
                             "architecture":"conv", "epochs":10, "lr":0.001},
-                 "model_1":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
+                   "model_1":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
                             "architecture":"conv", "epochs":15, "lr":0.001},
-                 "model_2":{"dataset":"cifar", "hidden_size":512, "activation":"leaky",
+                   "model_2":{"dataset":"cifar", "hidden_size":512, "activation":"leaky",
                             "architecture":"conv", "epochs":20, "lr":0.01}}
 
 
@@ -193,34 +195,33 @@ class baseNN(nn.Module):
             return accuracy
 
 
-def main(args):
+# def main(args):
 
-    rel_path=DATA if args.savedir=="DATA" else TESTS
-    n_inputs = 100 if DEBUG else args.n_inputs
+#     rel_path=DATA if args.savedir=="DATA" else TESTS
+#     n_inputs = 100 if DEBUG else args.n_inputs
 
-    model = saved_baseNNs["model_"+str(args.model_idx)]
+#     model = baseNN_settings["model_"+str(args.model_idx)]
 
-    train_loader, test_loader, inp_shape, out_size = \
-                            data_loaders(dataset_name=model["dataset"], batch_size=128, 
-                                         n_inputs=n_inputs, shuffle=True)
+#     train_loader, test_loader, inp_shape, out_size = \
+#                             data_loaders(dataset_name=model["dataset"], batch_size=128, 
+#                                          n_inputs=n_inputs, shuffle=True)
 
-    nn = baseNN(inp_shape, out_size, *list(model.values()))
+#     nn = baseNN(inp_shape, out_size, *list(model.values()))
 
-    if args.train:
-        nn.train(train_loader=train_loader, device=args.device)
-    else:
-        nn.load(device=args.device, rel_path=rel_path)
+#     if args.train:
+#         nn.train(train_loader=train_loader, device=args.device)
+#     else:
+#         nn.load(device=args.device, rel_path=rel_path)
     
-    if args.test:   
-        nn.evaluate(test_loader=test_loader, device=args.device)
+#     if args.test:   
+#         nn.evaluate(test_loader=test_loader, device=args.device)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--n_inputs", default=60000, type=int, help="number of input points")
-    parser.add_argument("--model_idx", default=0, type=int, help="choose idx from saved_NNs")
-    parser.add_argument("--train", default=True, type=eval)
-    parser.add_argument("--test", default=True, type=eval)
-    parser.add_argument("--savedir", default='DATA', type=str, help="DATA, TESTS")  
-    parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
-    main(args=parser.parse_args())
+# if __name__ == "__main__":
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument("--n_inputs", default=60000, type=int, help="number of input points")
+#     parser.add_argument("--model_idx", default=0, type=int, help="choose model idx from pre defined settings")
+#     parser.add_argument("--train", default=True, type=eval)
+#     parser.add_argument("--test", default=True, type=eval)
+#     parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
+#     main(args=parser.parse_args())

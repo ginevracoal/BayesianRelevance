@@ -1,5 +1,5 @@
 """
-FGSM and PGD classic & bayesian adversarial attacks + robustness measures
+FGSM and PGD classic & bayesian adversarial attacks 
 """
 
 import sys
@@ -14,58 +14,15 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as nnf
 import pandas
 import os
-from savedir import *
-from utils_data import *
-from utils_models import *
-from model_baseNN import *
-from model_bnn import *
+
+from utils.savedir import *
+from utils.data import *
+from utils.networks import *
+from attacks.robustness_measures import *
+from attacks.plot import plot_grid_attacks
 
 
 DEBUG=False
-
-#######################
-# robustness measures #
-#######################
-
-
-def softmax_difference(original_predictions, adversarial_predictions):
-    """
-    Compute the expected l-inf norm of the difference between predictions and adversarial 
-    predictions. This is also a point-wise robustness measure.
-    """
-
-    original_predictions = nnf.softmax(original_predictions, dim=-1)
-    adversarial_predictions = nnf.softmax(adversarial_predictions, dim=-1)
-
-    if len(original_predictions) != len(adversarial_predictions):
-        raise ValueError("\nInput arrays should have the same length.")
-
-    if DEBUG:
-        print("\n\n", original_predictions[0], "\t", adversarial_predictions[0], end="\n\n")
-
-    softmax_diff = original_predictions-adversarial_predictions
-    softmax_diff_norms = softmax_diff.abs().max(dim=-1)[0]
-
-    if softmax_diff_norms.min() < 0. or softmax_diff_norms.max() > 1.:
-        raise ValueError("Softmax difference should be in [0,1]")
-
-    return softmax_diff_norms
-
-def softmax_robustness(original_outputs, adversarial_outputs):
-    """ 
-    This robustness measure is global and it is strictly dependent on the epsilon chosen for the 
-    perturbations.
-    """
-
-    softmax_differences = softmax_difference(original_outputs, adversarial_outputs)
-    robustness = (torch.ones_like(softmax_differences)-softmax_differences)
-    print(f"avg softmax robustness = {robustness.mean().item():.2f}")
-    return robustness
-
-
-#######################
-# adversarial attacks #
-#######################
 
 def loss_gradient_sign(net, n_samples, image, label):
 
@@ -140,7 +97,7 @@ def attack(net, x_test, y_test, device, method, filename, savedir=None,
     x_test, y_test = x_test.to(device), y_test.to(device)
 
     adversarial_attack = []
-    
+
     for idx in tqdm(range(len(x_test))):
         image = x_test[idx].unsqueeze(0)
         label = y_test[idx].argmax(-1).unsqueeze(0)
@@ -160,8 +117,16 @@ def attack(net, x_test, y_test, device, method, filename, savedir=None,
 
     path = TESTS+filename+"/" if savedir is None else TESTS+savedir+"/"
     name = filename+"_"+str(method)
-    name = name+"_attackSamp="+str(n_samples)+"_attack.pkl" if n_samples else name+"_attack.pkl"
-    save_to_pickle(data=adversarial_attack, path=path, filename=name)
+    name = name+"_attackSamp="+str(n_samples)+"_attack.pkl" if n_samples else name+"_attack"
+    save_to_pickle(data=adversarial_attack, path=path, filename=name+".pkl")
+
+    idxs = np.random.choice(len(x_test), 10, replace=False)
+    original_images_plot = torch.stack([x_test[i].squeeze() for i in idxs])
+    perturbed_images_plot = torch.stack([adversarial_attack[i].squeeze() for i in idxs])
+    plot_grid_attacks(original_images=original_images_plot.detach().cpu(), 
+                      perturbed_images=perturbed_images_plot.detach().cpu(), 
+                      filename=name+".png", savedir=path)
+
     return adversarial_attack
 
 def load_attack(method, filename, savedir=None, n_samples=None, rel_path=TESTS):
@@ -171,9 +136,6 @@ def load_attack(method, filename, savedir=None, n_samples=None, rel_path=TESTS):
     return load_from_pickle(path=path+name)
 
 def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None):
-
-    if device=="cuda":
-        torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
     print(f"\nEvaluating against the attacks", end="")
     if n_samples:
@@ -217,50 +179,49 @@ def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None):
 
     return original_accuracy, adversarial_accuracy, softmax_rob
 
-########
-# main #
-########
+# ########
+# # main #
+# ########
 
-def main(args):
+# def main(args):
 
-    bayesian_attack_samples=[1,20,50]
+#     bayesian_attack_samples=[1,20,50]
 
-    if args.device=="cuda":
-        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+#     if args.device=="cuda":
+#         torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
-    load_dir = DATA if args.load_dir=="DATA" else TESTS
+#     load_dir = DATA if args.load_dir=="DATA" else TESTS
 
-    (x_test, y_test), net = load_test_net(model_idx=args.model_idx, model_type=args.model_type, 
-                        device=args.device, load_dir=load_dir, n_inputs=args.n_inputs,
-                        return_data_loader=False)
+#     (x_test, y_test), net = load_test_net(model_idx=args.model_idx, model_type=args.model_type, 
+#                         device=args.device, load_dir=load_dir, n_inputs=args.n_inputs,
+#                         return_data_loader=False)
 
-    if args.model_type=="baseNN":
+#     if args.model_type=="baseNN":
 
-        x_attack = attack(net=net, x_test=x_test, y_test=y_test,
-                          device=args.device, method=args.attack_method, filename=net.name)
+#         x_attack = attack(net=net, x_test=x_test, y_test=y_test,
+#                           device=args.device, method=args.attack_method, filename=net.name)
 
-        attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
-                            device=args.device)
+#         attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
+#                             device=args.device)
 
-    else:
+#     else:
 
-        for attack_samples in bayesian_attack_samples:
-            x_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device, 
-                            method=args.attack_method, filename=net.name, n_samples=attack_samples)
+#         for attack_samples in bayesian_attack_samples:
+#             x_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device, 
+#                             method=args.attack_method, filename=net.name, n_samples=attack_samples)
 
-            for defence_samples in [attack_samples]:
-                attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
-                                  device=args.device, n_samples=defence_samples)
+#             for defence_samples in [attack_samples]:
+#                 attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
+#                                   device=args.device, n_samples=defence_samples)
 
 
-if __name__ == "__main__":
-    assert pyro.__version__.startswith('1.3.0')
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--n_inputs", default=100, type=int, help="inputs to be attacked")
-    parser.add_argument("--model_idx", default=0, type=int, help="choose idx from saved_NNs")
-    parser.add_argument("--model_type", default="fullBNN", type=str, 
-                        help="baseNN, fullBNN, redBNN, laplBNN")
-    parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-    parser.add_argument("--load_dir", default='DATA', type=str, help="DATA, TESTS")  
-    parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")   
-    main(args=parser.parse_args())
+# if __name__ == "__main__":
+#     assert pyro.__version__.startswith('1.3.0')
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument("--n_inputs", default=100, type=int, help="inputs to be attacked")
+#     parser.add_argument("--model_idx", default=0, type=int, help="choose idx from saved_NNs")
+#     parser.add_argument("--model_type", default="fullBNN", type=str, 
+#                         help="baseNN, fullBNN, redBNN, laplBNN")
+#     parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
+#     parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")   
+#     main(args=parser.parse_args())

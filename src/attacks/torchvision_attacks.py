@@ -1,6 +1,6 @@
 from utils.savedir import *
-from adversarialAttacks import *
 from utils.torchvision import plot_grid_attacks
+from attacks.gradient_based import *
 
 def attack(network, dataloader, method, device, n_samples=None, hyperparams=None):
     """ Attacks the given dataloader using the input network and the chosen attack method. 

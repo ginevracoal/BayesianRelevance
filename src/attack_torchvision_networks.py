@@ -4,8 +4,8 @@ from __future__ import print_function
 from argparse import ArgumentParser
 
 from utils.torchvision import *
-from networks.torchvision.NN import *
-from networks.torchvision.BNN import *
+from networks.torchvision.baseNN import *
+from networks.torchvision.redBNN import *
 from utils.data import load_from_pickle
 from utils.seeding import *
 from attacks.torchvision_attacks import *

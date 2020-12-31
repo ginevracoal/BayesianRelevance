@@ -5,8 +5,6 @@ Neural network with bayesian last layer.
 import os
 import argparse
 import numpy as np
-from utils_data import *
-from model_baseNN import baseNN
 
 import torch
 from torch import nn
@@ -19,14 +17,16 @@ from pyro import poutine
 from pyro.infer.mcmc import MCMC, HMC, NUTS
 from pyro.distributions import OneHotCategorical, Normal, Categorical
 
+from utils.data import *
+from networks.baseNN import baseNN
 
 DEBUG=False
 
-saved_redBNNs = {"model_0":{"dataset":"mnist", "inference":"svi", "hidden_size":512, 
+redBNN_settings = {"model_0":{"dataset":"mnist", "inference":"svi", "hidden_size":512, 
                  			"baseNN_inputs":60000, "baseNN_epochs":10, "baseNN_lr":0.001,
                  			"BNN_inputs":60000, "BNN_epochs":5, "BNN_lr":0.01, 
                  			"activation":"leaky", "architecture":"conv"},
-     			 "model_1":{"dataset":"fashion_mnist", "inference":"svi", "hidden_size":1024, 
+     			   "model_1":{"dataset":"fashion_mnist", "inference":"svi", "hidden_size":1024, 
                  			"baseNN_inputs":60000, "baseNN_epochs":15, "baseNN_lr":0.001,
                  			"BNN_inputs":60000, "BNN_epochs":5, "BNN_lr":0.01, 
                  			"activation":"leaky", "architecture":"conv"}}
@@ -309,49 +309,49 @@ class redBNN(nn.Module):
 			return accuracy
 
 
-def main(args):
+# def main(args):
 
-	m = saved_redBNNs["model_"+str(args.model_idx)]
-	rel_path = DATA if args.load_dir=="DATA" else TESTS
+# 	m = saved_redBNNs["model_"+str(args.model_idx)]
+# 	rel_path = DATA if args.load_dir=="DATA" else TESTS
 
-	if args.device=="cuda":
-		torch.set_default_tensor_type('torch.cuda.FloatTensor')
+# 	if args.device=="cuda":
+# 		torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
-	### baseNN 
-	train_loader, test_loader, inp_shape, out_size = \
-							data_loaders(dataset_name=m["dataset"], batch_size=128, 
-										 n_inputs=m["baseNN_inputs"], shuffle=True)
+# 	### baseNN 
+# 	train_loader, test_loader, inp_shape, out_size = \
+# 							data_loaders(dataset_name=m["dataset"], batch_size=128, 
+# 										 n_inputs=m["baseNN_inputs"], shuffle=True)
 
-	nn = baseNN(dataset_name=m["dataset"], input_shape=inp_shape, output_size=out_size,
-		        epochs=m["baseNN_epochs"], lr=m["baseNN_lr"], hidden_size=m["hidden_size"], 
-		        activation=m["activation"], architecture=m["architecture"])
-	nn.load(rel_path=rel_path, device=args.device)
+# 	nn = baseNN(dataset_name=m["dataset"], input_shape=inp_shape, output_size=out_size,
+# 		        epochs=m["baseNN_epochs"], lr=m["baseNN_lr"], hidden_size=m["hidden_size"], 
+# 		        activation=m["activation"], architecture=m["architecture"])
+# 	nn.load(rel_path=rel_path, device=args.device)
 	
-	if args.test is True:
-		nn.evaluate(test_loader=test_loader, device=args.device)
+# 	if args.test is True:
+# 		nn.evaluate(test_loader=test_loader, device=args.device)
 
-	### redBNN
-	train_loader, test_loader, inp_shape, out_size = \
-							data_loaders(dataset_name=m["dataset"], batch_size=128, 
-										 n_inputs=m["BNN_inputs"], shuffle=True)
-	hyp = get_hyperparams(m)
-	bnn = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=nn, hyperparams=hyp)
+# 	### redBNN
+# 	train_loader, test_loader, inp_shape, out_size = \
+# 							data_loaders(dataset_name=m["dataset"], batch_size=128, 
+# 										 n_inputs=m["BNN_inputs"], shuffle=True)
+# 	hyp = get_hyperparams(m)
+# 	bnn = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=nn, hyperparams=hyp)
 
-	if args.train is True:
-		bnn.train(train_loader=train_loader, device=args.device)
-	else:
-		bnn.load(n_inputs=m["BNN_inputs"], device=args.device, rel_path=rel_path)
+# 	if args.train is True:
+# 		bnn.train(train_loader=train_loader, device=args.device)
+# 	else:
+# 		bnn.load(n_inputs=m["BNN_inputs"], device=args.device, rel_path=rel_path)
 	
-	if args.test is True:
-		bnn.evaluate(test_loader=test_loader, device=args.device, n_samples=100)
+# 	if args.test is True:
+# 		bnn.evaluate(test_loader=test_loader, device=args.device, n_samples=100)
 
 
-if __name__ == "__main__":
-    assert pyro.__version__.startswith('1.3.0')
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model_idx", default=0, type=int, help="choose idx from saved_BNNs dict")
-    parser.add_argument("--train", default=True, type=eval, help="if True train else load")
-    parser.add_argument("--test", default=True, type=eval, help="test set evaluation")
-    parser.add_argument("--load_dir", default="DATA", type=str, help="DATA, TESTS")
-    parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")	
-    main(args=parser.parse_args())
+# if __name__ == "__main__":
+#     assert pyro.__version__.startswith('1.3.0')
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument("--model_idx", default=0, type=int, help="choose idx from saved_BNNs dict")
+#     parser.add_argument("--train", default=True, type=eval, help="if True train else load")
+#     parser.add_argument("--test", default=True, type=eval, help="test set evaluation")
+#     parser.add_argument("--load_dir", default="DATA", type=str, help="DATA, TESTS")
+#     parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")	
+#     main(args=parser.parse_args())

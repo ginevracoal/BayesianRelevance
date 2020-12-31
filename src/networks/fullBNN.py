@@ -7,6 +7,7 @@ import os
 import numpy as np
 import pandas as pd 
 import copy
+from collections import OrderedDict
 
 import torch
 from torch import nn
@@ -23,26 +24,26 @@ from pyro.infer.mcmc import MCMC, HMC, NUTS
 from pyro.distributions import OneHotCategorical, Normal, Categorical, Uniform
 from pyro.nn import PyroModule
 
-from utils_data import *
-from collections import OrderedDict
-from model_baseNN import baseNN
+from utils.data import *
+from utils.savedir import *
+from networks.baseNN import baseNN
 
 
 DEBUG=False
 
 
-saved_BNNs = {"model_0":["mnist", {"hidden_size":512, "activation":"leaky",
-                         "architecture":"conv", "inference":"svi", "epochs":5, 
-                         "lr":0.01, "n_samples":None, "warmup":None}],
-              "model_1":["mnist", {"hidden_size":512, "activation":"leaky",
-                         "architecture":"fc2", "inference":"hmc", "epochs":None,
-                         "lr":None, "n_samples":100, "warmup":50}],
-              "model_2":["fashion_mnist", {"hidden_size":1024, "activation":"leaky",
-                         "architecture":"conv", "inference":"svi", "epochs":10,
-                         "lr":0.001, "n_samples":None, "warmup":None}],
-              "model_3":["fashion_mnist", {"hidden_size":1024, "activation":"leaky",
-                         "architecture":"fc2", "inference":"hmc", "epochs":None,
-                         "lr":None, "n_samples":100, "warmup":50}]}
+fullBNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
+                             "architecture":"conv", "inference":"svi", "epochs":5, 
+                             "lr":0.01, "n_samples":None, "warmup":None},
+                    "model_1":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
+                             "architecture":"fc2", "inference":"hmc", "epochs":None,
+                             "lr":None, "n_samples":100, "warmup":50},
+                    "model_2":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
+                             "architecture":"conv", "inference":"svi", "epochs":10,
+                             "lr":0.001, "n_samples":None, "warmup":None},
+                    "model_3":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
+                             "architecture":"fc2", "inference":"hmc", "epochs":None,
+                             "lr":None, "n_samples":100, "warmup":50}}
 
 
 class BNN(PyroModule):
@@ -67,7 +68,7 @@ class BNN(PyroModule):
 
     def get_name(self, n_inputs=None):
         
-        name = str(self.dataset_name)+"_bnn_"+str(self.inference)+"_hid="+\
+        name = str(self.dataset_name)+"_fullBNN_"+str(self.inference)+"_hid="+\
                str(self.basenet.hidden_size)+"_act="+str(self.basenet.activation)+\
                "_arch="+str(self.basenet.architecture)
 
@@ -117,8 +118,8 @@ class BNN(PyroModule):
 
         name = self.name
         path = TESTS + name +"/"
-        filename = name+"_weights"
         os.makedirs(os.path.dirname(path), exist_ok=True)
+        filename = name+"_weights"
 
         if self.inference == "svi":
             self.basenet.to("cpu")
@@ -342,38 +343,37 @@ class BNN(PyroModule):
             return accuracy
 
 
-def main(args):
+# def main(args):
 
-    rel_path=DATA if args.load_dir=="DATA" else TESTS
+#     rel_path=TESTS
 
-    if args.device=="cuda":
-        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+#     if args.device=="cuda":
+#         torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
-    dataset, model = saved_BNNs["model_"+str(args.model_idx)]
-    batch_size = 5000 if model["inference"] == "hmc" else 64
+#     dataset, model = fullBNN_settings["model_"+str(args.model_idx)]
+#     batch_size = 5000 if model["inference"] == "hmc" else 64
 
-    train_loader, test_loader, inp_shape, out_size = \
-                            data_loaders(dataset_name=dataset, batch_size=batch_size, 
-                                         n_inputs=args.n_inputs, shuffle=True)
+#     train_loader, test_loader, inp_shape, out_size = \
+#                             data_loaders(dataset_name=dataset, batch_size=batch_size, 
+#                                          n_inputs=args.n_inputs, shuffle=True)
                         
-    bnn = BNN(dataset, *list(model.values()), inp_shape, out_size)
+#     bnn = BNN(dataset, *list(model.values()), inp_shape, out_size)
    
-    if args.train:
-        bnn.train(train_loader=train_loader, device=args.device)
-    else:
-        bnn.load(device=args.device, rel_path=rel_path)
+#     if args.train:
+#         bnn.train(train_loader=train_loader, device=args.device)
+#     else:
+#         bnn.load(device=args.device, rel_path=rel_path)
 
-    if args.test:
-        bnn.evaluate(test_loader=test_loader, device=args.device, n_samples=10)
+#     if args.test:
+#         bnn.evaluate(test_loader=test_loader, device=args.device, n_samples=10)
 
 
-if __name__ == "__main__":
-    assert pyro.__version__.startswith('1.3.0')
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--n_inputs", default=60000, type=int, help="number of input points")
-    parser.add_argument("--model_idx", default=0, type=int, help="choose idx from saved_BNNs")
-    parser.add_argument("--train", default=True, type=eval)
-    parser.add_argument("--test", default=True, type=eval)
-    parser.add_argument("--load_dir", default='TESTS', type=str, help="DATA, TESTS")  
-    parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
-    main(args=parser.parse_args())
+# if __name__ == "__main__":
+#     assert pyro.__version__.startswith('1.3.0')
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument("--n_inputs", default=60000, type=int, help="number of input points")
+#     parser.add_argument("--model_idx", default=0, type=int, help="choose model idx from pre defined settings")
+#     parser.add_argument("--train", default=True, type=eval)
+#     parser.add_argument("--test", default=True, type=eval)
+#     parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
+#     main(args=parser.parse_args())

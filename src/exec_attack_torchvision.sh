@@ -11,11 +11,10 @@ ITERS=15
 ATTACK_METHOD="fgsm"
 DEVICE="cpu"
 
-source venv/bin/activate
+source ../venv/bin/activate
 
-DATE=$(date +%Y-%m-%d)
 TIME=$(date +%H:%M:%S)
-TESTS="tests/logs/"
+TESTS="experiments/logs/"
 mkdir -p $TESTS
 
 if [ "${BAYESIAN}" = "True" ]; then
