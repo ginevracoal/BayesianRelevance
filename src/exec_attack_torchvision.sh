@@ -14,14 +14,17 @@ DEVICE="cpu"
 source ../venv/bin/activate
 
 TIME=$(date +%H:%M:%S)
+TESTS="../experiments/"
 
 if [ "${BAYESIAN}" = "True" ]; then
     SAVEDIR="${MODEL_NAME}_${DATASET_NAME}_${INFERENCE}_iters=${ITERS}"
-	OUT="${SAVEDIR}${TIME}_${MODEL_NAME}_${DATASET_NAME}_${INFERENCE}_iters=${ITERS}_${ATTACK_METHOD}.txt"
+	OUT="${TESTS}${SAVEDIR}/${TIME}_${MODEL_NAME}_${DATASET_NAME}_${INFERENCE}_iters=${ITERS}_${ATTACK_METHOD}.txt"
 else
     SAVEDIR="${MODEL_NAME}_${DATASET_NAME}_iters=${ITERS}"
-	OUT="${SAVEDIR}${TIME}_${MODEL_NAME}_${DATASET_NAME}_iters=${ITERS}_${ATTACK_METHOD}.txt"
+	OUT="${TESTS}${SAVEDIR}/${TIME}_${MODEL_NAME}_${DATASET_NAME}_iters=${ITERS}_${ATTACK_METHOD}.txt"
 fi
+
+mkdir -p "${TESTS}${SAVEDIR}"
 
 python3 attack_torchvision_networks.py --savedir=$SAVEDIR --model=$MODEL_NAME  --dataset=$DATASET_NAME \
 		--bayesian=$BAYESIAN --inference=$INFERENCE --train=$TRAIN --attack=$ATTACK --iters=$ITERS \
