@@ -11,8 +11,8 @@ from utils.seeding import *
 from attacks.torchvision_attacks import *
 
 parser = ArgumentParser()
-parser.add_argument("--model_name", type=str, default="resnet", help="resnet, alexnet, vgg")
-parser.add_argument("--dataset_name", type=str, default="animals10", 
+parser.add_argument("--model", type=str, default="resnet", help="resnet, alexnet, vgg")
+parser.add_argument("--dataset", type=str, default="animals10", 
                     help="imagenette, imagewoof, animals10, hymenoptera")
 parser.add_argument("--bayesian", type=eval, default="True")
 parser.add_argument("--inference", type=str, default="svi", help="laplace, svi")
@@ -39,7 +39,7 @@ device = torch.device(args.device)
 criterion = nn.CrossEntropyLoss()
 
 batch_size = 128
-dataloaders_dict, num_classes = load_data(dataset_name=args.dataset_name, batch_size=batch_size, debug=args.debug)
+dataloaders_dict, num_classes = load_data(dataset_name=args.dataset, batch_size=batch_size, debug=args.debug)
 
 ############## 
 # Initialize #
@@ -47,8 +47,8 @@ dataloaders_dict, num_classes = load_data(dataset_name=args.dataset_name, batch_
 
 if args.bayesian is False:
 
-    model_nn = torchvisionNN(model_name=args.model_name, dataset_name=args.dataset_name)
-    model_nn.initialize_model(model_name=args.model_name, num_classes=num_classes, 
+    model_nn = torchvisionNN(model_name=args.model, dataset_name=args.dataset)
+    model_nn.initialize_model(model_name=args.model, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
     model_nn.to(device)
     params_nn = set_params_updates(model_nn.basenet, feature_extract=True)
@@ -74,8 +74,8 @@ if args.bayesian is False:
 
 else:
 
-    model_bnn = torchvisionBNN(model_name=args.model_name, dataset_name=args.dataset_name, inference=args.inference)
-    model_bnn.initialize_model(model_name=args.model_name, num_classes=num_classes, 
+    model_bnn = torchvisionBNN(model_name=args.model, dataset_name=args.dataset, inference=args.inference)
+    model_bnn.initialize_model(model_name=args.model, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
     model_bnn.to(device)
     set_params_updates(model_bnn.basenet, feature_extract=True)

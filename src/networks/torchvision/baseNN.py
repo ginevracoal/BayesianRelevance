@@ -106,8 +106,10 @@ class torchvisionNN(PyroModule):
         return self.basenet, val_acc_history
 
     def initialize_model(self, model_name, num_classes, feature_extract, use_pretrained=True):
-        # Initialize these variables which will be set in this if statement. Each of these
-        #   variables is model specific. 
+        """
+        Loads pretrained models and sets parameters for training.
+        """
+
         model_ft = None
         input_size = 0
         self.num_classes=num_classes
