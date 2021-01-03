@@ -127,9 +127,9 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
         if batch_size is None:
             batch_size = len(train_set)
 
-        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True)
-        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=True)
-        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=True)
+        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False)
+        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False)
+        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False)
 
         dataloaders_dict = {'train': train_dataloader, 
                            'val':val_dataloader,
@@ -199,9 +199,9 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
 
         if batch_size is None:
             batch_size = len(train_set)
-        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True, num_workers=4)
-        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=True, num_workers=4)
-        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=True, num_workers=4)
+        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=4)
+        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False, num_workers=4)
+        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=4)
 
         dataloaders_dict = {'train': train_dataloader, 'val':val_dataloader, 'test':test_dataloader}
 
@@ -229,8 +229,8 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
 
         if batch_size is None:
             batch_size = len(train_set)
-        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True, num_workers=4)
-        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=True, num_workers=4)
+        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=4)
+        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=4)
 
         dataloaders_dict = {'train': train_dataloader, 'test':test_dataloader}
 
@@ -242,7 +242,7 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
         for phase in ['train','val','test']:
             dataset = dataloaders_dict[phase].dataset
             dataset = torch.utils.data.Subset(dataset, np.random.choice(len(dataset), 100, replace=False))
-            dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
+            dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False)
             dataloaders_dict[phase]=dataloader
 
     print("\ntrain dataset length =", len(dataloaders_dict['train'].dataset), end="\t")

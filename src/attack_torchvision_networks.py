@@ -23,6 +23,7 @@ parser.add_argument("--iters", type=int, default=15)
 parser.add_argument("--attack_method", type=str, default="fgsm")
 parser.add_argument("--device", type=str, default="cuda")
 parser.add_argument("--debug", type=eval, default="False")
+parser.add_argument("--savedir", type=str, default=None)
 args = parser.parse_args()
 
 print("PyTorch Version: ", torch.__version__)
@@ -40,6 +41,17 @@ criterion = nn.CrossEntropyLoss()
 
 batch_size = 128
 dataloaders_dict, num_classes = load_data(dataset_name=args.dataset, batch_size=batch_size, debug=args.debug)
+iters = 1 if args.debug else args.iters
+n_samples = 1 if args.debug else args.n_samples
+
+if args.savedir:
+    savedir = args.savedir 
+
+else:
+    if args.bayesian:
+        savedir = args.model+"_"+args.dataset+"_"+args.inference+"_iters="+str(args.iters)
+    else:
+        savedir = args.model+"_"+args.dataset+"_iters="+str(args.iters)
 
 ############## 
 # Initialize #
@@ -53,24 +65,23 @@ if args.bayesian is False:
     model_nn.to(device)
     params_nn = set_params_updates(model_nn.basenet, feature_extract=True)
     optimizer_nn = optim.Adam(params_nn, lr=0.001)
-    iters = 1 if args.debug else args.iters
 
     # print(model_nn.basenet)
 
     if args.train:
         model_nn.train(dataloaders_dict, criterion, optimizer_nn, num_iters=iters, device=device)
-        model_nn.save(iters)
+        model_nn.save(savedir, iters)
     else:
-        model_nn.load(iters, device)
+        model_nn.load(savedir, iters, device)
 
     if args.attack:
         nn_attack = attack(network=model_nn, dataloader=dataloaders_dict['test'], 
-            method=args.attack_method, device=device)
+                    method=args.attack_method, device=device, savedir=savedir)
     else:
-        nn_attack = load_attack(network=model_nn, method=args.attack_method)
+        nn_attack = load_attack(network=model_nn, method=args.attack_method, savedir=savedir)
 
     evaluate_attack(network=model_nn, dataloader=dataloaders_dict['test'], 
-                    adversarial_data=nn_attack, device=device)
+                    device=device, method=args.attack_method, savedir=savedir)
 
 else:
 
@@ -80,24 +91,23 @@ else:
     model_bnn.to(device)
     set_params_updates(model_bnn.basenet, feature_extract=True)
     optimizer_bnn = pyro.optim.Adam({"lr":0.001})
-    iters = 1 if args.inference=="laplace" else args.iters
-    iters = 1 if args.debug else iters
+
+
 
     # print(model_bnn.basenet)
 
     if args.train:
         model_bnn.train(dataloaders_dict, criterion, optimizer_bnn, num_iters=iters, device=device)
-        model_bnn.save(iters)
+        model_bnn.save(savedir, iters)
     else:
-        model_bnn.load(iters, device)
+        model_bnn.load(savedir, iters, device)
 
-    n_samples = 1 if args.debug else args.n_samples
 
     if args.attack:
         bnn_attack = attack(network=model_bnn, dataloader=dataloaders_dict['test'], 
-            method=args.attack_method, n_samples=n_samples, device=device)
+                     method=args.attack_method, n_samples=n_samples, device=device, savedir=savedir)
     else:
-        bnn_attack = load_attack(network=model_bnn, method=args.attack_method, n_samples=n_samples)
+        bnn_attack = load_attack(method=args.attack_method, n_samples=n_samples, savedir=savedir)
 
     evaluate_attack(network=model_bnn, dataloader=dataloaders_dict['test'], adversarial_data=bnn_attack, 
-                    n_samples=n_samples, device=device)
+                    n_samples=n_samples, device=device, method=args.attack_method, savedir=savedir)

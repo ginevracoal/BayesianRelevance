@@ -373,8 +373,8 @@ class torchvisionBNN(torchvisionNN):
         
         return output_probs if out_prob else output_probs.mean(0)
 
-    def save(self, num_iters):
-        path=TESTS+self.name+"/"
+    def save(self, savedir, num_iters):
+        path=TESTS+savedir+"/"
         self.to("cpu")
 
         filename=self.name+"_iters="+str(num_iters)+"_weights.pt"
@@ -392,8 +392,8 @@ class torchvisionBNN(torchvisionNN):
 
         print("\nSaving: ", path + filename)
 
-    def load(self, num_iters, device):
-        path=TESTS+self.name+"/"
+    def load(self, savedir, num_iters, device):
+        path=TESTS+savedir+"/"
         filename=self.name+"_iters="+str(num_iters)+"_weights.pt"
 
         if self.inference=="svi":

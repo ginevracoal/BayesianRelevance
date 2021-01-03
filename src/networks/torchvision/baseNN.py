@@ -155,9 +155,9 @@ class torchvisionNN(PyroModule):
     def to(self, device):
         self.basenet = self.basenet.to(device)
 
-    def save(self, num_iters):
+    def save(self, savedir, num_iters):
    
-        path=TESTS+self.name+"/"
+        path=TESTS+savedir+"/"
         filename=self.name+"_iters="+str(num_iters)+"_weights.pt"
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
@@ -166,9 +166,9 @@ class torchvisionNN(PyroModule):
         # print(f"\nlearned params = {self.basenets.state_dict().keys()}")
         torch.save(self.basenet.state_dict(), path + filename)
 
-    def load(self, num_iters, device):
+    def load(self, savedir, num_iters, device):
 
-        path=TESTS+self.name+"/"
+        path=TESTS+savedir+"/"
         filename=self.name+"_iters="+str(num_iters)+"_weights.pt"
         print("\nLoading ", path + filename)
 
