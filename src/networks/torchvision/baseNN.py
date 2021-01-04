@@ -21,7 +21,7 @@ class torchvisionNN(PyroModule):
 
         self.model_name = model_name
         self.dataset_name = dataset_name
-        self.name = "finetuned_"+str(model_name)+"_"+str(dataset_name)
+        self.name = str(model_name)+"_baseNN_"+str(dataset_name)
 
     def train(self, dataloaders, criterion, optimizer, device, num_iters=25, is_inception=False):
         since = time.time()

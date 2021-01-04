@@ -41,17 +41,17 @@ criterion = nn.CrossEntropyLoss()
 
 batch_size = 128
 dataloaders_dict, num_classes = load_data(dataset_name=args.dataset, batch_size=batch_size, debug=args.debug)
-iters = 1 if args.debug else args.iters
-n_samples = 1 if args.debug else args.n_samples
+iters = 1 if args.debug=="True" else args.iters
+n_samples = 1 if args.debug=="True" else args.n_samples
 
 if args.savedir:
     savedir = args.savedir 
 
 else:
-    if args.bayesian:
-        savedir = args.model+"_"+args.dataset+"_"+args.inference+"_iters="+str(args.iters)
+    if args.bayesian=="True":
+        savedir = args.model+"_redBNN_"+args.dataset+"_"+args.inference+"_iters="+str(args.iters)
     else:
-        savedir = args.model+"_"+args.dataset+"_iters="+str(args.iters)
+        savedir = args.model+"_baseNN_"+args.dataset+"_iters="+str(args.iters)
 
 ############## 
 # Initialize #

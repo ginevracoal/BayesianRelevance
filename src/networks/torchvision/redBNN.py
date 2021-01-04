@@ -22,7 +22,7 @@ class torchvisionBNN(torchvisionNN):
         super(torchvisionBNN, self).__init__(model_name, dataset_name)
 
         self.inference = inference
-        self.name = "finetuned_"+str(model_name)+"_"+str(inference)+"_"+str(dataset_name)
+        self.name = str(model_name)+"_redBNN_"+str(inference)+"_"+str(dataset_name)
 
     def to(self, device):
         """
@@ -354,7 +354,8 @@ class torchvisionBNN(torchvisionNN):
                 output_probs = torch.matmul(out_batch.squeeze(), out_w.t()) + out_b
                 output_probs = output_probs.unsqueeze(0)
 
-                print("out_w[:5] =", out_w[:5], "out_b[:5] =",out_b[5])
+                if DEBUG:
+                    print("out_w[:5] =", out_w[:5], "out_b[:5] =",out_b[5])
 
         elif self.inference=="svi":
 
@@ -365,7 +366,6 @@ class torchvisionBNN(torchvisionNN):
                 preds.append(guide_trace.nodes['_RETURN']['value'])
 
             output_probs = torch.stack(preds)
-
             # print(output_probs.mean(0).sum(1))
 
         else:
