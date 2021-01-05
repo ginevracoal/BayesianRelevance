@@ -110,47 +110,71 @@ class torchvisionNN(PyroModule):
         Loads pretrained models and sets parameters for training.
         """
 
-        model_ft = None
+        network = None
         input_size = 0
         self.num_classes=num_classes
 
         if model_name == "resnet":
 
-            model_ft = models.resnet18(pretrained=use_pretrained)
-            self.set_parameter_requires_grad(model_ft, feature_extract)
-            num_ftrs = model_ft.fc.in_features
-            model_ft.fc = nn.Linear(num_ftrs, num_classes)
+            network = models.resnet18(pretrained=use_pretrained)
+            self.set_parameter_requires_grad(network, feature_extract)
+            num_ftrs = network.fc.in_features
+            network.fc = nn.Linear(num_ftrs, num_classes)
             input_size = 224
 
         elif model_name == "alexnet":
 
-            model_ft = models.alexnet(pretrained=use_pretrained)
-            self.set_parameter_requires_grad(model_ft, feature_extract)
-            num_ftrs = model_ft.classifier[6].in_features
-            model_ft.classifier[6] = nn.Linear(num_ftrs,num_classes)
+            network = models.alexnet(pretrained=use_pretrained)
+            self.set_parameter_requires_grad(network, feature_extract)
+            num_ftrs = network.classifier[6].in_features
+            network.classifier[6] = nn.Linear(num_ftrs,num_classes)
             input_size = 224
 
         elif model_name == "vgg":
 
-            model_ft = models.vgg11_bn(pretrained=use_pretrained)
-            self.set_parameter_requires_grad(model_ft, feature_extract)
-            num_ftrs = model_ft.classifier[6].in_features
-            model_ft.classifier[6] = nn.Linear(num_ftrs,num_classes)
+            network = models.vgg11_bn(pretrained=use_pretrained)
+            self.set_parameter_requires_grad(network, feature_extract)
+            num_ftrs = network.classifier[6].in_features
+            network.classifier[6] = nn.Linear(num_ftrs,num_classes)
             input_size = 224
 
         else:
             print("Invalid model name, exiting...")
             exit()
 
-        self.basenet = model_ft
+        self.basenet = network
         self.input_size = input_size
 
-        return model_ft, input_size
+        params_to_update = self.set_params_updates(network, feature_extract)
+        return params_to_update
 
-    def set_parameter_requires_grad(self, model, feature_extracting):
-        if feature_extracting:
+    def set_parameter_requires_grad(self, model, feature_extract):
+        if feature_extract:
             for param in model.parameters():
                 param.requires_grad = False
+
+    def set_params_updates(self, model, feature_extract):
+        # Gather the parameters to be optimized/updated in this run. If we are
+        #  finetuning we will be updating all parameters. However, if we are
+        #  doing feature extract method, we will only update the parameters
+        #  that we have just initialized, i.e. the parameters with requires_grad
+        #  is True.
+        params_to_update = model.parameters()
+        print("\nParams to learn:")
+
+        count = 0
+        params_to_update = []
+
+        for name,param in model.named_parameters():
+            if param.requires_grad == True:
+                if feature_extract:
+                    params_to_update.append(param)
+                print("\t", name)
+                count += param.numel()
+
+        print("Total n. of params =", count)
+
+        return params_to_update
 
     def to(self, device):
         self.basenet = self.basenet.to(device)

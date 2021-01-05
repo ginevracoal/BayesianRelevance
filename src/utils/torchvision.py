@@ -20,28 +20,28 @@ from attacks.plot import plot_grid_attacks
 torch.manual_seed(0)
 
 
-def set_params_updates(model, feature_extract):
-    # Gather the parameters to be optimized/updated in this run. If we are
-    #  finetuning we will be updating all parameters. However, if we are
-    #  doing feature extract method, we will only update the parameters
-    #  that we have just initialized, i.e. the parameters with requires_grad
-    #  is True.
-    params_to_update = model.parameters()
-    print("\nParams to learn:")
+# def set_params_updates(model, feature_extract):
+#     # Gather the parameters to be optimized/updated in this run. If we are
+#     #  finetuning we will be updating all parameters. However, if we are
+#     #  doing feature extract method, we will only update the parameters
+#     #  that we have just initialized, i.e. the parameters with requires_grad
+#     #  is True.
+#     params_to_update = model.parameters()
+#     print("\nParams to learn:")
 
-    count = 0
-    params_to_update = []
+#     count = 0
+#     params_to_update = []
 
-    for name,param in model.named_parameters():
-        if param.requires_grad == True:
-            if feature_extract:
-                params_to_update.append(param)
-            print("\t", name)
-            count += param.numel()
+#     for name,param in model.named_parameters():
+#         if param.requires_grad == True:
+#             if feature_extract:
+#                 params_to_update.append(param)
+#             print("\t", name)
+#             count += param.numel()
 
-    print("Total n. of params =", count)
+#     print("Total n. of params =", count)
 
-    return params_to_update
+#     return params_to_update
     
 
 class TransformDataset(Dataset):

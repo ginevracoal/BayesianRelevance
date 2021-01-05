@@ -14,7 +14,7 @@ from networks.torchvision.baseNN import *
 from utils.savedir import *
 from utils.data import *
 
-DEBUG=False
+DEBUG=True
 
 class torchvisionBNN(torchvisionNN):
 
@@ -42,11 +42,41 @@ class torchvisionBNN(torchvisionNN):
         Loads pretrained models, sets parameters for training and specifies last layer weights 
         as the only ones that need to be inferred.
         """
-        model_ft, input_size = super(torchvisionBNN, self).initialize_model(model_name, num_classes,
+        params_to_update = super(torchvisionBNN, self).initialize_model(model_name, num_classes,
                                                      feature_extract, use_pretrained)
 
-        self.rednet = nn.Sequential(*list(model_ft.children())[:-1])
-        return model_ft, input_size
+        self.rednet = nn.Sequential(*list(self.basenet.children())[:-1])
+
+        return params_to_update
+
+    def set_params_updates(self, model, feature_extract):
+        # Gather the parameters to be optimized/updated in this run. If we are
+        #  finetuning we will be updating all parameters. However, if we are
+        #  doing feature extract method, we will only update the parameters
+        #  that we have just initialized, i.e. the parameters with requires_grad
+        #  is True.
+
+        if self.inference == "svi":
+            for weights_name in pyro.get_param_store():
+                if weights_name not in ["outw_mu","outw_sigma","outb_mu","outb_sigma"]:
+                    pyro.get_param_store()[weights_name].requires_grad=False
+
+        params_to_update = model.parameters()
+        print("\nParams to learn:")
+
+        count = 0
+        params_to_update = []
+
+        for name,param in model.named_parameters():
+            if param.requires_grad == True:
+                if feature_extract:
+                    params_to_update.append(param)
+                print("\t", name)
+                count += param.numel()
+
+        print("Total n. of params =", count)
+
+        return params_to_update
 
     def train(self, dataloaders, criterion, optimizer, device, num_iters=10, is_inception=False):
         """
@@ -62,6 +92,9 @@ class torchvisionBNN(torchvisionNN):
 
         elif self.inference == "laplace":
             self.train_laplace(dataloaders, criterion, optimizer, device, num_iters, is_inception)
+
+        else:
+            raise NotImplementedError
 
     def train_svi(self, dataloaders, criterion, optimizer, device, num_iters=10, is_inception=False):
 
@@ -110,13 +143,15 @@ class torchvisionBNN(torchvisionNN):
                         _, preds = torch.max(outputs, 1)
 
                         if DEBUG:
-                            print("\n", pyro.get_param_store()["outw_mu"])    
+                            print(self.basenet.state_dict()['conv1.weight'][:5])
+                            print(self.rednet.state_dict()['0.weight'][:5])
+                            print(pyro.get_param_store()["outw_mu"][:5])
 
                     running_loss += loss * inputs.size(0)
                     running_corrects += torch.sum(preds == labels.data)
 
-                if DEBUG:
-                    print(list(poutine.trace(self.guide).get_trace(inputs).nodes.keys()))
+                # if DEBUG:
+                #     print(list(poutine.trace(self.guide).get_trace(inputs).nodes.keys()))
 
                 epoch_loss = running_loss / len(dataloaders[phase].dataset)
                 epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
