@@ -1,12 +1,12 @@
 #!/bin/bash
 
-MODEL_NAME="alexnet" # resnet, alexnet, vgg
-DATASET_NAME="imagewoof" # imagenette, imagewoof, animals10, hymenoptera
+MODEL_NAME="resnet" # resnet, alexnet, vgg
+DATASET_NAME="imagenette" # imagenette, imagewoof, animals10, hymenoptera
 BAYESIAN="False"
 INFERENCE="svi" # laplace, svi
 TRAIN="True"
-ATTACK="False"
-N_SAMPLES=100
+ATTACK="True"
+N_SAMPLES=50
 ITERS=2
 ATTACK_METHOD="fgsm"
 DEVICE="cpu"
@@ -19,12 +19,11 @@ TESTS="../experiments/"
 
 if [ "${BAYESIAN}" = "True" ]; then
     SAVEDIR="${MODEL_NAME}_redBNN_${DATASET_NAME}_${INFERENCE}_iters=${ITERS}"
-	OUT="${TESTS}${SAVEDIR}/${MODEL_NAME}_${DATASET_NAME}_${INFERENCE}_iters=${ITERS}.txt"
 else
     SAVEDIR="${MODEL_NAME}_baseNN_${DATASET_NAME}_iters=${ITERS}"
-	OUT="${TESTS}${SAVEDIR}/${MODEL_NAME}_${DATASET_NAME}_iters=${ITERS}.txt"
 fi
 
+OUT="${TESTS}${SAVEDIR}/out.txt"
 mkdir -p "${TESTS}${SAVEDIR}"
 
 echo "=== exec ${DATE} ${TIME} ===" >> $OUT

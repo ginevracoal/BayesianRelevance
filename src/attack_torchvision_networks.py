@@ -2,7 +2,6 @@ from __future__ import division
 from __future__ import print_function
 
 from argparse import ArgumentParser
-
 from utils.torchvision import *
 from networks.torchvision.baseNN import *
 from networks.torchvision.redBNN import *
@@ -14,15 +13,15 @@ parser = ArgumentParser()
 parser.add_argument("--model", type=str, default="resnet", help="resnet, alexnet, vgg")
 parser.add_argument("--dataset", type=str, default="animals10", 
                     help="imagenette, imagewoof, animals10, hymenoptera")
-parser.add_argument("--bayesian", type=eval, default="True")
-parser.add_argument("--inference", type=str, default="svi", help="laplace, svi")
+parser.add_argument("--debug", type=eval, default="False")
 parser.add_argument("--train", type=eval, default="True")
 parser.add_argument("--attack", type=eval, default="True")
+parser.add_argument("--bayesian", type=eval, default="True")
+parser.add_argument("--inference", type=str, default="svi", help="laplace, svi")
 parser.add_argument("--n_samples", type=int, default=100)
 parser.add_argument("--iters", type=int, default=15)
 parser.add_argument("--attack_method", type=str, default="fgsm")
 parser.add_argument("--device", type=str, default="cuda")
-parser.add_argument("--debug", type=eval, default="False")
 parser.add_argument("--savedir", type=str, default=None)
 args = parser.parse_args()
 
@@ -41,58 +40,32 @@ criterion = nn.CrossEntropyLoss()
 
 batch_size = 128
 dataloaders_dict, num_classes = load_data(dataset_name=args.dataset, batch_size=batch_size, debug=args.debug)
-iters = 1 if args.debug=="True" else args.iters
-n_samples = 1 if args.debug=="True" else args.n_samples
+iters = 3 if args.debug else args.iters
+n_samples = 1 if args.debug else args.n_samples
 
-if args.savedir:
-    savedir = args.savedir 
+if args.debug:
+    savedir="debug"
 
 else:
-    if args.bayesian=="True":
-        savedir = args.model+"_redBNN_"+args.dataset+"_"+args.inference+"_iters="+str(args.iters)
+    if args.savedir:
+        savedir = args.savedir 
+
     else:
-        savedir = args.model+"_baseNN_"+args.dataset+"_iters="+str(args.iters)
+        if args.bayesian:
+            savedir = args.model+"_redBNN_"+args.dataset+"_"+args.inference+"_iters="+str(args.iters)
+        else:
+            savedir = args.model+"_baseNN_"+args.dataset+"_iters="+str(args.iters)
 
 ############## 
 # Initialize #
 ############## 
 
-if args.bayesian is False:
-
-    model_nn = torchvisionNN(model_name=args.model, dataset_name=args.dataset)
-    model_nn.initialize_model(model_name=args.model, num_classes=num_classes, 
-                                                feature_extract=True, use_pretrained=True)
-    model_nn.to(device)
-    params_nn = set_params_updates(model_nn.basenet, feature_extract=True)
-    optimizer_nn = optim.Adam(params_nn, lr=0.001)
-
-    # print(model_nn.basenet)
-
-    if args.train:
-        model_nn.train(dataloaders_dict, criterion, optimizer_nn, num_iters=iters, device=device)
-        model_nn.save(savedir, iters)
-    else:
-        model_nn.load(savedir, iters, device)
-
-    if args.attack:
-        nn_attack = attack(network=model_nn, dataloader=dataloaders_dict['test'], 
-                    method=args.attack_method, device=device, savedir=savedir)
-    else:
-        nn_attack = load_attack(network=model_nn, method=args.attack_method, savedir=savedir)
-
-    evaluate_attack(network=model_nn, dataloader=dataloaders_dict['test'], 
-                    device=device, method=args.attack_method, savedir=savedir)
-
-else:
-
+if args.bayesian:
     model_bnn = torchvisionBNN(model_name=args.model, dataset_name=args.dataset, inference=args.inference)
     model_bnn.initialize_model(model_name=args.model, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
     model_bnn.to(device)
-    set_params_updates(model_bnn.basenet, feature_extract=True)
     optimizer_bnn = pyro.optim.Adam({"lr":0.001})
-
-
 
     # print(model_bnn.basenet)
 
@@ -111,3 +84,29 @@ else:
 
     evaluate_attack(network=model_bnn, dataloader=dataloaders_dict['test'], adversarial_data=bnn_attack, 
                     n_samples=n_samples, device=device, method=args.attack_method, savedir=savedir)
+
+else:
+
+    model_nn = torchvisionNN(model_name=args.model, dataset_name=args.dataset)
+    params_nn = model_nn.initialize_model(model_name=args.model, num_classes=num_classes, 
+                                                feature_extract=True, use_pretrained=True)
+    model_nn.to(device)
+    optimizer_nn = optim.Adam(params_nn, lr=0.001)
+
+    # print(model_nn.basenet)
+
+    if args.train:
+        model_nn.train(dataloaders_dict, criterion, optimizer_nn, num_iters=iters, device=device)
+        model_nn.save(savedir, iters)
+    else:
+        model_nn.load(savedir, iters, device)
+
+    if args.attack:
+        nn_attack = attack(network=model_nn, dataloader=dataloaders_dict['test'], 
+                    method=args.attack_method, device=device, savedir=savedir)
+    else:
+        nn_attack = load_attack(method=args.attack_method, savedir=savedir)
+
+    evaluate_attack(network=model_nn, dataloader=dataloaders_dict['test'], 
+                    device=device, method=args.attack_method, savedir=savedir)
+

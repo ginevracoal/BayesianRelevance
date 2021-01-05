@@ -97,7 +97,7 @@ def save_attack(savedir, adversarial_data, method, n_samples=None):
     filename = _get_attacks_filename(savedir, method, n_samples)
     save_to_pickle(data=adversarial_data, path=TESTS+savedir+"/", filename=filename+".pkl")
 
-def load_attack(savedir, method, n_samples):
+def load_attack(savedir, method, n_samples=None):
 
     filename = _get_attacks_filename(savedir, method, n_samples)
     return load_from_pickle(TESTS+savedir+"/" +filename+".pkl")

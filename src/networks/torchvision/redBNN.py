@@ -1,10 +1,6 @@
-# import sys
-# sys.path.append(".")
-
 import pyro
 from pyro import poutine
 import pyro.optim as pyroopt
-# from pyro.nn import PyroModule
 from pyro.infer.mcmc import MCMC, HMC, NUTS
 from pyro.contrib.autoguide import AutoLaplaceApproximation
 from pyro.infer import SVI, Trace_ELBO, TraceMeanField_ELBO, Predictive
@@ -14,7 +10,7 @@ from networks.torchvision.baseNN import *
 from utils.savedir import *
 from utils.data import *
 
-DEBUG=True
+DEBUG=False
 
 class torchvisionBNN(torchvisionNN):
 
@@ -46,7 +42,6 @@ class torchvisionBNN(torchvisionNN):
                                                      feature_extract, use_pretrained)
 
         self.rednet = nn.Sequential(*list(self.basenet.children())[:-1])
-
         return params_to_update
 
     def set_params_updates(self, model, feature_extract):
@@ -143,8 +138,7 @@ class torchvisionBNN(torchvisionNN):
                         _, preds = torch.max(outputs, 1)
 
                         if DEBUG:
-                            print(self.basenet.state_dict()['conv1.weight'][:5])
-                            print(self.rednet.state_dict()['0.weight'][:5])
+                            print(self.basenet.state_dict()['conv1.weight'][0,0,:5])
                             print(pyro.get_param_store()["outw_mu"][:5])
 
                     running_loss += loss * inputs.size(0)
@@ -222,18 +216,19 @@ class torchvisionBNN(torchvisionNN):
 
                         loss += svi.step(x_data=inputs, y_data=labels)
                         self.delta_guide = guide.get_posterior()
-                        # print(guide.loc)
+
                         outputs = self.forward(inputs)
                         _, preds = torch.max(outputs, 1)
 
                         if DEBUG:
-                            print("\n", pyro.get_param_store()["outw_mu"])    
+                            print(self.basenet.state_dict()['conv1.weight'][0,0,:5])
+                            print(pyro.sample("posterior", self.delta_guide)[:5]) # = guide.loc
 
                     running_loss += loss * inputs.size(0)
                     running_corrects += torch.sum(preds == labels.data)
 
-                if DEBUG:
-                    print(list(poutine.trace(self.guide).get_trace(inputs).nodes.keys()))
+                # if DEBUG:
+                #     print(list(poutine.trace(self.guide).get_trace(inputs).nodes.keys()))
 
                 epoch_loss = running_loss / len(dataloaders[phase].dataset)
                 epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
@@ -390,7 +385,7 @@ class torchvisionBNN(torchvisionNN):
                 output_probs = output_probs.unsqueeze(0)
 
                 if DEBUG:
-                    print("out_w[:5] =", out_w[:5], "out_b[:5] =",out_b[5])
+                    print("out_w[:5] =", out_w[:5])
 
         elif self.inference=="svi":
 
