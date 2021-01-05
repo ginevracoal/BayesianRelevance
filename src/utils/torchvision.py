@@ -168,7 +168,7 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
 
         # Create training and validation dataloaders
         dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, 
-                            shuffle=True, num_workers=4) for x in ['train', 'test']}
+                            shuffle=True, num_workers=0) for x in ['train', 'test']}
 
     elif dataset_name=="imagenette":
 
@@ -199,9 +199,9 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
 
         if batch_size is None:
             batch_size = len(train_set)
-        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=4)
-        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False, num_workers=4)
-        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=4)
+        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=0)
+        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False, num_workers=0)
+        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=0)
 
         dataloaders_dict = {'train': train_dataloader, 'val':val_dataloader, 'test':test_dataloader}
 
@@ -215,24 +215,31 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
         train_set = datasets.ImageFolder(data_dir+"/train", transform=transform)
         test_set = datasets.ImageFolder(data_dir+"/test", transform=transform)
 
+        val_size = int(0.1 * len(train_set))
+        train_size = len(train_set) - val_size
+        train_subset, val_subset = random_split(train_set, [train_size, val_size])
+
         stats = [0.,0.,0.],[1.,1.,1.]
 
-        train_set = TransformDataset(train_set, transform = transforms.Compose([
+        train_set = TransformDataset(train_subset, transform = transforms.Compose([
                 transforms.ToPILImage(),
-                # transforms.RandomCrop(img_size, padding=None),
-                # transforms.RandomHorizontalFlip(),
+                transforms.RandomCrop(img_size, padding=None),
+                transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize(*stats, inplace=True),
+
             ]))
 
+        val_set = TransformDataset(val_subset, transform = transforms.Normalize(*stats, inplace=True))
         test_set = TransformDataset(test_set, transform = transforms.Normalize(*stats, inplace=True))
 
         if batch_size is None:
             batch_size = len(train_set)
-        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=4)
-        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=4)
-
-        dataloaders_dict = {'train': train_dataloader, 'test':test_dataloader}
+        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=0)
+        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False, num_workers=0)
+        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=0)
+        
+        dataloaders_dict = {'train': train_dataloader, 'val':val_dataloader, 'test':test_dataloader}
 
     else:
         raise NotImplementedError
