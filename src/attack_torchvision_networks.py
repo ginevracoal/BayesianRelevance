@@ -19,6 +19,7 @@ parser.add_argument("--attack", type=eval, default="True")
 parser.add_argument("--bayesian", type=eval, default="True")
 parser.add_argument("--inference", type=str, default="svi", help="laplace, svi")
 parser.add_argument("--n_samples", type=int, default=100)
+parser.add_argument("--n_inputs", type=int, default=None)
 parser.add_argument("--iters", type=int, default=15)
 parser.add_argument("--attack_method", type=str, default="fgsm")
 parser.add_argument("--device", type=str, default="cuda")
@@ -39,14 +40,18 @@ device = torch.device(args.device)
 criterion = nn.CrossEntropyLoss()
 
 batch_size = 128
-dataloaders_dict, num_classes = load_data(dataset_name=args.dataset, batch_size=batch_size, debug=args.debug)
-iters = 3 if args.debug else args.iters
-n_samples = 1 if args.debug else args.n_samples
 
 if args.debug:
     savedir="debug"
+    n_inputs=100
+    iters=1
+    n_samples=1
 
 else:
+    n_inputs=args.n_inputs
+    iters=args.iters
+    n_samples=args.n_samples
+
     if args.savedir:
         savedir = args.savedir 
 
@@ -55,6 +60,10 @@ else:
             savedir = args.model+"_redBNN_"+args.dataset+"_"+args.inference+"_iters="+str(args.iters)
         else:
             savedir = args.model+"_baseNN_"+args.dataset+"_iters="+str(args.iters)
+
+num_workers=0 if args.device=="cuda" else 4
+dataloaders_dict, num_classes, im_random_idxs = load_data(dataset_name=args.dataset, 
+                                    batch_size=batch_size, n_inputs=n_inputs, num_workers=num_workers)
 
 ############## 
 # Initialize #
@@ -75,12 +84,16 @@ if args.bayesian:
     else:
         model_bnn.load(savedir, iters, device)
 
-
     if args.attack:
         bnn_attack = attack(network=model_bnn, dataloader=dataloaders_dict['test'], 
                      method=args.attack_method, n_samples=n_samples, device=device, savedir=savedir)
     else:
         bnn_attack = load_attack(method=args.attack_method, n_samples=n_samples, savedir=savedir)
+
+        if len(bnn_attack)>n_inputs:
+            bnn_attack = bnn_attack[im_random_idxs['test']]
+        else:
+            print("Max number of available attacks is ", len(bnn_attack))
 
     evaluate_attack(network=model_bnn, dataloader=dataloaders_dict['test'], adversarial_data=bnn_attack, 
                     n_samples=n_samples, device=device, method=args.attack_method, savedir=savedir)
@@ -106,7 +119,12 @@ else:
                     method=args.attack_method, device=device, savedir=savedir)
     else:
         nn_attack = load_attack(method=args.attack_method, savedir=savedir)
+        
+        if len(nn_attack)>n_inputs:
+            nn_attack = nn_attack[im_random_idxs['test']]
+        else:
+            print("Max number of available attacks is ", len(nn_attack))
 
-    evaluate_attack(network=model_nn, dataloader=dataloaders_dict['test'], 
+    evaluate_attack(network=model_nn, dataloader=dataloaders_dict['test'], adversarial_data=nn_attack, 
                     device=device, method=args.attack_method, savedir=savedir)
 

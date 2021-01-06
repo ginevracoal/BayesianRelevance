@@ -4,13 +4,13 @@ MODEL_NAME="resnet" # resnet, alexnet, vgg
 DATASET_NAME="imagenette" # imagenette, imagewoof, animals10, hymenoptera
 BAYESIAN="False"
 INFERENCE="svi" # laplace, svi
-TRAIN="True"
-ATTACK="True"
+TRAIN="False"
+ATTACK="False"
 N_SAMPLES=50
 ITERS=2
 ATTACK_METHOD="fgsm"
-DEVICE="cpu"
-
+DEVICE="cuda"
+	
 source ../venv/bin/activate
 
 DATE=$(date '+%Y-%m-%d')
