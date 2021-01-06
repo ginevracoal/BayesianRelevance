@@ -88,12 +88,8 @@ if args.bayesian:
         bnn_attack = attack(network=model_bnn, dataloader=dataloaders_dict['test'], 
                      method=args.attack_method, n_samples=n_samples, device=device, savedir=savedir)
     else:
-        bnn_attack = load_attack(method=args.attack_method, n_samples=n_samples, savedir=savedir)
-
-        if len(bnn_attack)>n_inputs:
-            bnn_attack = bnn_attack[im_random_idxs['test']]
-        else:
-            print("Max number of available attacks is ", len(bnn_attack))
+        bnn_attack = load_attack(method=args.attack_method, n_samples=n_samples, savedir=savedir)        
+        bnn_attack = bnn_attack[im_random_idxs['test']]
 
     evaluate_attack(network=model_bnn, dataloader=dataloaders_dict['test'], adversarial_data=bnn_attack, 
                     n_samples=n_samples, device=device, method=args.attack_method, savedir=savedir)
@@ -119,12 +115,8 @@ else:
                     method=args.attack_method, device=device, savedir=savedir)
     else:
         nn_attack = load_attack(method=args.attack_method, savedir=savedir)
+        nn_attack = nn_attack[im_random_idxs['test']]
         
-        if len(nn_attack)>n_inputs:
-            nn_attack = nn_attack[im_random_idxs['test']]
-        else:
-            print("Max number of available attacks is ", len(nn_attack))
-
     evaluate_attack(network=model_nn, dataloader=dataloaders_dict['test'], adversarial_data=nn_attack, 
                     device=device, method=args.attack_method, savedir=savedir)
 

@@ -67,7 +67,7 @@ def evaluate_attack(savedir, network, dataloader, adversarial_data, device, meth
 
         original_accuracy = 100 * original_correct / len(dataloader.dataset)
         adversarial_accuracy = 100 * adversarial_correct / len(dataloader.dataset)
-        print(f"\ntest accuracy = {original_accuracy}\tadversarial accuracy = {adversarial_accuracy}",
+        print(f"\ntest accuracy = {original_accuracy:.2f}\tadversarial accuracy = {adversarial_accuracy:.2f}",
               end="\t")
 
         original_outputs = torch.cat(original_outputs)
