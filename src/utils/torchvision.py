@@ -3,6 +3,7 @@ import pickle
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import collections 
 
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
@@ -15,34 +16,9 @@ from torch.utils.data import DataLoader, random_split, Dataset
 from torchvision import datasets, transforms
 
 from utils.savedir import *
+from utils.seeding import *
 from attacks.plot import plot_grid_attacks
 
-torch.manual_seed(0)
-
-
-# def set_params_updates(model, feature_extract):
-#     # Gather the parameters to be optimized/updated in this run. If we are
-#     #  finetuning we will be updating all parameters. However, if we are
-#     #  doing feature extract method, we will only update the parameters
-#     #  that we have just initialized, i.e. the parameters with requires_grad
-#     #  is True.
-#     params_to_update = model.parameters()
-#     print("\nParams to learn:")
-
-#     count = 0
-#     params_to_update = []
-
-#     for name,param in model.named_parameters():
-#         if param.requires_grad == True:
-#             if feature_extract:
-#                 params_to_update.append(param)
-#             print("\t", name)
-#             count += param.numel()
-
-#     print("Total n. of params =", count)
-
-#     return params_to_update
-    
 
 class TransformDataset(Dataset):
     def __init__(self, subset, transform=None):
@@ -58,7 +34,40 @@ class TransformDataset(Dataset):
     def __len__(self):
         return len(self.subset)
 
-def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
+def subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs):
+
+    im_idxs_dict={}
+    label_counts_dict={str(class_idx):.0001 for class_idx in range(num_classes)}
+
+    for phase in dataloaders_dict.keys():
+        dataset = dataloaders_dict[phase].dataset
+        n_inputs = min(n_inputs, len(dataset)) if n_inputs else len(dataset)
+
+        im_idxs_dict[phase]=np.random.choice(len(dataset), n_inputs, replace=False)
+        dataset = torch.utils.data.Subset(dataset, im_idxs_dict[phase])
+        dataloaders_dict[phase] = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False)
+        
+    return dataloaders_dict, im_idxs_dict
+
+def transform_data(train_set, val_set, test_set, img_size):
+    
+    stats = [0.,0.,0.],[1.,1.,1.]
+
+    train_set = TransformDataset(train_set, transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.RandomCrop(img_size, padding=None),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(*stats, inplace=True),
+
+        ]))
+
+    val_set = TransformDataset(val_set, transform = transforms.Normalize(*stats, inplace=True))
+    test_set = TransformDataset(test_set, transform = transforms.Normalize(*stats, inplace=True))
+
+    return train_set, val_set, test_set
+
+def load_data(dataset_name, batch_size=128, n_inputs=None, img_size=224, num_workers=0):
     """
     Builds a dictionary of torch training, validation and test dataloaders from the chosen dataset.
     In debugging mode all dataloaders are cut to 100 randomly chosen points.
@@ -100,41 +109,19 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
                                                                 transforms.ToTensor(),
                                                                 ]))
 
-
         val_size = int(0.1 * len(dataset))
         test_size = int(0.1 * len(dataset))
         train_size = len(dataset) - val_size - test_size
-        train_subset, val_subset, test_set = random_split(dataset, [train_size, val_size, test_size])
+        train_set, val_set, test_set = random_split(dataset, [train_size, val_size, test_size])
         
-        # Augment and normalize
-
-        # stats = ((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-        stats = [0.,0.,0.],[1.,1.,1.]
-
-        train_set = TransformDataset(train_subset, transform = transforms.Compose([
-                transforms.ToPILImage(),
-                transforms.RandomCrop(img_size, padding=None),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                transforms.Normalize(*stats, inplace=True),
-
-            ]))
-
-        val_set = TransformDataset(val_subset, transform = transforms.Normalize(*stats, inplace=True))
-
-        test_set = TransformDataset(test_set, transform = transforms.Normalize(*stats, inplace=True))
-
-        if batch_size is None:
-            batch_size = len(train_set)
+        train_set, val_set, test_set = transform_data(train_set, val_set, test_set, img_size)
 
         train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False)
         val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False)
         test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False)
 
-        dataloaders_dict = {'train': train_dataloader, 
-                           'val':val_dataloader,
-                           'test':test_dataloader}
-
+        dataloaders_dict = {'train': train_dataloader, 'val':val_dataloader, 'test':test_dataloader}
+  
     elif dataset_name=="hymenoptera":
 
         data_dir = DATA+"hymenoptera_data"
@@ -157,18 +144,23 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
             ]),
         }
 
-        print("Initializing Datasets and Dataloaders...")
+        # todo: add validation set
 
         # Create training and validation datasets
         image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x])
                              for x in ['train', 'test']}
+        train_set = image_datasets['train']
+        test_set = image_datasets['test']
 
-        if batch_size is None:
-            batch_size = len(train_set)     
+        val_size = int(0.1 * len(train_set))
+        train_size = len(train_set) - val_size
+        train_set, val_set = random_split(train_set, [train_size, val_size])
 
-        # Create training and validation dataloaders
-        dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, 
-                            shuffle=True, num_workers=0) for x in ['train', 'test']}
+        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+
+        dataloaders_dict = {'train': train_dataloader, 'val':val_dataloader, 'test':test_dataloader}
 
     elif dataset_name=="imagenette":
 
@@ -181,30 +173,15 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
 
         val_size = int(0.1 * len(train_set))
         train_size = len(train_set) - val_size
-        train_subset, val_subset = random_split(train_set, [train_size, val_size])
+        train_set, val_set = random_split(train_set, [train_size, val_size])
         
-        stats = [0.,0.,0.],[1.,1.,1.]
+        train_set, val_set, test_set = transform_data(train_set, val_set, test_set, img_size)
 
-        train_set = TransformDataset(train_subset, transform = transforms.Compose([
-                transforms.ToPILImage(),
-                transforms.RandomCrop(img_size, padding=None),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                transforms.Normalize(*stats, inplace=True),
-
-            ]))
-
-        val_set = TransformDataset(val_subset, transform = transforms.Normalize(*stats, inplace=True))
-        test_set = TransformDataset(test_set, transform = transforms.Normalize(*stats, inplace=True))
-
-        if batch_size is None:
-            batch_size = len(train_set)
-        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=0)
-        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False, num_workers=0)
-        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=0)
+        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
         dataloaders_dict = {'train': train_dataloader, 'val':val_dataloader, 'test':test_dataloader}
-
 
     elif dataset_name=="imagewoof":
 
@@ -217,45 +194,25 @@ def load_data(dataset_name, batch_size=None, img_size=224, debug=False):
 
         val_size = int(0.1 * len(train_set))
         train_size = len(train_set) - val_size
-        train_subset, val_subset = random_split(train_set, [train_size, val_size])
+        train_set, val_set = random_split(train_set, [train_size, val_size])
 
-        stats = [0.,0.,0.],[1.,1.,1.]
+        train_set, val_set, test_set = transform_data(train_set, val_set, test_set, img_size)
 
-        train_set = TransformDataset(train_subset, transform = transforms.Compose([
-                transforms.ToPILImage(),
-                transforms.RandomCrop(img_size, padding=None),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                transforms.Normalize(*stats, inplace=True),
-
-            ]))
-
-        val_set = TransformDataset(val_subset, transform = transforms.Normalize(*stats, inplace=True))
-        test_set = TransformDataset(test_set, transform = transforms.Normalize(*stats, inplace=True))
-
-        if batch_size is None:
-            batch_size = len(train_set)
-        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=0)
-        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False, num_workers=0)
-        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=0)
+        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
         
         dataloaders_dict = {'train': train_dataloader, 'val':val_dataloader, 'test':test_dataloader}
 
     else:
         raise NotImplementedError
 
-    if debug:
-
-        for phase in ['train','val','test']:
-            dataset = dataloaders_dict[phase].dataset
-            dataset = torch.utils.data.Subset(dataset, np.random.choice(len(dataset), 100, replace=False))
-            dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False)
-            dataloaders_dict[phase]=dataloader
+    dataloaders_dict, im_idxs_dict = subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs)
 
     print("\ntrain dataset length =", len(dataloaders_dict['train'].dataset), end="\t")
     print("val dataset length =", len(dataloaders_dict['val'].dataset), end="\t")
     print("test dataset length =", len(dataloaders_dict['test'].dataset), end="\t")
     print("img_size =", dataloaders_dict['train'].dataset[0][0].shape, end="\n")
 
-    return dataloaders_dict, num_classes
+    return dataloaders_dict, num_classes, im_idxs_dict
 
