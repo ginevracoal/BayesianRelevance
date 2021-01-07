@@ -41,9 +41,9 @@ def subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs):
 
     for phase in dataloaders_dict.keys():
         dataset = dataloaders_dict[phase].dataset
-        n_inputs = min(n_inputs, len(dataset)) if n_inputs else len(dataset)
+        n_samples = min(n_inputs, len(dataset)) if n_inputs else len(dataset)
 
-        im_idxs_dict[phase]=np.random.choice(len(dataset), n_inputs, replace=False)
+        im_idxs_dict[phase]=np.random.choice(len(dataset), n_samples, replace=False)
         dataset = torch.utils.data.Subset(dataset, im_idxs_dict[phase])
         dataloaders_dict[phase] = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False)
         
@@ -115,12 +115,6 @@ def load_data(dataset_name, batch_size=128, n_inputs=None, img_size=224, num_wor
         train_set, val_set, test_set = random_split(dataset, [train_size, val_size, test_size])
         
         train_set, val_set, test_set = transform_data(train_set, val_set, test_set, img_size)
-
-        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False)
-        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False)
-        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False)
-
-        dataloaders_dict = {'train': train_dataloader, 'val':val_dataloader, 'test':test_dataloader}
   
     elif dataset_name=="hymenoptera":
 
@@ -156,12 +150,6 @@ def load_data(dataset_name, batch_size=128, n_inputs=None, img_size=224, num_wor
         train_size = len(train_set) - val_size
         train_set, val_set = random_split(train_set, [train_size, val_size])
 
-        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-
-        dataloaders_dict = {'train': train_dataloader, 'val':val_dataloader, 'test':test_dataloader}
-
     elif dataset_name=="imagenette":
 
         data_dir = DATA+"imagenette2-320"
@@ -176,12 +164,6 @@ def load_data(dataset_name, batch_size=128, n_inputs=None, img_size=224, num_wor
         train_set, val_set = random_split(train_set, [train_size, val_size])
         
         train_set, val_set, test_set = transform_data(train_set, val_set, test_set, img_size)
-
-        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-
-        dataloaders_dict = {'train': train_dataloader, 'val':val_dataloader, 'test':test_dataloader}
 
     elif dataset_name=="imagewoof":
 
@@ -198,14 +180,14 @@ def load_data(dataset_name, batch_size=128, n_inputs=None, img_size=224, num_wor
 
         train_set, val_set, test_set = transform_data(train_set, val_set, test_set, img_size)
 
-        train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        
-        dataloaders_dict = {'train': train_dataloader, 'val':val_dataloader, 'test':test_dataloader}
-
     else:
         raise NotImplementedError
+
+    train_dataloader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    val_dataloader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    
+    dataloaders_dict = {'train': train_dataloader, 'val':val_dataloader, 'test':test_dataloader}
 
     dataloaders_dict, im_idxs_dict = subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs)
 
