@@ -23,10 +23,12 @@ class torchvisionNN(PyroModule):
         self.dataset_name = dataset_name
         self.name = str(model_name)+"_baseNN_"+str(dataset_name)
 
-    def train(self, dataloaders, criterion, optimizer, device, num_iters=25, is_inception=False):
+    def train(self, dataloaders, criterion, params_to_update, device, num_iters=25, is_inception=False):
         since = time.time()
         model = self.basenet
         self.to(device)
+
+        optimizer = optim.Adam(params_to_update, lr=0.001)
 
         val_acc_history = []
 

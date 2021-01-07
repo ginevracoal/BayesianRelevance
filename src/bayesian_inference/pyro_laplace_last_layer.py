@@ -1,6 +1,8 @@
 import time
+from utils.data import save_to_pickle
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as nnf
 softplus = torch.nn.Softplus()
 
@@ -37,8 +39,10 @@ def model(bayesian_network, x_data, y_data):
     
     return cond_model
 
-def train(bayesian_network, dataloaders, criterion, optimizer, device, num_iters=10, is_inception=False):
+def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
 
+    criterion = nn.CrossEntropyLoss()
+    optimizer = pyro.optim.Adam({"lr":0.001})
     bayesian_network.to(device)
 
     network = bayesian_network.basenet
@@ -112,23 +116,29 @@ def train(bayesian_network, dataloaders, criterion, optimizer, device, num_iters
 
     return val_acc_history
 
-def forward(bayesian_network, inputs, n_samples, seeds):
+def forward(bayesian_network, inputs, n_samples, seeds=None):
+
+    if seeds:
+        if len(seeds) != n_samples:
+            raise ValueError("Number of seeds should match number of samples.")
+    else:
+        seeds = list(range(n_samples))
 
     out_batch = bayesian_network.rednet(inputs).squeeze(3).squeeze(2)
 
     if hasattr(bayesian_network, 'laplace_posterior'):
         # after training use Laplace posterior approximation
 
-        preds = []  
+        outputs = []  
         for seed in seeds:
             pyro.set_rng_seed(seed)
             posterior = pyro.sample("posterior", bayesian_network.laplace_posterior)
             out_w = posterior['fc.weight']
             out_b = posterior['fc.bias']
-            output_probs = torch.matmul(out_batch, out_w.t()) + out_b
-            preds.append(output_probs)
+            output = torch.matmul(out_batch, out_w.t()) + out_b
+            outputs.append(output)
 
-        output_probs = torch.stack(preds)
+        outputs = torch.stack(outputs)
 
     else:
         # during training use delta function at MAP estimate
@@ -139,19 +149,19 @@ def forward(bayesian_network, inputs, n_samples, seeds):
         out_w = out_w.reshape(bayesian_network.num_classes, layer_size)
         out_b = map_weights[bayesian_network.num_classes*layer_size:]
 
-        output_probs = torch.matmul(out_batch.squeeze(), out_w.t()) + out_b
-        output_probs = output_probs.unsqueeze(0)
+        outputs = torch.matmul(out_batch.squeeze(), out_w.t()) + out_b
+        outputs = outputs.unsqueeze(0)
 
         if DEBUG:
             print("out_w[:5] =", out_w[:5])
 
-    return output_probs
+    return outputs
 
-def save(path, filename):
-    save_to_pickle(self.laplace_posterior, path, filename)
+def save(bayesian_network, path, filename):
+    save_to_pickle(bayesian_network.laplace_posterior, path, filename+".pkl")
 
-def load(path, filename):
-    self.laplace_posterior = load_from_pickle(path+filename)
+def load(bayesian_network, path, filename):
+    bayesian_network.laplace_posterior = load_from_pickle(path+filename+".pkl")
 
 def to(bayesian_network, device):
     if hasattr(bayesian_network, "laplace_posterior"):

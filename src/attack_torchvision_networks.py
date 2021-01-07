@@ -18,11 +18,11 @@ parser.add_argument("--train", type=eval, default="True")
 parser.add_argument("--attack", type=eval, default="True")
 parser.add_argument("--bayesian", type=eval, default="True")
 parser.add_argument("--inference", type=str, default="svi", help="laplace, svi")
-parser.add_argument("--n_samples", type=int, default=100)
-parser.add_argument("--n_inputs", type=int, default=None)
-parser.add_argument("--iters", type=int, default=15)
-parser.add_argument("--attack_method", type=str, default="fgsm")
-parser.add_argument("--device", type=str, default="cuda")
+parser.add_argument("--samples", type=int, default=100, help="Number of posterior samples in the Bayesian case.")
+parser.add_argument("--inputs", type=int, default=None, help="Number of input images. None loads all the available ones.")
+parser.add_argument("--iters", type=int, default=5, help="Number of training iterations.")
+parser.add_argument("--attack_method", type=str, default="fgsm", help="Attack name: fgsm, pgd.")
+parser.add_argument("--device", type=str, default="cuda", help="cuda, cpu")
 parser.add_argument("--savedir", type=str, default=None)
 args = parser.parse_args()
 
@@ -37,20 +37,19 @@ if args.device=="cuda":
 ################
 
 device = torch.device(args.device)
-criterion = nn.CrossEntropyLoss()
 
 batch_size = 128
 
 if args.debug:
     savedir="debug"
     n_inputs=100
-    iters=1
-    n_samples=1
+    iters=2
+    n_samples=2
 
 else:
-    n_inputs=args.n_inputs
+    n_inputs=args.inputs
     iters=args.iters
-    n_samples=args.n_samples
+    n_samples=args.samples
 
     if args.savedir:
         savedir = args.savedir 
@@ -74,12 +73,11 @@ if args.bayesian:
     model_bnn.initialize_model(model_name=args.model, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
     model_bnn.to(device)
-    optimizer_bnn = pyro.optim.Adam({"lr":0.001})
 
     # print(model_bnn.basenet)
 
     if args.train:
-        model_bnn.train(dataloaders_dict, criterion, optimizer_bnn, num_iters=iters, device=device)
+        model_bnn.train(dataloaders_dict, num_iters=iters, device=device)
         model_bnn.save(savedir, iters)
     else:
         model_bnn.load(savedir, iters, device)
@@ -97,15 +95,14 @@ if args.bayesian:
 else:
 
     model_nn = torchvisionNN(model_name=args.model, dataset_name=args.dataset)
-    params_nn = model_nn.initialize_model(model_name=args.model, num_classes=num_classes, 
+    params_to_update = model_nn.initialize_model(model_name=args.model, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
     model_nn.to(device)
-    optimizer_nn = optim.Adam(params_nn, lr=0.001)
 
     # print(model_nn.basenet)
 
     if args.train:
-        model_nn.train(dataloaders_dict, criterion, optimizer_nn, num_iters=iters, device=device)
+        model_nn.train(dataloaders_dict, params_to_update, num_iters=iters, device=device)
         model_nn.save(savedir, iters)
     else:
         model_nn.load(savedir, iters, device)

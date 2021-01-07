@@ -9,7 +9,6 @@ def attack(network, dataloader, method, device, savedir, n_samples=None, hyperpa
 
     network.to(device)
     print(f"\n{method} attack")
-    # original_images_list = []
     adversarial_data = []
     
     for images, labels in tqdm(dataloader):
@@ -26,7 +25,6 @@ def attack(network, dataloader, method, device, savedir, n_samples=None, hyperpa
                 perturbed_image = pgd_attack(net=network, image=image, label=label, 
                                               hyperparams=hyperparams, n_samples=n_samples)
 
-            # original_images_list.append(image.squeeze(0))
             adversarial_data.append(perturbed_image)
 
     adversarial_data = torch.cat(adversarial_data)

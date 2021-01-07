@@ -29,7 +29,7 @@ def loss_gradient_sign(net, n_samples, image, label):
     if n_samples is None:
 
         image.requires_grad = True
-        output = net.forward(inputs=image, out_prob=True)
+        output = net.forward(inputs=image, avg_out=False)
         
         loss = torch.nn.CrossEntropyLoss()(output, label)
         net.zero_grad()
@@ -44,7 +44,7 @@ def loss_gradient_sign(net, n_samples, image, label):
 
             x_copy = copy.deepcopy(image)
             x_copy.requires_grad = True
-            output = net.forward(inputs=x_copy, n_samples=1, seeds=[i], out_prob=True)[0]
+            output = net.forward(inputs=x_copy, n_samples=1, sample_idxs=[i], avg_out=False)[0]
 
             loss = torch.nn.CrossEntropyLoss()(output.to(dtype=torch.double), label)
             net.zero_grad()

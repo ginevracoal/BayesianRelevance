@@ -1,16 +1,10 @@
-# import pyro
-# from pyro import poutine
-# import pyro.optim as pyroopt
-# from pyro.contrib.autoguide import AutoLaplaceApproximation
-# from pyro.infer import SVI, Trace_ELBO, TraceMeanField_ELBO, Predictive
-# from pyro.distributions import OneHotCategorical, Normal, Categorical, Uniform, Delta
-
-from networks.torchvision.baseNN import *
-from utils.savedir import *
 from utils.data import *
+from utils.savedir import *
+from networks.torchvision.baseNN import *
 
 import bayesian_inference.pyro_svi_last_layer as pyro_svi
 import bayesian_inference.pyro_laplace_last_layer as pyro_laplace
+import bayesian_inference.stochastic_gradient_langevin_dynamics as sgld
 
 DEBUG=False
 
@@ -22,12 +16,16 @@ class torchvisionBNN(torchvisionNN):
         self.inference = inference
         self.name = str(model_name)+"_redBNN_"+str(inference)+"_"+str(dataset_name)
 
+        if inference=="sgld":
+            self.burnin=2
+
     def to(self, device):
         """
-        Sends network to device.
+        Send network to device.
         """
         self.basenet = self.basenet.to(device)
         self.rednet = self.rednet.to(device)
+        self.last_layer = self.last_layer.to(device)
 
         if self.inference=="svi":
             pyro_svi.to(device)
@@ -37,14 +35,14 @@ class torchvisionBNN(torchvisionNN):
 
     def initialize_model(self, model_name, num_classes, feature_extract, use_pretrained=True):
         """
-        Loads pretrained models, sets parameters for training and specifies last layer weights 
+        Load pretrained models, set parameters for training and specify last layer weights 
         as the only ones that need to be inferred.
         """
-        params_to_update = super(torchvisionBNN, self).initialize_model(model_name, num_classes,
+        super(torchvisionBNN, self).initialize_model(model_name, num_classes,
                                                      feature_extract, use_pretrained)
 
         self.rednet = nn.Sequential(*list(self.basenet.children())[:-1])
-        return params_to_update
+        self.last_layer = nn.Sequential(list(self.basenet.children())[-1])
 
     def set_params_updates(self, model, feature_extract):
         # Gather the parameters to be optimized/updated in this run. If we are
@@ -73,7 +71,7 @@ class torchvisionBNN(torchvisionNN):
 
         return params_to_update
 
-    def train(self, dataloaders, criterion, optimizer, device, num_iters=10, is_inception=False):
+    def train(self, dataloaders, device, num_iters=10, is_inception=False):
         """
         dataloaders: dictionary containing 'train', 'test' and 'val' dataloaders
         criterion: loss function
@@ -82,11 +80,14 @@ class torchvisionBNN(torchvisionNN):
         num_iters: number of training iterations
         is_inception: flag for Inception v3 model
         """
-        if self.inference == "svi":
-            pyro_svi.train(self, dataloaders, criterion, optimizer, device, num_iters, is_inception)
+        if self.inference=="svi":
+            pyro_svi.train(self, dataloaders, device, num_iters, is_inception)
 
-        elif self.inference == "laplace":
-            pyro_laplace.train(self, dataloaders, criterion, optimizer, device, num_iters, is_inception)
+        elif self.inference=="laplace":
+            pyro_laplace.train(self, dataloaders, device, num_iters, is_inception)
+
+        elif self.inference=="sgld":
+            sgld.train(self, dataloaders, device, num_iters, is_inception)
 
         else:
             raise NotImplementedError
@@ -109,60 +110,61 @@ class torchvisionBNN(torchvisionNN):
 
     def model(self, x_data, y_data):
 
-
-        if self.inference=="laplace":
-
-            return pyro_laplace.model(self, x_data, y_data)
-
-        elif self.inference=="svi":
-
+        if self.inference=="svi":
             return pyro_svi.model(self, x_data, y_data)
 
-        else:
-            raise AssertionError("Wrong inference method")
-
-    def forward(self, inputs, n_samples=10, seeds=None, out_prob=False):
-    
-        if seeds:
-            if len(seeds) != n_samples:
-                raise ValueError("Number of seeds should match number of samples.")
-        else:
-            seeds = list(range(n_samples))
-
-        if self.inference=="laplace":
-            output_probs = pyro_laplace.forward(self, inputs, n_samples, seeds)
-
-        elif self.inference=="svi":
-            output_probs = pyro_svi.forward(self, inputs, n_samples, seeds)
+        elif self.inference=="laplace":
+            return pyro_laplace.model(self, x_data, y_data)
 
         else:
             raise NotImplementedError
+
+    def forward(self, inputs, n_samples, sample_idxs=None, avg_out=True):
+
+        if self.inference=="svi":
+            outputs = pyro_svi.forward(self, inputs, n_samples, sample_idxs)
+
+        elif self.inference=="laplace":
+            outputs = pyro_laplace.forward(self, inputs, n_samples, sample_idxs)
+       
+        elif self.inference=="sgld":
+            outputs = sgld.forward(self, inputs, n_samples, sample_idxs)
+       
+        else:
+            raise NotImplementedError
         
-        return output_probs if out_prob else output_probs.mean(0)
+        return outputs.mean(0) if avg_out else outputs
 
     def save(self, savedir, num_iters):
         path=TESTS+savedir+"/"
         self.to("cpu")
 
-        filename=self.name+"_iters="+str(num_iters)+"_weights.pt"
+        filename=self.name+"_iters="+str(num_iters)+"_weights"
         os.makedirs(os.path.dirname(path), exist_ok=True)
         
         if self.inference=="svi":
-            pyro_svi.save(path, filename)
+            pyro_svi.save(self, path, filename)
 
         elif self.inference=="laplace":
-            pyro_laplace.save(path, filename)
+            pyro_laplace.save(self, path, filename)
 
-        print("\nSaving: ", path + filename)
+        elif self.inference=="sgld":
+            path=path+filename+"/"
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            sgld.save(self, num_iters, path, filename)
 
     def load(self, savedir, num_iters, device):
         path=TESTS+savedir+"/"
-        filename=self.name+"_iters="+str(num_iters)+"_weights.pt"
+        filename=self.name+"_iters="+str(num_iters)+"_weights"
 
         if self.inference=="svi":
-            pyro_svi.load(path, filename)
+            pyro_svi.load(self, path, filename)
 
         elif self.inference=="laplace":
-            pyro_laplace.load(path, filename)
+            pyro_laplace.load(self, path, filename)
+
+        elif self.inference=="sgld":
+            path=path+filename+"/"
+            sgld.load(self, num_iters, path, filename)
 
         self.to(device)

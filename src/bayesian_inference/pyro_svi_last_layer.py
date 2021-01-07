@@ -1,6 +1,7 @@
 import time
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as nnf
 softplus = torch.nn.Softplus()
 
@@ -58,8 +59,10 @@ def guide(bayesian_network, x_data, y_data=None):
 
     return probs
 
-def train(bayesian_network, dataloaders, criterion, optimizer, device, num_iters=10, is_inception=False):
+def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
 
+    criterion = nn.CrossEntropyLoss()
+    optimizer = pyro.optim.Adam({"lr":0.001})
     bayesian_network.to(device)
 
     network = bayesian_network.basenet
@@ -130,29 +133,37 @@ def train(bayesian_network, dataloaders, criterion, optimizer, device, num_iters
 
     return val_acc_history
 
-def forward(bayesian_network, inputs, n_samples, seeds):
+def forward(bayesian_network, inputs, n_samples, sample_idxs=None):
 
-    preds = []  
-    for seed in seeds:
+    if sample_idxs:
+        if len(sample_idxs) != n_samples:
+            raise ValueError("Number of sample_idxs should match number of samples.")
+    else:
+        sample_idxs = list(range(n_samples))
+
+    outputs = []  
+    for seed in sample_idxs:
         pyro.set_rng_seed(seed)
         guide_trace = poutine.trace(bayesian_network.guide).get_trace(bayesian_network, inputs)   
-        preds.append(guide_trace.nodes['_RETURN']['value'])
+        outputs.append(guide_trace.nodes['_RETURN']['value'])
 
-    output_probs = torch.stack(preds)
-    # print(output_probs.mean(0).sum(1))    
-    return output_probs
+    outputs = torch.stack(outputs)
+    return outputs
 
-def save(path, filename):
+def save(bayesian_network, path, filename):
     param_store = pyro.get_param_store()
     print(f"\nlearned params = {param_store.get_all_param_names()}")
-    param_store.save(path + filename)
+    param_store.save(path + filename + ".pt")
 
-def load(path, filename):
+def load(bayesian_network, path, filename):
     param_store = pyro.get_param_store()
-    param_store.load(path + filename)
+    param_store.load(path + filename + ".pt")
     for key, value in param_store.items():
         param_store.replace_param(key, value, value)
     
+    bayesian_network.model = model
+    bayesian_network.guide = guide
+
     print("\nLoading: ", path + filename)
 
 def set_params_updates():
