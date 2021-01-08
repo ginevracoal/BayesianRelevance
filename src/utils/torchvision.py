@@ -37,7 +37,6 @@ class TransformDataset(Dataset):
 def subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs):
 
     im_idxs_dict={}
-    label_counts_dict={str(class_idx):.0001 for class_idx in range(num_classes)}
 
     for phase in dataloaders_dict.keys():
         dataset = dataloaders_dict[phase].dataset
@@ -47,6 +46,30 @@ def subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs):
         dataset = torch.utils.data.Subset(dataset, im_idxs_dict[phase])
         dataloaders_dict[phase] = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False)
         
+    return dataloaders_dict, im_idxs_dict
+
+def balanced_subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs):
+
+    im_idxs_dict={}
+    
+    # for phase in dataloaders_dict.keys():
+    for phase in ['test']:
+        dataset = dataloaders_dict[phase].dataset
+        n_samples = min(n_inputs, len(dataset))
+        samples_per_class = int(n_samples/num_classes)
+
+        sampled_idxs = []
+        for target in range(num_classes+1):
+
+            while len(sampled_idxs) < target*samples_per_class:
+                idx = np.random.randint(0, len(dataset))
+                if dataset[idx][1]==(target-1):
+                    sampled_idxs.append(idx)
+
+        im_idxs_dict[phase]=sampled_idxs[:n_samples]
+        dataset = torch.utils.data.Subset(dataset, im_idxs_dict[phase])        
+        dataloaders_dict[phase] = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
     return dataloaders_dict, im_idxs_dict
 
 def transform_data(train_set, val_set, test_set, img_size):
@@ -192,7 +215,8 @@ def load_data(dataset_name, batch_size=128, n_inputs=None, img_size=224, num_wor
     im_idxs_dict = None
 
     if n_inputs is not None:
-        dataloaders_dict, im_idxs_dict = subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs)
+        # dataloaders_dict, im_idxs_dict = subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs)
+        dataloaders_dict, im_idxs_dict = balanced_subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs)
 
     print("\ntrain dataset length =", len(dataloaders_dict['train'].dataset), end="\t")
     print("val dataset length =", len(dataloaders_dict['val'].dataset), end="\t")
