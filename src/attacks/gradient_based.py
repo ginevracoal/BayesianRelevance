@@ -60,7 +60,7 @@ def loss_gradient_sign(net, n_samples, image, label):
 
 def fgsm_attack(net, image, label, hyperparams=None, n_samples=None, avg_posterior=False):
 
-    epsilon = hyperparams["epsilon"] if hyperparams is not None else 0.3
+    epsilon = hyperparams["epsilon"] if hyperparams is not None else 0.2
     
     gradient_sign = loss_gradient_sign(net, n_samples, image, label)
     perturbed_image = image + epsilon * gradient_sign
@@ -73,7 +73,7 @@ def pgd_attack(net, image, label, hyperparams=None, n_samples=None, avg_posterio
     if hyperparams is not None: 
         epsilon, alpha, iters = (hyperparams["epsilon"], 2/image.max(), 40)
     else:
-        epsilon, alpha, iters = (0.3, 2/225, 40)
+        epsilon, alpha, iters = (0.2, 2/225, 40)
 
     original_image = copy.deepcopy(image)
     

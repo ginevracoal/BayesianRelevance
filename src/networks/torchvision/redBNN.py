@@ -2,7 +2,7 @@ from utils.data import *
 from utils.savedir import *
 from networks.torchvision.baseNN import *
 
-import bayesian_inference.last_layer.pyro_svi_new as pyro_svi
+import bayesian_inference.last_layer.pyro_svi as pyro_svi
 import bayesian_inference.last_layer.pyro_laplace as pyro_laplace
 import bayesian_inference.last_layer.stochastic_gradient_langevin_dynamics as sgld
 
@@ -119,7 +119,13 @@ class torchvisionBNN(torchvisionNN):
         else:
             raise NotImplementedError
 
-    def forward(self, inputs, n_samples, sample_idxs=None, expected_out=True):
+    def forward(self, inputs, n_samples=None, sample_idxs=None, expected_out=True):
+
+        if hasattr(self, 'n_samples'):
+            n_samples = self.n_samples
+        else:
+            if n_samples is None:
+                raise ValueError("Set the number of posterior samples.")
 
         if self.inference=="svi":
             logits = pyro_svi.forward(self, inputs, n_samples, sample_idxs)

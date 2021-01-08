@@ -53,7 +53,7 @@ def evaluate_attack(savedir, network, dataloader, adversarial_data, device, meth
                 original_images_list.append(image)
 
             images, labels = images.to(device), labels.to(device)
-            attacks = adversarial_data[idx:idx+len(images)]#.to(device)
+            attacks = adversarial_data[idx:idx+len(images)]
 
             out = network(images, n_samples)
             original_correct += torch.sum(out.argmax(-1) == labels).item()

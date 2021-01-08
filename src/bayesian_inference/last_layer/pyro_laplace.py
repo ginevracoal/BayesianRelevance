@@ -84,7 +84,7 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
                     loss += svi.step(bayesian_network, x_data=inputs, y_data=labels)
                     bayesian_network.delta_guide = guide.get_posterior()
 
-                    logits = bayesian_network.forward(inputs)
+                    logits = bayesian_network.forward(inputs, n_samples=1)
                     _, preds = torch.max(logits, 1)
 
                     if DEBUG:
@@ -93,9 +93,6 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
 
                 running_loss += loss * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
-
-            # if DEBUG:
-            #     print(list(poutine.trace(self.guide).get_trace(inputs).nodes.keys()))
 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
@@ -116,13 +113,13 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
 
     return val_acc_history
 
-def forward(bayesian_network, inputs, n_samples, seeds=None):
+def forward(bayesian_network, inputs, n_samples, sample_idxs=None):
 
-    if seeds:
-        if len(seeds) != n_samples:
-            raise ValueError("Number of seeds should match number of samples.")
+    if sample_idxs:
+        if len(sample_idxs) != n_samples:
+            raise ValueError("Number of sample_idxs should match number of samples.")
     else:
-        seeds = list(range(n_samples))
+        sample_idxs = list(range(n_samples))
 
     out_batch = bayesian_network.rednet(inputs).squeeze(3).squeeze(2)
 
@@ -130,8 +127,8 @@ def forward(bayesian_network, inputs, n_samples, seeds=None):
         # after training use Laplace posterior approximation
 
         logits = []  
-        for seed in seeds:
-            pyro.set_rng_seed(seed)
+        for sample_idx in sample_idxs:
+            pyro.set_rng_seed(sample_idx)
             posterior = pyro.sample("posterior", bayesian_network.laplace_posterior)
             out_w = posterior['fc.weight']
             out_b = posterior['fc.bias']
