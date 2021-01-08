@@ -9,6 +9,7 @@ from torch.optim.optimizer import Optimizer, required
 
 from utils.data import load_from_pickle, save_to_pickle
 
+BURNIN=10
 
 class SGLD(Optimizer):
     """
@@ -70,7 +71,7 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
     best_model_wts = copy.deepcopy(model.state_dict())
 
     since = time.time()
-    num_iters = bayesian_network.burnin+num_iters
+    num_iters = BURNIN+num_iters
     for epoch in range(num_iters):
         print('Epoch {}/{}'.format(epoch, num_iters - 1))
         print('-' * 10)
@@ -122,7 +123,7 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
 
             val_acc_history.append(epoch_acc)
 
-            if epoch >= bayesian_network.burnin and phase == 'train':
+            if epoch >= BURNIN and phase == 'train':
                 iter_weights = copy.deepcopy(model.state_dict())
                 bayesian_network.posterior_samples.append(iter_weights)
 
@@ -154,7 +155,7 @@ def forward(bayesian_network, inputs, n_samples, sample_idxs=None):
         features = bayesian_network.rednet(inputs).squeeze()
         logits.append(last_layer_copy(features))
 
-    logits = torch.stack(logits).unsqueeze(0)
+    logits = torch.stack(logits).unsqueeze(1) # second dim = n. images = 1
     return logits
 
 def save(bayesian_network, num_iters, path, filename):

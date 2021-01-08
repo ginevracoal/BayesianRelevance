@@ -16,9 +16,6 @@ class torchvisionBNN(torchvisionNN):
         self.inference = inference
         self.name = str(model_name)+"_redBNN_"+str(inference)+"_"+str(dataset_name)
 
-        if inference=="sgld":
-            self.burnin=2
-
     def to(self, device):
         """
         Send network to device.
