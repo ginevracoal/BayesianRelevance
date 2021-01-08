@@ -54,14 +54,13 @@ else:
         else:
             savedir = args.model+"_baseNN_"+args.dataset+"_iters="+str(args.iters)
 
-
 if args.device=="cuda":
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 num_workers=0 if args.device=="cuda" else 4
 device = torch.device(args.device) if args.attack_library=="grad_based" else args.device
 
-dataloaders_dict, num_classes, im_random_idxs = load_data(dataset_name=args.dataset, 
+dataloaders_dict, num_classes, im_random_idxs = load_data(dataset_name=args.dataset, phases=['test'], 
                                     batch_size=batch_size, n_inputs=n_inputs, num_workers=num_workers)
 
 atk_lib = eval(args.attack_library)

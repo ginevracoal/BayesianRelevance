@@ -52,8 +52,7 @@ def balanced_subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inpu
 
     im_idxs_dict={}
     
-    # for phase in dataloaders_dict.keys():
-    for phase in ['test']:
+    for phase in dataloaders_dict.keys():
         dataset = dataloaders_dict[phase].dataset
         n_samples = min(n_inputs, len(dataset))
         samples_per_class = int(n_samples/num_classes)
@@ -90,7 +89,8 @@ def transform_data(train_set, val_set, test_set, img_size):
 
     return train_set, val_set, test_set
 
-def load_data(dataset_name, batch_size=128, n_inputs=None, img_size=224, num_workers=0):
+def load_data(dataset_name, phases=['train','val','test'], batch_size=128, n_inputs=None, 
+              img_size=224, num_workers=0):
     """
     Builds a dictionary of torch training, validation and test dataloaders from the chosen dataset.
     In debugging mode all dataloaders are cut to 100 randomly chosen points.
@@ -211,17 +211,18 @@ def load_data(dataset_name, batch_size=128, n_inputs=None, img_size=224, num_wor
     test_dataloader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     
     dataloaders_dict = {'train': train_dataloader, 'val':val_dataloader, 'test':test_dataloader}
+    print("\nimg shape =", dataloaders_dict['train'].dataset[0][0].shape, end="\t")
+    
+    dataloaders_dict = {phase:dataloaders_dict[phase] for phase in phases}
 
     im_idxs_dict = None
-
     if n_inputs is not None:
         # dataloaders_dict, im_idxs_dict = subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs)
         dataloaders_dict, im_idxs_dict = balanced_subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs)
 
-    print("\ntrain dataset length =", len(dataloaders_dict['train'].dataset), end="\t")
-    print("val dataset length =", len(dataloaders_dict['val'].dataset), end="\t")
-    print("test dataset length =", len(dataloaders_dict['test'].dataset), end="\t")
-    print("img_size =", dataloaders_dict['train'].dataset[0][0].shape, end="\n")
+    for phase in phases:
+        print(phase, "dataset length =", len(dataloaders_dict[phase].dataset), end="\t")
+    print()
 
-    return dataloaders_dict, num_classes, im_idxs_dict
+    return dataloaders_dict, num_classes, im_idxs_dict[phase]
 

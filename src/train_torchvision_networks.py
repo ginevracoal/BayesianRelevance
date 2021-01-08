@@ -58,7 +58,7 @@ if args.device=="cuda":
 num_workers=0 if args.device=="cuda" else 4
 device = torch.device(args.device)
 
-dataloaders_dict, num_classes, _ = load_data(dataset_name=args.dataset, 
+dataloaders_dict, num_classes, _ = load_data(dataset_name=args.dataset, phases=['train','val'],
                                     batch_size=batch_size, n_inputs=n_inputs, num_workers=num_workers)
 
 if args.bayesian:
