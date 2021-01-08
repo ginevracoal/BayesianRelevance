@@ -61,7 +61,7 @@ else:
             savedir = args.model+"_baseNN_"+args.dataset+"_iters="+str(args.iters)
 
 num_workers=0 if args.device=="cuda" else 4
-dataloaders_dict, num_classes, im_random_idxs = load_data(dataset_name=args.dataset, 
+dataloaders_dict, num_classes, _ = load_data(dataset_name=args.dataset, 
                                     batch_size=batch_size, n_inputs=n_inputs, num_workers=num_workers)
 
 ############## 
@@ -87,7 +87,6 @@ if args.bayesian:
                      method=args.attack_method, n_samples=n_samples, device=device, savedir=savedir)
     else:
         bnn_attack = load_attack(method=args.attack_method, n_samples=n_samples, savedir=savedir)        
-        bnn_attack = bnn_attack[im_random_idxs['test']]
 
     evaluate_attack(network=model_bnn, dataloader=dataloaders_dict['test'], adversarial_data=bnn_attack, 
                     n_samples=n_samples, device=device, method=args.attack_method, savedir=savedir)
@@ -112,7 +111,6 @@ else:
                     method=args.attack_method, device=device, savedir=savedir)
     else:
         nn_attack = load_attack(method=args.attack_method, savedir=savedir)
-        nn_attack = nn_attack[im_random_idxs['test']]
         
     evaluate_attack(network=model_nn, dataloader=dataloaders_dict['test'], adversarial_data=nn_attack, 
                     device=device, method=args.attack_method, savedir=savedir)

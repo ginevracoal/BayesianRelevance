@@ -32,8 +32,8 @@ def model(bayesian_network, x_data, y_data):
     # print(outw.shape, outb.shape)
 
     with pyro.plate("data", len(x_data)):
-        output = bayesian_network.rednet(x_data).squeeze()
-        yhat = torch.matmul(output, outw.t()) + outb 
+        features = bayesian_network.rednet(x_data).squeeze()
+        yhat = torch.matmul(features, outw.t()) + outb 
         lhat = nnf.log_softmax(yhat, dim=-1)
         cond_model = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
     
@@ -76,7 +76,7 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
                 inputs, labels  = inputs.to(device), labels.to(device)
 
                 with torch.set_grad_enabled(phase == 'train'):
-                    # Get model outputs and calculate loss
+                    # Get model logits and calculate loss
                     # Special case for inception because in training it has an auxiliary output. In train
                     #   mode we calculate the loss by summing the final output and the auxiliary output
                     #   but in testing we only consider the final output.
@@ -84,8 +84,8 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
                     loss += svi.step(bayesian_network, x_data=inputs, y_data=labels)
                     bayesian_network.delta_guide = guide.get_posterior()
 
-                    outputs = bayesian_network.forward(inputs)
-                    _, preds = torch.max(outputs, 1)
+                    logits = bayesian_network.forward(inputs)
+                    _, preds = torch.max(logits, 1)
 
                     if DEBUG:
                         print(bayesian_network.basenet.state_dict()['conv1.weight'][0,0,:5])
@@ -129,16 +129,15 @@ def forward(bayesian_network, inputs, n_samples, seeds=None):
     if hasattr(bayesian_network, 'laplace_posterior'):
         # after training use Laplace posterior approximation
 
-        outputs = []  
+        logits = []  
         for seed in seeds:
             pyro.set_rng_seed(seed)
             posterior = pyro.sample("posterior", bayesian_network.laplace_posterior)
             out_w = posterior['fc.weight']
             out_b = posterior['fc.bias']
-            output = torch.matmul(out_batch, out_w.t()) + out_b
-            outputs.append(output)
+            logits.append(torch.matmul(out_batch, out_w.t()) + out_b)
 
-        outputs = torch.stack(outputs)
+        logits = torch.stack(logits)
 
     else:
         # during training use delta function at MAP estimate
@@ -149,13 +148,13 @@ def forward(bayesian_network, inputs, n_samples, seeds=None):
         out_w = out_w.reshape(bayesian_network.num_classes, layer_size)
         out_b = map_weights[bayesian_network.num_classes*layer_size:]
 
-        outputs = torch.matmul(out_batch.squeeze(), out_w.t()) + out_b
-        outputs = outputs.unsqueeze(0)
+        logits = torch.matmul(out_batch.squeeze(), out_w.t()) + out_b
+        logits = logits.unsqueeze(0)
 
         if DEBUG:
             print("out_w[:5] =", out_w[:5])
 
-    return outputs
+    return logits
 
 def save(bayesian_network, path, filename):
     save_to_pickle(bayesian_network.laplace_posterior, path, filename+".pkl")

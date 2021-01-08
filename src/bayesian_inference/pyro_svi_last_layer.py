@@ -97,14 +97,14 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
                 inputs, labels  = inputs.to(device), labels.to(device)
 
                 with torch.set_grad_enabled(phase == 'train'):
-                    # Get model outputs and calculate loss
+                    # Get model logits and calculate loss
                     # Special case for inception because in training it has an auxiliary output. In train
                     #   mode we calculate the loss by summing the final output and the auxiliary output
                     #   but in testing we only consider the final output.
 
                     loss += svi.step(bayesian_network, x_data=inputs, y_data=labels)
-                    outputs = bayesian_network.forward(inputs)
-                    _, preds = torch.max(outputs, 1)
+                    logits = bayesian_network.forward(inputs, n_samples=1)
+                    _, preds = torch.max(logits, 1)
 
                     if DEBUG:
                         print(bayesian_network.basenet.state_dict()['conv1.weight'][0,0,:5])
@@ -112,9 +112,6 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
 
                 running_loss += loss * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
-
-            # if DEBUG:
-            #     print(list(poutine.trace(self.guide).get_trace(inputs).nodes.keys()))
 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
@@ -141,14 +138,14 @@ def forward(bayesian_network, inputs, n_samples, sample_idxs=None):
     else:
         sample_idxs = list(range(n_samples))
 
-    outputs = []  
-    for seed in sample_idxs:
-        pyro.set_rng_seed(seed)
+    logits = []  
+    for sample_idx in sample_idxs:
+        pyro.set_rng_seed(sample_idx)
         guide_trace = poutine.trace(bayesian_network.guide).get_trace(bayesian_network, inputs)   
-        outputs.append(guide_trace.nodes['_RETURN']['value'])
+        logits.append(guide_trace.nodes['_RETURN']['value'])
 
-    outputs = torch.stack(outputs)
-    return outputs
+    logits = torch.stack(logits)
+    return logits
 
 def save(bayesian_network, path, filename):
     param_store = pyro.get_param_store()
