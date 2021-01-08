@@ -67,7 +67,7 @@ def balanced_subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inpu
 
         im_idxs_dict[phase]=sampled_idxs[:n_samples]
         dataset = torch.utils.data.Subset(dataset, im_idxs_dict[phase])        
-        dataloaders_dict[phase] = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        dataloaders_dict[phase] = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
     return dataloaders_dict, im_idxs_dict
 
@@ -214,8 +214,8 @@ def load_data(dataset_name, phases=['train','val','test'], batch_size=128, n_inp
     print("\nimg shape =", dataloaders_dict['train'].dataset[0][0].shape, end="\t")
     
     dataloaders_dict = {phase:dataloaders_dict[phase] for phase in phases}
+    im_idxs_dict = {phase:None for phase in phases}
 
-    im_idxs_dict = None
     if n_inputs is not None:
         # dataloaders_dict, im_idxs_dict = subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs)
         dataloaders_dict, im_idxs_dict = balanced_subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs)
@@ -224,5 +224,5 @@ def load_data(dataset_name, phases=['train','val','test'], batch_size=128, n_inp
         print(phase, "dataset length =", len(dataloaders_dict[phase].dataset), end="\t")
     print()
 
-    return dataloaders_dict, num_classes, im_idxs_dict[phase]
+    return dataloaders_dict, num_classes, im_idxs_dict
 

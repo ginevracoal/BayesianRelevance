@@ -37,8 +37,8 @@ batch_size = 128
 if args.debug:
     savedir="debug"
     n_inputs=10
-    iters=2
-    n_samples=2
+    iters=1
+    n_samples=1
 
 else:
     n_inputs=args.inputs
@@ -79,7 +79,7 @@ if args.bayesian:
                      method=args.attack_method, n_samples=n_samples, device=device, savedir=savedir)
     else:
         adversarial_data = load_attack(method=args.attack_method, n_samples=n_samples, savedir=savedir)  
-        # adversarial_data = adversarial_data[im_random_idxs['test']]
+        adversarial_data = adversarial_data[im_random_idxs['test']]
 
     evaluate_attack(network=model, dataloader=dataloaders_dict['test'], adversarial_data=adversarial_data, 
                     n_samples=n_samples, device=device, method=args.attack_method, savedir=savedir)
@@ -96,7 +96,7 @@ else:
                     method=args.attack_method, device=device, savedir=savedir)
     else:
         adversarial_data = load_attack(method=args.attack_method, savedir=savedir)
-        # adversarial_data = adversarial_data[im_random_idxs['test']]
+        adversarial_data = adversarial_data[im_random_idxs['test']]
 
     evaluate_attack(network=model, dataloader=dataloaders_dict['test'], adversarial_data=adversarial_data, 
                     device=device, method=args.attack_method, savedir=savedir)
