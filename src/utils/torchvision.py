@@ -41,7 +41,7 @@ def subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs):
 
     for phase in dataloaders_dict.keys():
         dataset = dataloaders_dict[phase].dataset
-        n_samples = min(n_inputs, len(dataset)) if n_inputs else len(dataset)
+        n_samples = min(n_inputs, len(dataset))
 
         im_idxs_dict[phase]=np.random.choice(len(dataset), n_samples, replace=False)
         dataset = torch.utils.data.Subset(dataset, im_idxs_dict[phase])
@@ -189,7 +189,10 @@ def load_data(dataset_name, batch_size=128, n_inputs=None, img_size=224, num_wor
     
     dataloaders_dict = {'train': train_dataloader, 'val':val_dataloader, 'test':test_dataloader}
 
-    dataloaders_dict, im_idxs_dict = subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs)
+    im_idxs_dict = None
+
+    if n_inputs is not None:
+        dataloaders_dict, im_idxs_dict = subset_dataloader(dataloaders_dict, batch_size, num_classes, n_inputs)
 
     print("\ntrain dataset length =", len(dataloaders_dict['train'].dataset), end="\t")
     print("val dataset length =", len(dataloaders_dict['val'].dataset), end="\t")

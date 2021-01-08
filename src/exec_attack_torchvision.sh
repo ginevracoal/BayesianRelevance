@@ -3,11 +3,11 @@
 MODEL_NAME="resnet" # resnet, alexnet, vgg
 DATASET_NAME="imagenette" # imagenette, imagewoof, animals10, hymenoptera
 BAYESIAN="True"
-INFERENCE="svi" # laplace, svi
-TRAIN="True"
+INFERENCE="laplace" # laplace, svi, sgld
+TRAIN="False"
 ATTACK="True"
 N_SAMPLES=50
-ITERS=2
+ITERS=5
 ATTACK_METHOD="fgsm"
 DEVICE="cpu"
 	
@@ -30,6 +30,6 @@ echo "=== exec ${DATE} ${TIME} ===" >> $OUT
 
 python3 attack_torchvision_networks.py --savedir=$SAVEDIR --model=$MODEL_NAME  --dataset=$DATASET_NAME \
 		--bayesian=$BAYESIAN --inference=$INFERENCE --train=$TRAIN --attack=$ATTACK --iters=$ITERS \
-		--attack_method=$ATTACK_METHOD --n_samples=$N_SAMPLES --device=$DEVICE #&>> $OUT
+		--attack_method=$ATTACK_METHOD --samples=$N_SAMPLES --device=$DEVICE &>> $OUT
 
 deactivate

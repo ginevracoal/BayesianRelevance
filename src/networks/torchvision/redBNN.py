@@ -2,9 +2,9 @@ from utils.data import *
 from utils.savedir import *
 from networks.torchvision.baseNN import *
 
-import bayesian_inference.pyro_svi_last_layer as pyro_svi
-import bayesian_inference.pyro_laplace_last_layer as pyro_laplace
-import bayesian_inference.stochastic_gradient_langevin_dynamics as sgld
+import bayesian_inference.last_layer.pyro_svi_new as pyro_svi
+import bayesian_inference.last_layer.pyro_laplace as pyro_laplace
+import bayesian_inference.last_layer.stochastic_gradient_langevin_dynamics as sgld
 
 DEBUG=False
 
@@ -119,21 +119,21 @@ class torchvisionBNN(torchvisionNN):
         else:
             raise NotImplementedError
 
-    def forward(self, inputs, n_samples, sample_idxs=None, avg_out=True):
+    def forward(self, inputs, n_samples, sample_idxs=None, expected_out=True):
 
         if self.inference=="svi":
-            outputs = pyro_svi.forward(self, inputs, n_samples, sample_idxs)
+            logits = pyro_svi.forward(self, inputs, n_samples, sample_idxs)
 
         elif self.inference=="laplace":
-            outputs = pyro_laplace.forward(self, inputs, n_samples, sample_idxs)
+            logits = pyro_laplace.forward(self, inputs, n_samples, sample_idxs)
        
         elif self.inference=="sgld":
-            outputs = sgld.forward(self, inputs, n_samples, sample_idxs)
+            logits = sgld.forward(self, inputs, n_samples, sample_idxs)
        
         else:
             raise NotImplementedError
         
-        return outputs.mean(0) if avg_out else outputs
+        return logits.mean(0) if expected_out else logits
 
     def save(self, savedir, num_iters):
         path=TESTS+savedir+"/"

@@ -75,56 +75,48 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
         print('Epoch {}/{}'.format(epoch, num_iters - 1))
         print('-' * 10)
 
-        # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
             if phase == 'train':
-                model.train()  # Set model to training mode
+                model.train()  
             else:
-                model.eval()   # Set model to evaluate mode
+                model.eval()  
 
             running_loss = 0.0
             running_corrects = 0
 
-            # Iterate over data.
             for inputs, labels in dataloaders[phase]:
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
-                inputs = bayesian_network.rednet(inputs).squeeze()
+                features = bayesian_network.rednet(inputs).squeeze()
 
-                # zero the parameter gradients
                 optimizer.zero_grad()
 
-                # forward
-                # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
-                    # Get model outputs and calculate loss
-                    # Special case for inception because in training it has an auxiliary output. In train
-                    #   mode we calculate the loss by summing the final output and the auxiliary output
-                    #   but in testing we only consider the final output.
+
                     if is_inception and phase == 'train':
                         # From https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958
-                        outputs, aux_outputs = model(inputs)
-                        loss1 = criterion(outputs, labels)
-                        loss2 = criterion(aux_outputs, labels)
+                        logits, aux_logits = model(features)
+                        loss1 = criterion(logits, labels)
+                        loss2 = criterion(aux_logits, labels)
                         loss = loss1 + 0.4*loss2
                     else:
-                        outputs = model(inputs)
-                        loss = criterion(outputs, labels)
+                        logits = model(features)
+                        loss = criterion(logits, labels)
 
-                    _, preds = torch.max(outputs, 1)
+                    _, preds = torch.max(logits, 1)
 
-                    # backward + optimize only if in training phase
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
 
-                # statistics
-                running_loss += loss.item() * inputs.size(0)
+                minibatch_size = inputs.size(0)
+                running_loss += loss.item() * minibatch_size
                 running_corrects += torch.sum(preds == labels.data)
 
-            epoch_loss = running_loss / len(dataloaders[phase].dataset)
-            epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
+            num_minibatches =  len(dataloaders[phase].dataset)
+            epoch_loss = running_loss / num_minibatches
+            epoch_acc = running_corrects.double() / num_minibatches
 
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
 
@@ -153,17 +145,17 @@ def forward(bayesian_network, inputs, n_samples, sample_idxs=None):
     else:
         sample_idxs = list(range(n_samples))
 
-    outputs = []  
+    logits = []  
     last_layer_copy = copy.deepcopy(bayesian_network.last_layer)
 
     for idx in sample_idxs:
 
         last_layer_copy.load_state_dict(bayesian_network.posterior_samples[idx])
-        out_data = bayesian_network.rednet(inputs).squeeze()
-        outputs.append(last_layer_copy(out_data))
+        features = bayesian_network.rednet(inputs).squeeze()
+        logits.append(last_layer_copy(features))
 
-    outputs = torch.stack(outputs).unsqueeze(0)
-    return outputs
+    logits = torch.stack(logits).unsqueeze(0)
+    return logits
 
 def save(bayesian_network, num_iters, path, filename):
 
@@ -185,4 +177,3 @@ def load(bayesian_network, num_iters, path, filename):
 
     bayesian_network.posterior_samples=posterior_samples
 
-# def to    

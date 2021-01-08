@@ -1,5 +1,5 @@
 import time
-from utils.data import save_to_pickle
+from utils.data import save_to_pickle, load_from_pickle
 
 import torch
 import torch.nn as nn

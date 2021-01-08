@@ -29,14 +29,10 @@ args = parser.parse_args()
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
 
-if args.device=="cuda":
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 ################
 # common setup #
 ################
-
-device = torch.device(args.device)
 
 batch_size = 128
 
@@ -60,58 +56,64 @@ else:
         else:
             savedir = args.model+"_baseNN_"+args.dataset+"_iters="+str(args.iters)
 
+
+if args.device=="cuda":
+    torch.set_default_tensor_type('torch.cuda.FloatTensor')
+
 num_workers=0 if args.device=="cuda" else 4
-dataloaders_dict, num_classes, _ = load_data(dataset_name=args.dataset, 
+device = torch.device(args.device)
+
+dataloaders_dict, num_classes, im_idxs_dict = load_data(dataset_name=args.dataset, 
                                     batch_size=batch_size, n_inputs=n_inputs, num_workers=num_workers)
 
-############## 
-# Initialize #
-############## 
+####################
+# Train and attack #
+####################
 
 if args.bayesian:
-    model_bnn = torchvisionBNN(model_name=args.model, dataset_name=args.dataset, inference=args.inference)
-    model_bnn.initialize_model(model_name=args.model, num_classes=num_classes, 
+    model = torchvisionBNN(model_name=args.model, dataset_name=args.dataset, inference=args.inference)
+    model.initialize_model(model_name=args.model, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
-    model_bnn.to(device)
-
-    # print(model_bnn.basenet)
+    model.to(device)
 
     if args.train:
-        model_bnn.train(dataloaders_dict, num_iters=iters, device=device)
-        model_bnn.save(savedir, iters)
+        model.train(dataloaders_dict, num_iters=iters, device=device)
+        model.save(savedir, iters)
     else:
-        model_bnn.load(savedir, iters, device)
+        model.load(savedir, iters, device)
 
     if args.attack:
-        bnn_attack = attack(network=model_bnn, dataloader=dataloaders_dict['test'], 
+        adversarial_data = attack(network=model, dataloader=dataloaders_dict['test'], 
                      method=args.attack_method, n_samples=n_samples, device=device, savedir=savedir)
     else:
-        bnn_attack = load_attack(method=args.attack_method, n_samples=n_samples, savedir=savedir)        
+        adversarial_data = load_attack(method=args.attack_method, n_samples=n_samples, savedir=savedir)  
+        if args.inputs:      
+            adversarial_data = adversarial_data[im_random_idxs['test']]
 
-    evaluate_attack(network=model_bnn, dataloader=dataloaders_dict['test'], adversarial_data=bnn_attack, 
+    evaluate_attack(network=model, dataloader=dataloaders_dict['test'], adversarial_data=adversarial_data, 
                     n_samples=n_samples, device=device, method=args.attack_method, savedir=savedir)
 
 else:
 
-    model_nn = torchvisionNN(model_name=args.model, dataset_name=args.dataset)
-    params_to_update = model_nn.initialize_model(model_name=args.model, num_classes=num_classes, 
+    model = torchvisionNN(model_name=args.model, dataset_name=args.dataset)
+    params_to_update = model.initialize_model(model_name=args.model, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
-    model_nn.to(device)
-
-    # print(model_nn.basenet)
+    model.to(device)
 
     if args.train:
-        model_nn.train(dataloaders_dict, params_to_update, num_iters=iters, device=device)
-        model_nn.save(savedir, iters)
+        model.train(dataloaders_dict, params_to_update, num_iters=iters, device=device)
+        model.save(savedir, iters)
     else:
-        model_nn.load(savedir, iters, device)
+        model.load(savedir, iters, device)
 
     if args.attack:
-        nn_attack = attack(network=model_nn, dataloader=dataloaders_dict['test'], 
+        adversarial_data = attack(network=model, dataloader=dataloaders_dict['test'], 
                     method=args.attack_method, device=device, savedir=savedir)
     else:
-        nn_attack = load_attack(method=args.attack_method, savedir=savedir)
-        
-    evaluate_attack(network=model_nn, dataloader=dataloaders_dict['test'], adversarial_data=nn_attack, 
+        adversarial_data = load_attack(method=args.attack_method, savedir=savedir)
+        if args.inputs:      
+            adversarial_data = adversarial_data[im_random_idxs['test']]
+
+    evaluate_attack(network=model, dataloader=dataloaders_dict['test'], adversarial_data=adversarial_data, 
                     device=device, method=args.attack_method, savedir=savedir)
 

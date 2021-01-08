@@ -11,6 +11,8 @@ import pyro.optim as pyroopt
 from pyro.infer import SVI, Trace_ELBO, TraceMeanField_ELBO, Predictive
 from pyro.distributions import OneHotCategorical, Normal, Categorical, Uniform, Delta
 
+import bayesian_inference.pyro_svi as pyro_svi
+
 DEBUG=False
 
 def model(bayesian_network, x_data, y_data):
@@ -61,20 +63,16 @@ def guide(bayesian_network, x_data, y_data=None):
 
 def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = pyro.optim.Adam({"lr":0.001})
     bayesian_network.to(device)
-
-    network = bayesian_network.basenet
-    since = time.time()
-    elbo = TraceMeanField_ELBO()
-
     bayesian_network.model = model
     bayesian_network.guide = guide
 
+    elbo = TraceMeanField_ELBO()
+    optimizer = pyro.optim.Adam({"lr":0.001})
     svi = SVI(bayesian_network.model, bayesian_network.guide, optimizer, loss=elbo)
 
     val_acc_history = []
+    since = time.time()
 
     for epoch in range(num_iters):
 
@@ -85,9 +83,9 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
 
         for phase in ['train', 'val']:
             if phase == 'train':
-                network.train()  # Set model to training mode
+                bayesian_network.basenet.train() 
             else:
-                network.eval()  # Set model to evaluate mode
+                bayesian_network.basenet.eval() 
 
             running_loss = 0.0
             running_corrects = 0
@@ -97,12 +95,8 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
                 inputs, labels  = inputs.to(device), labels.to(device)
 
                 with torch.set_grad_enabled(phase == 'train'):
-                    # Get model logits and calculate loss
-                    # Special case for inception because in training it has an auxiliary output. In train
-                    #   mode we calculate the loss by summing the final output and the auxiliary output
-                    #   but in testing we only consider the final output.
 
-                    loss += svi.step(bayesian_network, x_data=inputs, y_data=labels)
+                    loss = svi.step(bayesian_network, x_data=inputs, y_data=labels)
                     logits = bayesian_network.forward(inputs, n_samples=1)
                     _, preds = torch.max(logits, 1)
 
@@ -148,20 +142,21 @@ def forward(bayesian_network, inputs, n_samples, sample_idxs=None):
     return logits
 
 def save(bayesian_network, path, filename):
-    param_store = pyro.get_param_store()
-    print(f"\nlearned params = {param_store.get_all_param_names()}")
-    param_store.save(path + filename + ".pt")
+    # param_store = pyro.get_param_store()
+    # print(f"\nlearned params = {param_store.get_all_param_names()}")
+    # param_store.save(path + filename + ".pt")
+    pyro_svi.save(path, filename)
 
 def load(bayesian_network, path, filename):
-    param_store = pyro.get_param_store()
-    param_store.load(path + filename + ".pt")
-    for key, value in param_store.items():
-        param_store.replace_param(key, value, value)
+    # param_store = pyro.get_param_store()
+    # param_store.load(path + filename + ".pt")
+    # for key, value in param_store.items():
+    #     param_store.replace_param(key, value, value)
+    # print("\nLoading: ", path + filename)
+    pyro_svi.load(path, filename)
     
     bayesian_network.model = model
     bayesian_network.guide = guide
-
-    print("\nLoading: ", path + filename)
 
 def set_params_updates():
     for weights_name in pyro.get_param_store():
@@ -169,5 +164,6 @@ def set_params_updates():
             pyro.get_param_store()[weights_name].requires_grad=False
 
 def to(device):
-    for k, v in pyro.get_param_store().items():
-        pyro.get_param_store()[k] = v.to(device)
+    # for k, v in pyro.get_param_store().items():
+    #     pyro.get_param_store()[k] = v.to(device)
+    pyro_svi.to(device)
