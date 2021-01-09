@@ -15,7 +15,7 @@ class SGLD(Optimizer):
     """
     SGLD optimiser based on pytorch's SGD.
     Note that the weight decay is specified in terms of the gaussian prior sigma.
-    https://github.com/JavierAntoran/Bayesian-Neural-Networks/tree/master/src/Stochastic_Gradient_Langevin_Dynamics
+    From https://github.com/JavierAntoran/Bayesian-Neural-Networks/tree/master/src/Stochastic_Gradient_Langevin_Dynamics
     """
 
     def __init__(self, params, lr=required, norm_sigma=0, addnoise=True):
@@ -147,11 +147,12 @@ def forward(bayesian_network, inputs, n_samples, sample_idxs=None):
         sample_idxs = list(range(n_samples))
 
     logits = []  
-    last_layer_copy = copy.deepcopy(bayesian_network.last_layer)
 
     for idx in sample_idxs:
 
+        last_layer_copy = copy.deepcopy(bayesian_network.last_layer)
         last_layer_copy.load_state_dict(bayesian_network.posterior_samples[idx])
+        # last_layer_copy = bayesian_network.posterior_samples[idx] ### v2 ###
         features = bayesian_network.rednet(inputs).squeeze()
         logits.append(last_layer_copy(features))
 
@@ -177,4 +178,19 @@ def load(bayesian_network, num_iters, path, filename):
         posterior_samples.append(sampled_weights)
 
     bayesian_network.posterior_samples=posterior_samples
+
+# def load(bayesian_network, num_iters, path, filename): ### v2 ###
+
+#     print("\nLoading from: ", path)
+
+#     posterior_samples = []
+
+#     for idx in range(num_iters):
+
+#         last_layer_copy = copy.deepcopy(bayesian_network.last_layer)
+#         sampled_weights = load_from_pickle(path+filename+"_"+str(idx)+".pkl")
+#         last_layer_copy.load_state_dict(sampled_weights)        
+#         posterior_samples.append(last_layer_copy)
+
+#     bayesian_network.posterior_samples=posterior_samples
 
