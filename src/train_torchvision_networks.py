@@ -20,7 +20,8 @@ parser.add_argument("--bayesian", type=eval, default="True")
 parser.add_argument("--inference", type=str, default="svi", help="laplace, svi")
 parser.add_argument("--samples", type=int, default=10, help="Number of posterior samples in the Bayesian case.")
 parser.add_argument("--inputs", type=int, default=None, help="Number of input images. None loads all the available ones.")
-parser.add_argument("--iters", type=int, default=5, help="Number of training iterations.")
+parser.add_argument("--iters", type=int, default=10, help="Number of training iterations.")
+parser.add_argument("--baseiters", type=int, default=2, help="Number of training iterations.")
 parser.add_argument("--device", type=str, default="cuda", help="cuda, cpu")
 parser.add_argument("--savedir", type=str, default=None)
 args = parser.parse_args()
@@ -33,8 +34,8 @@ batch_size = 128
 
 if args.debug:
     savedir="debug"
-    n_inputs=10
-    iters=2
+    n_inputs=100
+    iters=20
     n_samples=2
 
 else:
@@ -61,17 +62,7 @@ device = torch.device(args.device)
 dataloaders_dict, num_classes, _ = load_data(dataset_name=args.dataset, phases=['train','val'],
                                     batch_size=batch_size, n_inputs=n_inputs, num_workers=num_workers)
 
-if args.bayesian:
-    model = torchvisionBNN(model_name=args.model, dataset_name=args.dataset, inference=args.inference)
-    model.initialize_model(model_name=args.model, num_classes=num_classes, 
-                                                feature_extract=True, use_pretrained=True)
-    model.to(device)
-
-    model.train(dataloaders_dict, num_iters=iters, device=device)
-    model.save(savedir, iters)
-
-else:
-
+if args.bayesian is False:
     model = torchvisionNN(model_name=args.model, dataset_name=args.dataset)
     params_to_update = model.initialize_model(model_name=args.model, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
@@ -79,3 +70,19 @@ else:
 
     model.train(dataloaders_dict, params_to_update, num_iters=iters, device=device)
     model.save(savedir, iters)
+
+else:
+    basenet = torchvisionNN(model_name=args.model, dataset_name=args.dataset)
+    basenet.initialize_model(model_name=args.model, num_classes=num_classes, 
+                                                feature_extract=True, use_pretrained=True)
+    basenet_savedir = args.model+"_baseNN_"+args.dataset+"_iters="+str(args.baseiters)
+    basenet.load(basenet_savedir, args.baseiters, device)
+
+    model = torchvisionBNN(model_name=args.model, dataset_name=args.dataset, inference=args.inference)
+    model.initialize_model(basenet=basenet, model_name=args.model, num_classes=num_classes, 
+                                                feature_extract=True, use_pretrained=True)
+    model.to(device)
+
+    model.train(dataloaders_dict, num_iters=iters, device=device)
+    model.save(savedir, iters)
+

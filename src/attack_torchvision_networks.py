@@ -22,6 +22,7 @@ parser.add_argument("--inference", type=str, default="svi", help="laplace, svi")
 parser.add_argument("--samples", type=int, default=10, help="Number of posterior samples in the Bayesian case.")
 parser.add_argument("--inputs", type=int, default=None, help="Number of input images. None loads all the available ones.")
 parser.add_argument("--iters", type=int, default=5, help="Number of training iterations.")
+parser.add_argument("--baseiters", type=int, default=2, help="Number of training iterations.")
 parser.add_argument("--attack_library", type=str, default="deeprobust", help="grad_based, deeprobust")
 parser.add_argument("--attack_method", type=str, default="fgsm", help="Attack name: fgsm, pgd.")
 parser.add_argument("--device", type=str, default="cuda", help="cuda, cpu")
@@ -68,24 +69,7 @@ attack = atk_lib.attack
 load_attack = atk_lib.load_attack
 evaluate_attack = atk_lib.evaluate_attack
 
-if args.bayesian:
-    model = torchvisionBNN(model_name=args.model, dataset_name=args.dataset, inference=args.inference)
-    model.initialize_model(model_name=args.model, num_classes=num_classes, 
-                                                feature_extract=True, use_pretrained=True)
-    model.load(savedir, iters, device)
-
-    if args.attack:
-        adversarial_data = attack(network=model, dataloader=dataloaders_dict['test'], 
-                     method=args.attack_method, n_samples=n_samples, device=device, savedir=savedir)
-    else:
-        adversarial_data = load_attack(method=args.attack_method, n_samples=n_samples, savedir=savedir)  
-        adversarial_data = adversarial_data[im_random_idxs['test']]
-
-    evaluate_attack(network=model, dataloader=dataloaders_dict['test'], adversarial_data=adversarial_data, 
-                    n_samples=n_samples, device=device, method=args.attack_method, savedir=savedir)
-
-else:
-
+if args.bayesian is False:
     model = torchvisionNN(model_name=args.model, dataset_name=args.dataset)
     params_to_update = model.initialize_model(model_name=args.model, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
@@ -100,4 +84,28 @@ else:
 
     evaluate_attack(network=model, dataloader=dataloaders_dict['test'], adversarial_data=adversarial_data, 
                     device=device, method=args.attack_method, savedir=savedir)
+
+else:
+    basenet = torchvisionNN(model_name=args.model, dataset_name=args.dataset)
+    basenet.initialize_model(model_name=args.model, num_classes=num_classes, 
+                                                feature_extract=True, use_pretrained=True)
+    basenet_savedir = args.model+"_baseNN_"+args.dataset+"_iters="+str(args.baseiters)
+    basenet.load(basenet_savedir, args.baseiters, device)
+
+    model = torchvisionBNN(model_name=args.model, dataset_name=args.dataset, inference=args.inference)
+    model.initialize_model(basenet=basenet, model_name=args.model, num_classes=num_classes, 
+                                                feature_extract=True, use_pretrained=True)
+    model.load(savedir, iters, device)
+
+    if args.attack:
+        adversarial_data = attack(network=model, dataloader=dataloaders_dict['test'], 
+                     method=args.attack_method, n_samples=n_samples, device=device, savedir=savedir)
+    else:
+        adversarial_data = load_attack(method=args.attack_method, n_samples=n_samples, savedir=savedir)  
+        adversarial_data = adversarial_data[im_random_idxs['test']]
+
+    evaluate_attack(network=model, dataloader=dataloaders_dict['test'], adversarial_data=adversarial_data, 
+                    n_samples=n_samples, device=device, method=args.attack_method, savedir=savedir)
+
+
 

@@ -30,14 +30,14 @@ class torchvisionBNN(torchvisionNN):
         if self.inference=="laplace":
             pyro_laplace.to(self, device)
 
-    def initialize_model(self, model_name, num_classes, feature_extract, use_pretrained=True):
+    def initialize_model(self, basenet, model_name, num_classes, feature_extract, use_pretrained=True):
         """
         Load pretrained models, set parameters for training and specify last layer weights 
         as the only ones that need to be inferred.
         """
-        super(torchvisionBNN, self).initialize_model(model_name, num_classes,
-                                                     feature_extract, use_pretrained)
-
+        # super(torchvisionBNN, self).initialize_model(model_name, num_classes,
+        #                                              feature_extract, use_pretrained)
+        self.basenet = basenet.basenet # new
         self.rednet = nn.Sequential(*list(self.basenet.children())[:-1])
         self.last_layer = nn.Sequential(list(self.basenet.children())[-1])
 
