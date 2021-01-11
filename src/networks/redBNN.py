@@ -146,7 +146,7 @@ class redBNN(nn.Module):
 
 		self.base_net.to(device)
 
-	def forward(self, inputs, n_samples, seeds=None, training=False, out_prob=True, 
+	def forward(self, inputs, n_samples, seeds=None, training=False, expected_out=True, 
 		        *args, **kwargs):
 
 		if seeds:
@@ -202,9 +202,8 @@ class redBNN(nn.Module):
 						  self.base_net.state_dict()["l2.0.weight"][0,0,:3])
 					print("\nout.weight should change:\n", self.base_net.state_dict()["out.weight"][0][:3])	
 		
-		output_probs = torch.stack(preds)
-		return output_probs if out_prob else output_probs.mean(0)
-
+		logits = torch.stack(preds)
+		return logits.mean(0) if expected_out else logits
 
 	def _train_hmc(self, train_loader, device):
 		print("\n == redBNN HMC training ==")

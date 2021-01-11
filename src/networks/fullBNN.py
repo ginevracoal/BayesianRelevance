@@ -110,7 +110,7 @@ class BNN(PyroModule):
         
         with pyro.plate("data", len(x_data)):
             logits = lifted_module(x_data)
-            preds = nnf.softmax(logits, dim=-1)
+            preds = nnf.log_softmax(logits, dim=-1)
 
         return preds
 
@@ -165,14 +165,14 @@ class BNN(PyroModule):
         self.to(device)
         self.basenet.to(device)
 
-    def forward(self, inputs, n_samples=10, avg_posterior=False, seeds=None, training=False,
-                out_prob=True):
+    def forward(self, inputs, n_samples=10, avg_posterior=False, sample_idxs=None, training=False,
+                expected_out=True):
         
-        if seeds:
-            if len(seeds) != n_samples:
-                raise ValueError("Number of seeds should match number of samples.")
+        if sample_idxs:
+            if len(sample_idxs) != n_samples:
+                raise ValueError("Number of sample_idxs should match number of samples.")
         else:
-            seeds = list(range(n_samples))
+            sample_idxs = list(range(n_samples))
 
         if self.inference == "svi":
 
@@ -193,41 +193,34 @@ class BNN(PyroModule):
                 preds = []  
 
                 if training:
-                    guide_trace = poutine.trace(self.guide).get_trace(inputs)   
-                    preds.append(guide_trace.nodes['_RETURN']['value'])
+
+                    for _ in range(n_samples):
+                        guide_trace = poutine.trace(self.guide).get_trace(inputs)   
+                        preds.append(guide_trace.nodes['_RETURN']['value'])   
                 
                 else:
-                    for seed in seeds:
+                    for seed in sample_idxs:
                         pyro.set_rng_seed(seed)
                         guide_trace = poutine.trace(self.guide).get_trace(inputs)   
                         preds.append(guide_trace.nodes['_RETURN']['value'])
-
-                if DEBUG:
-                    print("\nlearned variational params:\n")
-                    print(pyro.get_param_store().get_all_param_names())
-                    print(list(poutine.trace(self.guide).get_trace(inputs).nodes.keys()))
-                    print("\n", pyro.get_param_store()["model.0.weight_loc"][0][:5])
-                    print(guide_trace.nodes['module$$$model.0.weight']["fn"].loc[0][:5])
-                    print("posterior sample: ", 
-                      guide_trace.nodes['module$$$model.0.weight']['value'][5][0][0])
 
         elif self.inference == "hmc":
 
             preds = []
             posterior_predictive = list(self.posterior_predictive.values())
-            for seed in seeds:
+            for seed in sample_idxs:
                 net = posterior_predictive[seed]
                 preds.append(net.forward(inputs))
         
-        output_probs = torch.stack(preds)
-        return output_probs if out_prob else output_probs.mean(0)
+        logits = torch.stack(preds)
+        return logits.mean(0) if expected_out else logits
 
     def _train_hmc(self, train_loader, n_samples, warmup, step_size, num_steps, device):
         print("\n == HMC training ==")
         pyro.clear_param_store()
 
-        num_batches = int(len(train_loader.dataset)/train_loader.batch_size)
-        batch_samples = int(n_samples/num_batches)+1
+        num_batches = int(len(train_loader.dataset)/train_loader.batch_size)+1
+        batch_samples = int(n_samples/num_batches)
         print("\nn_batches=",num_batches,"\tbatch_samples =", batch_samples)
 
         kernel = HMC(self.model, step_size=step_size, num_steps=num_steps)
@@ -284,8 +277,8 @@ class BNN(PyroModule):
                 y_batch = y_batch.to(device)
                 loss += svi.step(x_data=x_batch, y_data=y_batch.argmax(dim=-1))
 
-                outputs = self.forward(x_batch, n_samples=1, training=True).to(device).mean(0)
-                predictions = outputs.argmax(dim=-1)
+                outputs = self.forward(x_batch, n_samples=10, training=True).to(device)
+                predictions = outputs.argmax(-1)
                 labels = y_batch.argmax(-1)
                 correct_predictions += (predictions == labels).sum().item()
             
@@ -333,7 +326,7 @@ class BNN(PyroModule):
             for x_batch, y_batch in test_loader:
 
                 x_batch = x_batch.to(device)
-                outputs = self.forward(x_batch, n_samples=n_samples, out_prob=False)
+                outputs = self.forward(x_batch, n_samples=n_samples)
                 predictions = outputs.to(device).argmax(-1)
                 labels = y_batch.to(device).argmax(-1)
                 correct_predictions += (predictions == labels).sum().item()
@@ -341,39 +334,3 @@ class BNN(PyroModule):
             accuracy = 100 * correct_predictions / len(test_loader.dataset)
             print("Accuracy: %.2f%%" % (accuracy))
             return accuracy
-
-
-# def main(args):
-
-#     rel_path=TESTS
-
-#     if args.device=="cuda":
-#         torch.set_default_tensor_type('torch.cuda.FloatTensor')
-
-#     dataset, model = fullBNN_settings["model_"+str(args.model_idx)]
-#     batch_size = 5000 if model["inference"] == "hmc" else 64
-
-#     train_loader, test_loader, inp_shape, out_size = \
-#                             data_loaders(dataset_name=dataset, batch_size=batch_size, 
-#                                          n_inputs=args.n_inputs, shuffle=True)
-                        
-#     bnn = BNN(dataset, *list(model.values()), inp_shape, out_size)
-   
-#     if args.train:
-#         bnn.train(train_loader=train_loader, device=args.device)
-#     else:
-#         bnn.load(device=args.device, rel_path=rel_path)
-
-#     if args.test:
-#         bnn.evaluate(test_loader=test_loader, device=args.device, n_samples=10)
-
-
-# if __name__ == "__main__":
-#     assert pyro.__version__.startswith('1.3.0')
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("--n_inputs", default=60000, type=int, help="number of input points")
-#     parser.add_argument("--model_idx", default=0, type=int, help="choose model idx from pre defined settings")
-#     parser.add_argument("--train", default=True, type=eval)
-#     parser.add_argument("--test", default=True, type=eval)
-#     parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
-#     main(args=parser.parse_args())

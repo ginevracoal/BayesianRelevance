@@ -22,8 +22,9 @@ baseNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation"
                             "architecture":"conv", "epochs":10, "lr":0.001},
                    "model_1":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
                             "architecture":"conv", "epochs":15, "lr":0.001},
-                   "model_2":{"dataset":"cifar", "hidden_size":512, "activation":"leaky",
-                            "architecture":"conv", "epochs":20, "lr":0.01}}
+                   # "model_2":{"dataset":"cifar", "hidden_size":512, "activation":"leaky",
+                   #          "architecture":"conv", "epochs":20, "lr":0.01}
+                            }
 
 
 class baseNN(nn.Module):
@@ -48,6 +49,10 @@ class baseNN(nn.Module):
         self.savedir = self.name
         # print("\nTotal number of weights =", sum(p.numel() for p in self.parameters()))
 
+    # def to(self, device):
+    #     self.model = self.model.to(device)
+    #     self.out = self.out.to(device)
+
     def set_model(self, architecture, activation, input_shape, output_size, hidden_size):
 
         input_size = input_shape[0]*input_shape[1]*input_shape[2]
@@ -65,11 +70,18 @@ class baseNN(nn.Module):
             raise AssertionError("\nWrong activation name.")
 
         if architecture == "fc":
+
             self.model = nn.Sequential(
                 nn.Flatten(), 
                 nn.Linear(input_size, hidden_size),
                 activ())
             self.out = nn.Linear(hidden_size, output_size)
+
+            # self.Fla1 = nn.Flatten()
+            # self.Lin1 = nn.Linear(input_size, hidden_size)
+            # self.Lin2 = nn.Linear(hidden_size, hidden_size)
+            # self.model = nn.Sequential(self.Fla1, self.Lin1, activ())
+            # self.out = self.Lin2
 
         elif architecture == "fc2":
             self.model = nn.Sequential(
@@ -96,6 +108,7 @@ class baseNN(nn.Module):
         elif architecture == "conv":
 
             if self.dataset_name in ["mnist","fashion_mnist"]:
+
                 self.model = nn.Sequential(
                     nn.Conv2d(in_channels, 16, kernel_size=5),
                     activ(),
@@ -105,6 +118,14 @@ class baseNN(nn.Module):
                     nn.MaxPool2d(kernel_size=2, stride=1),
                     nn.Flatten())
                 self.out = nn.Linear(int(hidden_size/(4*4))*input_size, output_size)
+
+                # self.C1 = nn.Conv2d(in_channels, 16, kernel_size=5)
+                # self.MP1 = nn.MaxPool2d(kernel_size=2)
+                # self.C2 = nn.Conv2d(16, hidden_size, kernel_size=5)
+                # self.MP2 = nn.MaxPool2d(kernel_size=2, stride=1)
+                # self.L = nn.Linear(int(hidden_size/(4*4))*input_size, output_size)
+                # self.model = nn.Sequential(self.C1, activ(), self.MP1, self.C2, activ(), self.MP2, nn.Flatten())
+                # self.out = self.L
 
             else:
                 raise NotImplementedError()
@@ -193,35 +214,3 @@ class baseNN(nn.Module):
             accuracy = 100 * correct_predictions / len(test_loader.dataset)
             print("\nAccuracy: %.2f%%" % (accuracy))
             return accuracy
-
-
-# def main(args):
-
-#     rel_path=DATA if args.savedir=="DATA" else TESTS
-#     n_inputs = 100 if DEBUG else args.n_inputs
-
-#     model = baseNN_settings["model_"+str(args.model_idx)]
-
-#     train_loader, test_loader, inp_shape, out_size = \
-#                             data_loaders(dataset_name=model["dataset"], batch_size=128, 
-#                                          n_inputs=n_inputs, shuffle=True)
-
-#     nn = baseNN(inp_shape, out_size, *list(model.values()))
-
-#     if args.train:
-#         nn.train(train_loader=train_loader, device=args.device)
-#     else:
-#         nn.load(device=args.device, rel_path=rel_path)
-    
-#     if args.test:   
-#         nn.evaluate(test_loader=test_loader, device=args.device)
-
-
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("--n_inputs", default=60000, type=int, help="number of input points")
-#     parser.add_argument("--model_idx", default=0, type=int, help="choose model idx from pre defined settings")
-#     parser.add_argument("--train", default=True, type=eval)
-#     parser.add_argument("--test", default=True, type=eval)
-#     parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
-#     main(args=parser.parse_args())

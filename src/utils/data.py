@@ -168,7 +168,7 @@ def load_cifar(channels, img_rows=32, img_cols=32):
     x_train = None
     y_train = []
 
-    data_dir="../cifar-10/"
+    data_dir="../../cifar-10/"
 
     for batch in range(1, 6):
         data_dic = unpickle(data_dir + "data_batch_{}".format(batch))
