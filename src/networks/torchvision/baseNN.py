@@ -14,20 +14,21 @@ from torchvision import datasets, models, transforms
 from pyro.nn import PyroModule
 softplus = torch.nn.Softplus()
 
-class torchvisionNN(PyroModule):
+class baseNN(PyroModule):
 
-    def __init__(self, model_name, dataset_name):
-        super(torchvisionNN, self).__init__()
+    def __init__(self, architecture, dataset_name):
+        super(baseNN, self).__init__()
 
-        self.model_name = model_name
+        self.architecture = architecture
         self.dataset_name = dataset_name
-        self.name = str(model_name)+"_baseNN_"+str(dataset_name)
+        self.name = str(architecture)+"_baseNN_"+str(dataset_name)
 
-    def train(self, dataloaders, criterion, params_to_update, device, num_iters=25, is_inception=False):
+    def train(self, dataloaders, params_to_update, device, num_iters, is_inception=False):
         since = time.time()
         model = self.basenet
         self.to(device)
 
+        criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(params_to_update, lr=0.001)
 
         val_acc_history = []
@@ -107,7 +108,7 @@ class torchvisionNN(PyroModule):
         self.basenet.load_state_dict(best_model_wts)
         return self.basenet, val_acc_history
 
-    def initialize_model(self, model_name, num_classes, feature_extract, use_pretrained=True):
+    def initialize_model(self, architecture, num_classes, feature_extract, use_pretrained=True):
         """
         Loads pretrained models and sets parameters for training.
         """
@@ -116,7 +117,7 @@ class torchvisionNN(PyroModule):
         input_size = 0
         self.num_classes=num_classes
 
-        if model_name == "resnet":
+        if architecture == "resnet":
 
             network = models.resnet18(pretrained=use_pretrained)
             self.set_parameter_requires_grad(network, feature_extract)
@@ -124,7 +125,7 @@ class torchvisionNN(PyroModule):
             network.fc = nn.Linear(num_ftrs, num_classes)
             input_size = 224
 
-        elif model_name == "alexnet":
+        elif architecture == "alexnet":
 
             network = models.alexnet(pretrained=use_pretrained)
             self.set_parameter_requires_grad(network, feature_extract)
@@ -132,7 +133,7 @@ class torchvisionNN(PyroModule):
             network.classifier[6] = nn.Linear(num_ftrs,num_classes)
             input_size = 224
 
-        elif model_name == "vgg":
+        elif architecture == "vgg":
 
             network = models.vgg11_bn(pretrained=use_pretrained)
             self.set_parameter_requires_grad(network, feature_extract)
@@ -187,7 +188,6 @@ class torchvisionNN(PyroModule):
         filename=self.name+"_iters="+str(num_iters)+"_weights.pt"
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
-        print("\nSaving: ", path + filename)
         self.to("cpu")
         # print(f"\nlearned params = {self.basenets.state_dict().keys()}")
         torch.save(self.basenet.state_dict(), path + filename)
@@ -196,7 +196,6 @@ class torchvisionNN(PyroModule):
 
         path=TESTS+savedir+"/"
         filename=self.name+"_iters="+str(num_iters)+"_weights.pt"
-        print("\nLoading ", path + filename)
 
         self.basenet.load_state_dict(torch.load(path + filename))
         self.to(device)

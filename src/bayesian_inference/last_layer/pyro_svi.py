@@ -7,9 +7,8 @@ softplus = torch.nn.Softplus()
 
 import pyro
 from pyro import poutine
-import pyro.optim as pyroopt
-from pyro.infer import SVI, Trace_ELBO, TraceMeanField_ELBO, Predictive
-from pyro.distributions import OneHotCategorical, Normal, Categorical, Uniform, Delta
+from pyro.infer import SVI, Trace_ELBO, TraceMeanField_ELBO
+from pyro.distributions import Normal, Categorical
 
 import bayesian_inference.pyro_svi as pyro_svi
 
@@ -32,10 +31,8 @@ def model(bayesian_network, x_data, y_data):
     with pyro.plate("data", len(x_data)):
         logits = lifted_module(x_data)
         lhat = nnf.log_softmax(logits, dim=-1)
-        cond_model = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
+        pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
     
-    return cond_model
-
 def guide(bayesian_network, x_data, y_data=None):
 
     w, b, w_name, b_name = bayesian_network._last_layer(bayesian_network.basenet)
@@ -64,10 +61,8 @@ def guide(bayesian_network, x_data, y_data=None):
 def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
 
     bayesian_network.to(device)
-    bayesian_network.model = model
-    bayesian_network.guide = guide
 
-    elbo = TraceMeanField_ELBO()
+    elbo = Trace_ELBO()
     optimizer = pyro.optim.Adam({"lr":0.001})
     svi = SVI(bayesian_network.model, bayesian_network.guide, optimizer, loss=elbo)
 
@@ -82,11 +77,14 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
         print('-' * 10)
 
         for phase in ['train', 'val']:
+            
             if phase == 'train':
-                bayesian_network.basenet.train() 
+                bayesian_network.basenet.train()  
+                bayesian_network.last_layer.train()
             else:
-                bayesian_network.basenet.eval() 
-
+                bayesian_network.basenet.eval()  
+                bayesian_network.last_layer.eval()
+            
             running_loss = 0.0
             running_corrects = 0
 
@@ -96,7 +94,7 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
 
                 with torch.set_grad_enabled(phase == 'train'):
 
-                    loss = svi.step(bayesian_network, x_data=inputs, y_data=labels)
+                    loss = svi.step(x_data=inputs, y_data=labels)
                     logits = bayesian_network.forward(inputs, n_samples=1)
                     _, preds = torch.max(logits, 1)
 
@@ -106,6 +104,8 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
 
                 running_loss += loss * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
+
+                print(preds, labels.data)
 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)

@@ -18,7 +18,7 @@ class SGLD(Optimizer):
     From https://github.com/JavierAntoran/Bayesian-Neural-Networks/tree/master/src/Stochastic_Gradient_Langevin_Dynamics
     """
 
-    def __init__(self, params, lr=required, norm_sigma=0, addnoise=True):
+    def __init__(self, params, lr=required, norm_sigma=0.1, addnoise=True):
 
         weight_decay = 1 / (norm_sigma ** 2)
 
@@ -77,10 +77,13 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
         print('-' * 10)
 
         for phase in ['train', 'val']:
+            bayesian_network.basenet.eval()  
+            bayesian_network.rednet.eval() 
+
             if phase == 'train':
-                model.train()  
+                bayesian_network.last_layer.train()
             else:
-                model.eval()  
+                bayesian_network.last_layer.eval()
 
             running_loss = 0.0
             running_corrects = 0
@@ -115,7 +118,7 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
                 running_loss += loss.item() * minibatch_size
                 running_corrects += torch.sum(preds == labels.data)
 
-            num_minibatches =  len(dataloaders[phase].dataset)
+            num_minibatches = len(dataloaders[phase].dataset)
             epoch_loss = running_loss / num_minibatches
             epoch_acc = running_corrects.double() / num_minibatches
 

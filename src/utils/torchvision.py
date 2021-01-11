@@ -95,7 +95,7 @@ def load_data(dataset_name, phases=['train','val','test'], batch_size=128, n_inp
     Builds a dictionary of torch training, validation and test dataloaders from the chosen dataset.
     In debugging mode all dataloaders are cut to 100 randomly chosen points.
     """
-
+    
     if dataset_name=="animals10":
         data_dir = DATA+"animals10/"
         dirs = os.listdir(data_dir)

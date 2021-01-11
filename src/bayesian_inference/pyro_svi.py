@@ -42,9 +42,9 @@ def guide(network, x_data, y_data=None):
     
     with pyro.plate("data", len(x_data)):
         logits = lifted_module(x_data)
-        preds = nnf.softmax(logits, dim=-1)
+        probs = nnf.softmax(logits, dim=-1)
 
-    return preds
+    return probs
 
 def train(network, dataloaders, criterion, device, num_iters, is_inception=False):
 
@@ -81,7 +81,7 @@ def train(network, dataloaders, criterion, device, num_iters, is_inception=False
 
                 with torch.set_grad_enabled(phase=='train'):
 
-                    loss = svi.step(network, x_data=inputs, y_data=labels)
+                    loss += svi.step(network, x_data=inputs, y_data=labels)
                     outputs = network.forward(inputs)
                     _, preds = torch.max(outputs, 1)
 
