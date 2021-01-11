@@ -27,7 +27,7 @@ parser.add_argument("--debug", default=False, type=eval)
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-bayesian_attack_samples=[3] if args.debug else [1,20,50]
+bayesian_attack_samples=[3] if args.debug else [10]
 n_inputs=100 if args.debug else args.n_inputs
 rel_path=TESTS
 
