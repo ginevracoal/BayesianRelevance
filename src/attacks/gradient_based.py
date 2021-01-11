@@ -29,7 +29,7 @@ def loss_gradient_sign(net, n_samples, image, label):
     if n_samples is None:
 
         image.requires_grad = True
-        output = net.forward(inputs=image, avg_out=False)
+        output = net.forward(inputs=image, expected_out=False)
         
         loss = torch.nn.CrossEntropyLoss()(output, label)
         net.zero_grad()
@@ -44,7 +44,7 @@ def loss_gradient_sign(net, n_samples, image, label):
 
             x_copy = copy.deepcopy(image)
             x_copy.requires_grad = True
-            output = net.forward(inputs=x_copy, n_samples=1, sample_idxs=[i])#, avg_out=True)[0]
+            output = net.forward(inputs=x_copy, n_samples=1, sample_idxs=[i])#, exp=True)[0]
 
             loss = torch.nn.CrossEntropyLoss()(output.to(dtype=torch.double), label)
             net.zero_grad()
@@ -129,8 +129,8 @@ def attack(net, x_test, y_test, device, method, filename, savedir=None,
 
     return adversarial_attack
 
-def load_attack(method, filename, savedir=None, n_samples=None, rel_path=TESTS):
-    path = TESTS+filename+"/" if savedir is None else TESTS+savedir+"/"
+def load_attack(method, filename, n_samples=None, rel_path=TESTS):
+    path = rel_path+filename+"/" 
     name = filename+"_"+str(method)
     name = name+"_attackSamp="+str(n_samples)+"_attack.pkl" if n_samples else name+"_attack.pkl"
     return load_from_pickle(path=path+name)

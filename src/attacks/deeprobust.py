@@ -22,32 +22,34 @@ def attack(network, dataloader, method, device, savedir, n_samples=None, hyperpa
     print(f"\n{method} attack")
 
     if method == "fgsm":
-        adversary = FGSM(network, device)
+        adversary = FGSM
         adversary_params = {'epsilon': 0.2, 'order': np.inf, 'clip_max': None, 'clip_min': None}
 
     elif method == "pgd":
-        adversary = PGD(network, device)
+        adversary = PGD
         adversary_params = {'epsilon': 0.2, 'clip_max': 1.0, 'clip_min': 0.0, 'print_process': False}
 
     elif method == "cw":
-        adversary = CarliniWagner(network, device)
+        adversary = CarliniWagner
         adversary_params = {'confidence': 1e-4, 'clip_max': 1, 'clip_min': 0, 'max_iterations': 1000,
                             'initial_const': 1e-2, 'binary_search_steps': 5, 'learning_rate': 5e-3,
                             'abort_early': True,}
 
     elif method == "nattack":
-        adversary = NATTACK(network, device)
+        adversary = NATTACK
         adversary_params = {}
 
     elif method == "yopo":
-        adversary = FASTPGD(network, device)
+        adversary = FASTPGD
         adversary_params = {}
 
     elif method == "deepfool":
-        adversary = DeepFool(network, device)
+        adversary = DeepFool
         adversary_params = {}
 
     adversarial_data=[]
+
+    # todo: sistemare calcolo gradienti
 
     for images, labels in tqdm(dataloader):
 
@@ -55,6 +57,7 @@ def attack(network, dataloader, method, device, savedir, n_samples=None, hyperpa
             image = image.unsqueeze(0)
             label = labels[idx].argmax(-1).unsqueeze(0)
 
+            adversary(network, device)
             perturbed_image = adversary.generate(image, label, **adversary_params)
             perturbed_image = torch.clamp(perturbed_image, 0., 1.)
             adversarial_data.append(perturbed_image)

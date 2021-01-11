@@ -68,18 +68,18 @@ else:
                             
         net = BNN(m["dataset"], *list(m.values())[1:], inp_shape, out_size)
    
-    elif args.model_type=="redBNN":
+    # elif args.model_type=="redBNN":
 
-        m = redBNN_settings["model_"+str(args.model_idx)]
-        x_train, y_train, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], 
-                                                                             n_inputs=n_inputs)
-        basenet = baseNN(dataset_name=m["dataset"], input_shape=inp_shape, output_size=out_size,
-                  epochs=m["baseNN_epochs"], lr=m["baseNN_lr"], hidden_size=m["hidden_size"], 
-                  activation=m["activation"], architecture=m["architecture"])        
-        basenet.load(rel_path=rel_path, device=args.device)
+    #     m = redBNN_settings["model_"+str(args.model_idx)]
+    #     x_train, y_train, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], 
+    #                                                                          n_inputs=n_inputs)
+    #     basenet = baseNN(dataset_name=m["dataset"], input_shape=inp_shape, output_size=out_size,
+    #               epochs=m["baseNN_epochs"], lr=m["baseNN_lr"], hidden_size=m["hidden_size"], 
+    #               activation=m["activation"], architecture=m["architecture"])        
+    #     basenet.load(rel_path=rel_path, device=args.device)
 
-        hyp = get_hyperparams(m)
-        net = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=basenet, hyperparams=hyp)
+    #     hyp = get_hyperparams(m)
+    #     net = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=basenet, hyperparams=hyp)
 
     else:
         raise NotImplementedError
@@ -89,7 +89,7 @@ else:
         train_loader = DataLoader(dataset=list(zip(x_train, y_train)), batch_size=batch_size, shuffle=False)
         net.train(train_loader=train_loader, device=args.device)
     else:
-        net.load(n_inputs=m["BNN_inputs"], device=args.device, rel_path=rel_path)
+        net.load(device=args.device, rel_path=rel_path)
     
     for attack_samples in bayesian_attack_samples:
         x_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device, 
