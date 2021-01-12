@@ -46,7 +46,6 @@ class baseNN(nn.Module):
         self.name = str(dataset_name)+"_baseNN_hid="+str(hidden_size)+\
                     "_arch="+str(self.architecture)+"_act="+str(self.activation)+\
                     "_ep="+str(self.epochs)+"_lr="+str(self.lr)
-        self.savedir = self.name
         # print("\nTotal number of weights =", sum(p.numel() for p in self.parameters()))
 
     # def to(self, device):
@@ -172,26 +171,26 @@ class baseNN(nn.Module):
         x = self.out(x)
         return nn.LogSoftmax(dim=-1)(x)
 
-    def save(self, savedir, rel_path=TESTS):
+    def save(self, savedir):
 
-        path=rel_path+savedir+"/"
         filename=self.name+"_weights.pt"
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        # os.makedirs(os.path.dirname(savedir), exist_ok=True)
+        print(savedir)
+        os.makedirs(os.path.dirname(savedir), exist_ok=True)
 
         self.to("cpu")
-        torch.save(self.state_dict(), path + filename)
+        torch.save(self.state_dict(), os.path.join(savedir, filename))
 
         if DEBUG:
             print("\nCheck saved weights:")
             print("\nstate_dict()['l2.0.weight'] =", self.state_dict()["l2.0.weight"][0,0,:3])
             print("\nstate_dict()['out.weight'] =",self.state_dict()["out.weight"][0,:3])
 
-    def load(self, device, savedir, rel_path=TESTS):
+    def load(self, device, savedir):
 
-        path=rel_path+savedir+"/"
         filename=self.name+"_weights.pt"
 
-        self.load_state_dict(torch.load(path + filename))
+        self.load_state_dict(torch.load(os.path.join(savedir, filename)))
         self.to(device)
 
         if DEBUG:

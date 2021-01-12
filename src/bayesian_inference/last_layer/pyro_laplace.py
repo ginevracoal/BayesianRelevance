@@ -29,17 +29,74 @@ def model(bayesian_network, x_data, y_data):
     outw = pyro.sample(w_name, outw_prior)
     outb = pyro.sample(b_name, outb_prior)
 
-    # print(outw.shape, outb.shape)
-
     with pyro.plate("data", len(x_data)):
         features = bayesian_network.rednet(x_data).squeeze()
         yhat = torch.matmul(features, outw.t()) + outb 
         lhat = nnf.log_softmax(yhat, dim=-1)
-        cond_model = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
+        pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
     
-    return cond_model
-
 def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
+    # criterion = nn.CrossEntropyLoss()
+    # optimizer = pyro.optim.Adam({"lr":0.001})
+    bayesian_network.to(device)
+
+    bayesian_network.model = model
+    since = time.time()
+
+    guide = AutoLaplaceApproximation(bayesian_network.model)
+    val_acc_history = []
+
+    num_iters=1
+    for epoch in range(num_iters):
+
+        loss=0.0
+
+        print('Epoch {}/{}'.format(epoch, num_iters - 1))
+        print('-' * 10)
+
+        for phase in ['train', 'val']:
+            bayesian_network.rednet.eval() 
+
+            if phase == 'train':
+                bayesian_network.basenet.train()  
+                bayesian_network.last_layer.train()
+            else:
+                bayesian_network.basenet.eval() 
+                bayesian_network.last_layer.eval()
+
+            running_loss = 0.0
+            running_corrects = 0
+
+            for inputs, labels in dataloaders[phase]:
+
+                inputs, labels  = inputs.to(device), labels.to(device)
+
+                with torch.set_grad_enabled(phase == 'train'):
+
+                    bayesian_network.laplace_posterior = guide.laplace_approximation(bayesian_network, inputs, labels)
+
+                # running_loss += loss * inputs.size(0)
+                running_corrects += torch.sum(preds == labels.data)
+
+                # epoch_loss = running_loss / len(dataloaders[phase].dataset)
+                epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
+
+                # print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
+
+                val_acc_history.append(epoch_acc)
+
+            print()
+
+    bayesian_network.laplace_posterior = guide.laplace_approximation(bayesian_network, inputs, labels)
+
+    # print(pyro.get_param_store().get_all_param_names())
+
+    time_elapsed = time.time() - since
+    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+
+    return val_acc_history
+
+def train_old(bayesian_network, dataloaders, device, num_iters, is_inception=False):
 
     criterion = nn.CrossEntropyLoss()
     optimizer = pyro.optim.Adam({"lr":0.001})
@@ -83,13 +140,8 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
 
                     loss += svi.step(bayesian_network, x_data=inputs, y_data=labels)
                     bayesian_network.delta_guide = guide.get_posterior()
-
                     logits = bayesian_network.forward(inputs, n_samples=1)
                     _, preds = torch.max(logits, 1)
-
-                    if DEBUG:
-                        print(bayesian_network.basenet.state_dict()['conv1.weight'][0,0,:5])
-                        print(pyro.sample("posterior", bayesian_network.delta_guide)[:5]) # = guide.loc
 
                 running_loss += loss * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
@@ -105,8 +157,8 @@ def train(bayesian_network, dataloaders, device, num_iters, is_inception=False):
 
     bayesian_network.laplace_posterior = guide.laplace_approximation(bayesian_network, inputs, labels)
 
-    print("\nLearned variational params:\n")
-    print(pyro.get_param_store().get_all_param_names())
+    # print("\nLearned variational params:\n")
+    # print(pyro.get_param_store().get_all_param_names())
 
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
@@ -155,9 +207,12 @@ def forward(bayesian_network, inputs, n_samples, sample_idxs=None):
 
 def save(bayesian_network, path, filename):
     save_to_pickle(bayesian_network.laplace_posterior, path, filename+".pkl")
+    pyro_svi.save(path, filename)    
 
 def load(bayesian_network, path, filename):
     bayesian_network.laplace_posterior = load_from_pickle(path+filename+".pkl")
+    pyro_svi.load(path, filename)
+    bayesian_network.model = model
 
 def to(bayesian_network, device):
     if hasattr(bayesian_network, "laplace_posterior"):

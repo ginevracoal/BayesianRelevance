@@ -22,13 +22,12 @@ parser.add_argument("--model_type", default="baseNN", type=str, help="baseNN, fu
 parser.add_argument("--inference", default="svi", type=str, help="svi, hmc")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--train", default=True, type=eval)
-parser.add_argument("--attack", default=True, type=eval)
 parser.add_argument("--debug", default=False, type=eval)
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
 n_inputs=100 if args.debug else None
-bayesian_attack_samples=[1, 10, 50]
+bayesian_attack_samples=[1] if args.debug else [1, 10, 50]
 atk_inputs=100 if args.debug else args.atk_inputs
 
 print("PyTorch Version: ", torch.__version__)
@@ -92,7 +91,9 @@ else:
 
     if args.train is True:
         batch_size = 5000 if m["inference"] == "hmc" else 128
-        train_loader = DataLoader(dataset=list(zip(x_train, y_train)), batch_size=batch_size, shuffle=False)
+        num_workers = 0 if args.device=="cuda" else 4
+        train_loader = DataLoader(dataset=list(zip(x_train, y_train)), batch_size=batch_size, 
+                                  num_workers=num_workers, shuffle=False)
         net.train(train_loader=train_loader, savedir=savedir, device=args.device)
     else:
         net.load(savedir=savedir, device=args.device)

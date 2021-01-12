@@ -116,25 +116,23 @@ def attack(net, x_test, y_test, device, method, filename, savedir,
 
     adversarial_attack = torch.cat(adversarial_attack)
 
-    path = TESTS+savedir+"/"
     name = filename+"_"+str(method)
-    name = name+"_attackSamp="+str(n_samples)+"_attack.pkl" if n_samples else name+"_attack.pkl"
-    save_to_pickle(data=adversarial_attack, path=path, filename=name)
+    name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
+    save_to_pickle(data=adversarial_attack, path=savedir, filename=name)
 
     idxs = np.random.choice(len(x_test), 10, replace=False)
     original_images_plot = torch.stack([x_test[i].squeeze() for i in idxs])
     perturbed_images_plot = torch.stack([adversarial_attack[i].squeeze() for i in idxs])
     plot_grid_attacks(original_images=original_images_plot.detach().cpu(), 
                       perturbed_images=perturbed_images_plot.detach().cpu(), 
-                      filename=name+".png", savedir=path)
+                      filename=name, savedir=savedir)
 
     return adversarial_attack
 
 def load_attack(method, filename, savedir, n_samples=None):
-    path = TESTS+savedir+"/" 
     name = filename+"_"+str(method)
     name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
-    return load_from_pickle(path=path+name+".pkl")
+    return load_from_pickle(path=savedir+name)
 
 def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None):
 

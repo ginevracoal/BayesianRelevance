@@ -142,21 +142,13 @@ def forward(bayesian_network, inputs, n_samples, sample_idxs=None):
     return logits
 
 def save(bayesian_network, path, filename):
-    # param_store = pyro.get_param_store()
-    # print(f"\nlearned params = {param_store.get_all_param_names()}")
-    # param_store.save(path + filename + ".pt")
     pyro_svi.save(path, filename)
 
 def load(bayesian_network, path, filename):
-    # param_store = pyro.get_param_store()
-    # param_store.load(path + filename + ".pt")
-    # for key, value in param_store.items():
-    #     param_store.replace_param(key, value, value)
-    # print("\nLoading: ", path + filename)
     pyro_svi.load(path, filename)
     
-    bayesian_network.model = model
-    bayesian_network.guide = guide
+    # bayesian_network.model = model
+    # bayesian_network.guide = guide
 
 def set_params_updates():
     for weights_name in pyro.get_param_store():
@@ -164,6 +156,4 @@ def set_params_updates():
             pyro.get_param_store()[weights_name].requires_grad=False
 
 def to(device):
-    # for k, v in pyro.get_param_store().items():
-    #     pyro.get_param_store()[k] = v.to(device)
     pyro_svi.to(device)

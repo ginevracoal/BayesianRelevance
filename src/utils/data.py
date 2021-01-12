@@ -267,23 +267,23 @@ def balanced_subset(inputs, labels, num_classes, subset_size):
 
 def save_to_pickle(data, path, filename):
 
-    print("\nSaving pickle: ", path + filename)
+    full_path=os.path.join(path, filename+".pkl")
+    print("\nSaving pickle: ", full_path)
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path + filename, 'wb') as f:
+    with open(full_path, 'wb') as f:
         pkl.dump(data, f)
 
+def load_from_pickle(path, filename):
 
-def load_from_pickle(path):
-
-    print("\nLoading from pickle: ", path)
-    with open(path, 'rb') as f:
+    full_path=os.path.join(path, filename+".pkl")
+    print("\nLoading from pickle: ", full_path)
+    with open(full_path, 'rb') as f:
         u = pkl._Unpickler(f)
         u.encoding = 'latin1'
         data = u.load()
 
     return data
     
-
 def unpickle(file):
     """ Load byte data from file"""
     with open(file, 'rb') as f:

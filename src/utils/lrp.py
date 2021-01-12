@@ -91,9 +91,8 @@ def plot_explanations(images, explanations, rule, savedir, filename):
     # cbar.set_label('Relevance', labelpad=10)
 
     plt.show()
-    path = TESTS+savedir+"/"
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    plt.savefig(path+filename)
+    os.makedirs(os.path.dirname(savedir), exist_ok=True)
+    plt.savefig(os.path.join(savedir,filename+".png"))
 
 def plot_attacks_explanations(images, explanations, attacks, attacks_explanations, rule, savedir, filename):
 
@@ -141,9 +140,8 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     cbar.set_label('Relevance', labelpad=10)
 
     plt.show()
-    path = TESTS+savedir+"/"
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    plt.savefig(path+filename)
+    os.makedirs(os.path.dirname(savedir), exist_ok=True)
+    plt.savefig(os.path.join(savedir,filename+".png"))
 
 def plot_vanishing_explanations(images, samples_explanations, n_samples_list, rule, savedir, filename):
 
@@ -189,9 +187,8 @@ def plot_vanishing_explanations(images, samples_explanations, n_samples_list, ru
         # cbar.set_label('Relevance', labelpad=10)
 
     plt.show()
-    path = TESTS+savedir+"/"
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    plt.savefig(path+filename)
+    os.makedirs(os.path.dirname(savedir), exist_ok=True)
+    plt.savefig(os.path.join(savedir,filename+".png"))
 
 def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
 

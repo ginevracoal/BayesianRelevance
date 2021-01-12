@@ -114,47 +114,45 @@ class BNN(PyroModule):
 
         return preds
 
-    def save(self, savedir, rel_path=TESTS):
+    def save(self, savedir):
 
-        path=rel_path+savedir+"/"
         filename=self.name+"_weights"
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        os.makedirs(os.path.dirname(savedir), exist_ok=True)
 
         if self.inference == "svi":
             self.basenet.to("cpu")
             self.to("cpu")
             param_store = pyro.get_param_store()
-            print("\nSaving: ", path + filename +".pt")
+            print("\nSaving: ", os.path.join(savedir, filename +".pt"))
             print(f"\nlearned params = {param_store.get_all_param_names()}")
-            param_store.save(path + filename +".pt")
+            param_store.save(os.path.join(savedir, filename +".pt"))
 
         elif self.inference == "hmc":
             self.basenet.to("cpu")
             self.to("cpu")
 
             for key, value in self.posterior_predictive.items():
-                torch.save(value.state_dict(), path+filename+"_"+str(key)+".pt")
+                torch.save(value.state_dict(), os.path.join(savedir, filename+"_"+str(key)+".pt"))
 
                 if DEBUG:
                     print(value.state_dict()["model.5.bias"])
 
-    def load(self, savedir, device, rel_path=TESTS):
-        path=rel_path+savedir+"/"
+    def load(self, savedir, device):
         filename=self.name+"_weights"
 
         if self.inference == "svi":
             param_store = pyro.get_param_store()
-            param_store.load(path + filename + ".pt")
+            param_store.load(os.path.join(savedir, filename + ".pt"))
             for key, value in param_store.items():
                 param_store.replace_param(key, value.to(device), value)
-            print("\nLoading ", path + filename + ".pt\n")
+            print("\nLoading ", os.path.join(savedir, filename + ".pt"))
 
         elif self.inference == "hmc":
 
             self.posterior_predictive={}
             for model_idx in range(self.n_samples):
                 net_copy = copy.deepcopy(self.basenet)
-                net_copy.load_state_dict(torch.load(path+filename+"_"+str(model_idx)+".pt"))
+                net_copy.load_state_dict(torch.load(os.path.join(savedir, filename+"_"+str(model_idx)+".pt")))
                 self.posterior_predictive.update({model_idx:net_copy})      
 
             if len(self.posterior_predictive)!=self.n_samples:
@@ -314,7 +312,7 @@ class BNN(PyroModule):
         self.save(savedir)
 
         plot_loss_accuracy(dict={'loss':loss_list, 'accuracy':accuracy_list},
-                           path=TESTS+self.name+"/"+self.name+"_training.png")
+                           path=os.path.join(savedir, self.name+"_training.png"))
 
     def train(self, train_loader, savedir, device):
         self.to(device)
