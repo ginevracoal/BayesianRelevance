@@ -1,16 +1,15 @@
 #!/bin/bash
 
-N_INPUTS=10
 MODEL="baseNN" # baseNN, fullBNN, redBNN, laplRedBNN
 MODEL_IDX=0 # model idx from the chosen dictionary
+
 ATTACK_METHOD="fgsm" # fgsm, pgd
+ATK_INPUTS=10
 
-TRAIN="True" # if True trains else loads
-ATTACK="True" # if True attacks else loads
+TRAIN_ATK="True" # if True trains else loads
+COMPUTE_LRP="True" # if True trains else loads
 
-DEBUG="False"
-TRAIN_DEVICE="cpu"
-ATK_DEVICE="cpu"
+DEVICE="cuda"
 
 ########
 # EXEC #
@@ -25,19 +24,22 @@ mkdir -p "${OUT_DIR}"
 OUT="${TESTS}${SAVEDIR}/out.txt"
 mkdir -p "${TESTS}${SAVEDIR}"
 
-if [ "${MODEL}" = "baseNN" ]; then
 
-	INFERENCE="None"; SAMPLES=0; BASE_ITERS=0
+if [ "${TRAIN_ATK}" = "True" ]; then
+
+	if [ "${MODEL}" = "baseNN" ]; then
+
+	# 	python3 train_attack_networks.py --model=$MODEL --model_idx=$MODEL_IDX \
+	# 			--atk_inputs=$ATK_INPUTS --attack_method=$ATTACK_METHOD --device=$DEVICE &>> $OUT 
+	# else
+	# 	python3 train_attack_networks.py --model=$MODEL --model_idx=$MODEL_IDX --inference=$INFERENCE \
+	# 			--atk_inputs=$ATK_INPUTS --attack_method=$ATTACK_METHOD --device=$DEVICE &>> $OUT 
+
+	fi
+
 fi
 
-if [ "${TRAIN}" = "True" ]; then
-
-	# python3 train_torchvision_networks.py --savedir=$SAVEDIR --model=$MODEL_NAME  --dataset=$DATASET_NAME \
-	# 		--bayesian=$BAYESIAN --inference=$INFERENCE --iters=$ITERS --debug=$DEBUG \
-	# 		--samples=$N_SAMPLES --device=$TRAIN_DEVICE &>> $OUT
-fi
-
-if [ "${ATTACK}" = "True" ]; then
+if [ "${COMPUTE_LRP}" = "True" ]; then
 
 	# python3 attack_torchvision_networks.py --savedir=$SAVEDIR --model=$MODEL_NAME  --dataset=$DATASET_NAME \
 	# 		--bayesian=$BAYESIAN --inference=$INFERENCE --iters=$ITERS --debug=$DEBUG \

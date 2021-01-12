@@ -7,7 +7,9 @@ from tqdm import tqdm
 import matplotlib.colors as colors 
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
+
 from utils.savedir import *
+from utils.seeding import set_seed
 
 cmap_name = "RdBu_r"
 
@@ -64,16 +66,16 @@ def plot_explanations(images, explanations, rule, savedir, filename):
         raise ValueError
 
     cmap = plt.cm.get_cmap(cmap_name)
-    # vmax = max([max(explanations.flatten()), 0.00001])
-    # vmin = min([min(explanations.flatten()), -0.00001])
-    # norm = colors.TwoSlopeNorm(vcenter=0., vmax=vmax, vmin=vmin)
 
     rows = 2
     cols = min(len(explanations), 6)
     fig, axes = plt.subplots(rows, cols, figsize=(12, 4))
     fig.tight_layout()
 
-    for idx in range(cols):
+    set_seed(0)
+    idxs = np.random.choice(len(explanations), cols)
+
+    for idx, col in enumerate(range(cols)):
 
         image = np.squeeze(images[idx])
         expl = np.squeeze(explanations[idx])
@@ -82,13 +84,8 @@ def plot_explanations(images, explanations, rule, savedir, filename):
             image = np.expand_dims(image, axis=0)
             expl = np.expand_dims(expl, axis=0)
 
-        axes[0, idx].imshow(image)
-        im = axes[1, idx].imshow(expl, cmap=cmap)#, norm=norm)
-
-    # fig.subplots_adjust(right=0.83)
-    # cbar_ax = fig.add_axes([0.88, 0.14, 0.03, 0.3])
-    # cbar = fig.colorbar(im, ax=axes[1, :].ravel().tolist(), cax=cbar_ax)
-    # cbar.set_label('Relevance', labelpad=10)
+        axes[0, col].imshow(image)
+        im = axes[1, col].imshow(expl, cmap=cmap)
 
     plt.show()
     os.makedirs(os.path.dirname(savedir), exist_ok=True)
@@ -157,6 +154,7 @@ def plot_vanishing_explanations(images, samples_explanations, n_samples_list, ru
     rows = min(len(n_samples_list), 5)+1
     cols = min(len(vanishing_idxs), 6)
 
+    set_seed(0)
     chosen_idxs = np.random.choice(vanishing_idxs, cols)
 
     fig, axes = plt.subplots(rows, cols, figsize=(10, 6))

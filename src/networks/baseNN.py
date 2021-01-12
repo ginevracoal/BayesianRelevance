@@ -169,14 +169,12 @@ class baseNN(nn.Module):
     def forward(self, inputs, *args, **kwargs):
         x = self.model(inputs)
         x = self.out(x)
-        return nn.LogSoftmax(dim=-1)(x)
+        return nnf.log_softmax(x, dim=-1)
 
     def save(self, savedir):
 
         filename=self.name+"_weights.pt"
-        # os.makedirs(os.path.dirname(savedir), exist_ok=True)
-        print(savedir)
-        os.makedirs(os.path.dirname(savedir), exist_ok=True)
+        os.makedirs(savedir, exist_ok=True)
 
         self.to("cpu")
         torch.save(self.state_dict(), os.path.join(savedir, filename))

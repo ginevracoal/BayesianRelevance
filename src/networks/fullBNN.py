@@ -39,7 +39,7 @@ fullBNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
                              "lr":None, "n_samples":100, "warmup":50},
                     "model_2":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
-                             "architecture":"conv", "inference":"svi", "epochs":10,
+                             "architecture":"fc2", "inference":"svi", "epochs":15,
                              "lr":0.001, "n_samples":None, "warmup":None},
                     "model_3":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
@@ -115,24 +115,26 @@ class BNN(PyroModule):
         return preds
 
     def save(self, savedir):
-
         filename=self.name+"_weights"
-        os.makedirs(os.path.dirname(savedir), exist_ok=True)
+        os.makedirs(savedir, exist_ok=True)
 
         if self.inference == "svi":
             self.basenet.to("cpu")
             self.to("cpu")
             param_store = pyro.get_param_store()
-            print("\nSaving: ", os.path.join(savedir, filename +".pt"))
             print(f"\nlearned params = {param_store.get_all_param_names()}")
-            param_store.save(os.path.join(savedir, filename +".pt"))
+
+            fullpath=os.path.join(savedir, filename+".pt")
+            print("\nSaving: ", fullpath)
+            param_store.save(fullpath)
 
         elif self.inference == "hmc":
             self.basenet.to("cpu")
             self.to("cpu")
 
             for key, value in self.posterior_predictive.items():
-                torch.save(value.state_dict(), os.path.join(savedir, filename+"_"+str(key)+".pt"))
+                fullpath=os.path.join(savedir, filename+"_"+str(key)+".pt")    
+                torch.save(value.state_dict(), fullpath)
 
                 if DEBUG:
                     print(value.state_dict()["model.5.bias"])
