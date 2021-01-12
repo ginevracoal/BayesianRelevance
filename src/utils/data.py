@@ -225,22 +225,24 @@ def load_dataset(dataset_name, n_inputs=None, channels="first", shuffle=False):
     else:
         raise AssertionError("\nDataset not available.")
 
+
+    x_train, y_train = torch.from_numpy(x_train), torch.from_numpy(y_train)
+    x_test, y_test = torch.from_numpy(x_test), torch.from_numpy(y_test)
+
     if n_inputs:
-        x_train, y_train, x_test, y_test = (x_train[:n_inputs], y_train[:n_inputs], 
-                                            x_test[:n_inputs], y_test[:n_inputs])
+        x_train, y_train, _ = balanced_subset(x_train, y_train, num_classes, n_inputs)
+        x_test, y_test, _ = balanced_subset(x_test, y_test, num_classes, n_inputs)
 
     print('x_train shape =', x_train.shape, '\nx_test shape =', x_test.shape)
     print('y_train shape =', y_train.shape, '\ny_test shape =', y_test.shape)
 
     if shuffle is True:
-        random.seed(0)
         idxs = np.random.permutation(len(x_train))
         x_train, y_train = (x_train[idxs], y_train[idxs])
         idxs = np.random.permutation(len(x_test))
         x_test, y_test = (x_test[idxs], y_test[idxs])
 
-    return torch.from_numpy(x_train), torch.from_numpy(y_train), \
-           torch.from_numpy(x_test), torch.from_numpy(y_test), input_shape, num_classes
+    return x_train, y_train, x_test, y_test, input_shape, num_classes
 
 def balanced_subset(inputs, labels, num_classes, subset_size):
 

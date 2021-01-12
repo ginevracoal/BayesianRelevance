@@ -169,7 +169,7 @@ def plot_vanishing_explanations(images, samples_explanations, n_samples_list, ru
         vmax = max(samples_explanations[samples_idx].flatten())
         vmin = min(samples_explanations[samples_idx].flatten())
         print(vmin, vmax)
-        norm = colors.TwoSlopeNorm(vcenter=0., vmax=vmax, vmin=vmin)
+        norm = colors.TwoSlopeNorm(vcenter=0.)#, vmax=vmax, vmin=vmin)
 
         for col_idx in range(cols):
 
@@ -182,7 +182,7 @@ def plot_vanishing_explanations(images, samples_explanations, n_samples_list, ru
             print(min(expl.flatten()), max(expl.flatten()))
 
             axes[0, col_idx].imshow(image)
-            im = axes[samples_idx+1, col_idx].imshow(expl, cmap=cmap, norm=norm)
+            im = axes[samples_idx+1, col_idx].imshow(expl, cmap=cmap)#, norm=norm)
 
         # fig.subplots_adjust(right=0.83)
         # cbar_ax = fig.add_axes([0.88, 0.12, 0.02, 0.6])

@@ -47,7 +47,8 @@ if args.model_type=="baseNN":
 
     model = baseNN_settings["model_"+str(args.model_idx)]
 
-    _, _, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], n_inputs=n_inputs)
+    _, _, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], 
+                                                            shuffle=True, n_inputs=n_inputs)
     savedir = get_savedir(model=args.model_type, dataset=model["dataset"], architecture=model["architecture"], 
                          iters=model["epochs"], debug=args.debug, model_idx=args.model_idx)
 
@@ -75,7 +76,7 @@ else:
         m = fullBNN_settings["model_"+str(args.model_idx)]
 
         _, _, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], 
-                                                                             n_inputs=n_inputs)
+                                                                    shuffle=True, n_inputs=n_inputs)
         savedir = get_savedir(model=args.model_type, dataset=m["dataset"], architecture=m["architecture"], 
                                inference=m["inference"], iters=m["epochs"],
                                 model_idx=args.model_idx, debug=args.debug)

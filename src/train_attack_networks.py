@@ -43,7 +43,6 @@ if args.model_type=="baseNN":
 
     x_train, y_train, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], 
                                                                             n_inputs=n_inputs)
-    x_test, y_test, _ = balanced_subset(x_test, y_test, num_classes=out_size, subset_size=atk_inputs)
     savedir = get_savedir(model=args.model_type, dataset=model["dataset"], architecture=model["architecture"], 
                            inference=None, iters=model["epochs"], baseiters=None, debug=args.debug,
                            model_idx=args.model_idx)
@@ -69,7 +68,6 @@ else:
 
         x_train, y_train, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"],
                                                                              n_inputs=n_inputs)
-        x_test, y_test, _ = balanced_subset(x_test, y_test, num_classes=out_size, subset_size=atk_inputs)
         savedir = get_savedir(model=args.model_type, dataset=m["dataset"], architecture=m["architecture"], 
                            inference=m["inference"], iters=m["epochs"], baseiters=None, debug=args.debug,
                            model_idx=args.model_idx)
