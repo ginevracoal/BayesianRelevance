@@ -133,7 +133,7 @@ class baseNN(nn.Module):
         else:
             raise NotImplementedError()
 
-    def train(self, train_loader, device):
+    def train(self, train_loader, savedir, device):
         print("\n == baseNN training ==")
         random.seed(0)
         self.to(device)
@@ -165,31 +165,33 @@ class baseNN(nn.Module):
                   end="\t")
 
         execution_time(start=start, end=time.time())
-        self.save()
+        self.save(savedir)
 
     def forward(self, inputs, *args, **kwargs):
         x = self.model(inputs)
         x = self.out(x)
         return nn.LogSoftmax(dim=-1)(x)
 
-    def save(self):
-        filepath, filename = (TESTS+self.savedir+"/", self.name+"_weights.pt")
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        print("\nSaving: ", filepath+filename)
-        torch.save(self.state_dict(),filepath+filename)
+    def save(self, savedir, rel_path=TESTS):
+
+        path=rel_path+savedir+"/"
+        filename=self.name+"_weights.pt"
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+
+        self.to("cpu")
+        torch.save(self.state_dict(), path + filename)
 
         if DEBUG:
             print("\nCheck saved weights:")
             print("\nstate_dict()['l2.0.weight'] =", self.state_dict()["l2.0.weight"][0,0,:3])
             print("\nstate_dict()['out.weight'] =",self.state_dict()["out.weight"][0,:3])
 
-    def load(self, device, savedir=None, rel_path=TESTS):
-        name = self.name
-        directory = name if savedir is None else savedir
+    def load(self, device, savedir, rel_path=TESTS):
 
-        print("\nLoading: ", rel_path+directory+"/"+name+"_weights.pt")
-        self.load_state_dict(torch.load(rel_path+directory+"/"+name+"_weights.pt"))
-        print("\n", list(self.state_dict().keys()), "\n")
+        path=rel_path+savedir+"/"
+        filename=self.name+"_weights.pt"
+
+        self.load_state_dict(torch.load(path + filename))
         self.to(device)
 
         if DEBUG:

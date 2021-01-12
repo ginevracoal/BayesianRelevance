@@ -128,7 +128,7 @@ class redBNN(baseNN):
         
         return logits.mean(0) if expected_out else logits
 
-    def save(self, savedir, num_iters):
+    def save(self, savedir):#, num_iters):
         path=TESTS+savedir+"/"
         self.to("cpu")
 
@@ -146,9 +146,11 @@ class redBNN(baseNN):
             os.makedirs(os.path.dirname(path), exist_ok=True)
             sgld.save(self, num_iters, path, filename)
 
-    def load(self, savedir, num_iters, device):
+    # def load(self, savedir, num_iters, device):
+    def load(self, savedir, device):
         path=TESTS+savedir+"/"
-        filename=self.name+"_iters="+str(num_iters)+"_weights"
+        # filename=self.name+"_iters="+str(num_iters)+"_weights"
+        filename=self.name+"_weights"
 
         if self.inference=="svi":
             pyro_svi.load(self, path, filename)

@@ -114,12 +114,11 @@ class BNN(PyroModule):
 
         return preds
 
-    def save(self):
+    def save(self, savedir, rel_path=TESTS):
 
-        name = self.name
-        path = TESTS + name +"/"
+        path=rel_path+savedir+"/"
+        filename=self.name+"_weights"
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        filename = name+"_weights"
 
         if self.inference == "svi":
             self.basenet.to("cpu")
@@ -139,10 +138,10 @@ class BNN(PyroModule):
                 if DEBUG:
                     print(value.state_dict()["model.5.bias"])
 
-    def load(self, device, rel_path=TESTS):
-        name = self.name
-        path = rel_path + name +"/"
-        filename = name+"_weights"
+    def load(self, savedir, device, rel_path=TESTS):
+        path=rel_path+savedir+"/"
+        filename=self.name+"_weights"
+
         if self.inference == "svi":
             param_store = pyro.get_param_store()
             param_store.load(path + filename + ".pt")
@@ -198,8 +197,7 @@ class BNN(PyroModule):
                         guide_trace = poutine.trace(self.guide).get_trace(inputs)   
                         preds.append(guide_trace.nodes['_RETURN']['value'])
 
-                # elif explain:
-                else:
+                elif explain:
 
                     for seed in sample_idxs:
                         pyro.set_rng_seed(seed)
@@ -207,13 +205,6 @@ class BNN(PyroModule):
 
                         weights = {}
                         for key, value in self.basenet.state_dict().items():
-                            # loc_name = str(f"{key}_loc")
-                            # scale_name = str(f"{key}_scale")
-                            # loc = pyro.param(loc_name, guide_trace.nodes[loc_name])
-                            # scale = pyro.param(scale_name, guide_trace.nodes[scale_name])
-                            # distr = Normal(loc=loc, scale=softplus(scale))
-                            # w = pyro.sample(str(f"{key}_weights"), distr)
-                            # weights.update({str(key):w})
 
                             w = guide_trace.nodes[str(f"module$$${key}")]["value"]
                             weights.update({str(key):w})
@@ -222,11 +213,11 @@ class BNN(PyroModule):
                         self.basenet.to(self.device)
                         preds.append(self.basenet.forward(inputs, explain, rule))
 
-                # else:
-                #     for seed in sample_idxs:
-                #         pyro.set_rng_seed(seed)
-                #         guide_trace = poutine.trace(self.guide).get_trace(inputs)   
-                #         preds.append(guide_trace.nodes['_RETURN']['value'])
+                else:
+                    for seed in sample_idxs:
+                        pyro.set_rng_seed(seed)
+                        guide_trace = poutine.trace(self.guide).get_trace(inputs)   
+                        preds.append(guide_trace.nodes['_RETURN']['value'])
 
         elif self.inference == "hmc":
 
@@ -239,7 +230,7 @@ class BNN(PyroModule):
         logits = torch.stack(preds)
         return logits.mean(0) if expected_out else logits
 
-    def _train_hmc(self, train_loader, n_samples, warmup, step_size, num_steps, device):
+    def _train_hmc(self, train_loader, n_samples, warmup, step_size, num_steps, savedir, device):
         print("\n == HMC training ==")
         pyro.clear_param_store()
 
@@ -278,9 +269,9 @@ class BNN(PyroModule):
         if DEBUG:
             print("\n", weights[model_idx]) 
 
-        self.save()
+        self.save(savedir)
 
-    def _train_svi(self, train_loader, epochs, lr, device):
+    def _train_svi(self, train_loader, epochs, lr, savedir, device):
         print("\n == SVI training ==")
 
         optimizer = pyro.optim.Adam({"lr":lr})
@@ -320,22 +311,22 @@ class BNN(PyroModule):
             accuracy_list.append(accuracy)
 
         execution_time(start=start, end=time.time())
-        self.save()
+        self.save(savedir)
 
         plot_loss_accuracy(dict={'loss':loss_list, 'accuracy':accuracy_list},
                            path=TESTS+self.name+"/"+self.name+"_training.png")
 
-    def train(self, train_loader, device):
+    def train(self, train_loader, savedir, device):
         self.to(device)
         self.basenet.to(device)
         self.device=device
 
         if self.inference == "svi":
-            self._train_svi(train_loader, self.epochs, self.lr, device)
+            self._train_svi(train_loader, self.epochs, self.lr, savedir, device)
 
         elif self.inference == "hmc":
             self._train_hmc(train_loader, self.n_samples, self.warmup,
-                            self.step_size, self.num_steps, device)
+                            self.step_size, self.num_steps, savedir, device)
 
     def evaluate(self, test_loader, device, n_samples=10):
         self.to(device)

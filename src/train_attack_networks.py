@@ -11,7 +11,7 @@ import torch.nn.functional as F
 
 from utils.data import *
 from utils.networks import *
-from utils.savedir import *
+from utils import savedir
 from utils.seeding import *
 from attacks.gradient_based import *
 
@@ -28,6 +28,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 rel_path=TESTS
+n_inputs=100 if args.debug else None
 bayesian_attack_samples=[1, 10, 50]
 atk_inputs=100 if args.debug else args.atk_inputs
 
@@ -41,16 +42,19 @@ if args.model_type=="baseNN":
 
     model = baseNN_settings["model_"+str(args.model_idx)]
 
-    x_train, y_train, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"])
+    x_train, y_train, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], 
+                                                                            n_inputs=n_inputs)
     x_test, y_test, _ = balanced_subset(x_test, y_test, num_classes=out_size, subset_size=atk_inputs)
+    savedir = savedir._get_savedir(model=args.model_type, dataset=model["dataset"], architecture=model["architecture"], 
+                           inference=None, iters=model["epochs"], baseiters=None, debug=args.debug)
     
     net = baseNN(inp_shape, out_size, *list(model.values()))
 
     if args.train:
         train_loader = DataLoader(dataset=list(zip(x_train, y_train)), batch_size=128, shuffle=False)
-        net.train(train_loader=train_loader, device=args.device)
+        net.train(train_loader=train_loader, savedir=savedir, device=args.device)
     else:
-        net.load(device=args.device, rel_path=rel_path)
+        net.load(savedir=savedir, device=args.device)
 
     x_attack = attack(net=net, x_test=x_test, y_test=y_test,
                       device=args.device, method=args.attack_method, filename=net.name)
@@ -63,11 +67,14 @@ else:
 
         m = fullBNN_settings["model_"+str(args.model_idx)]
 
-        x_train, y_train, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"])
+        x_train, y_train, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"],
+                                                                             n_inputs=n_inputs)
         x_test, y_test, _ = balanced_subset(x_test, y_test, num_classes=out_size, subset_size=atk_inputs)
+        savedir = savedir._get_savedir(model=args.model_type, dataset=m["dataset"], architecture=m["architecture"], 
+                           inference=m["inference"], iters=m["epochs"], baseiters=None, debug=args.debug)
                             
         net = BNN(m["dataset"], *list(m.values())[1:], inp_shape, out_size)
-   
+
     # elif args.model_type=="redBNN":
 
     #     m = redBNN_settings["model_"+str(args.model_idx)]
@@ -87,9 +94,9 @@ else:
     if args.train is True:
         batch_size = 5000 if m["inference"] == "hmc" else 128
         train_loader = DataLoader(dataset=list(zip(x_train, y_train)), batch_size=batch_size, shuffle=False)
-        net.train(train_loader=train_loader, device=args.device)
+        net.train(train_loader=train_loader, savedir=savedir, device=args.device)
     else:
-        net.load(device=args.device, rel_path=rel_path)
+        net.load(savedir=savedir, device=args.device)
     
     for attack_samples in bayesian_attack_samples:
         x_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device, 

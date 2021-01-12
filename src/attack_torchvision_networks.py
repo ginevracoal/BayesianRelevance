@@ -38,7 +38,7 @@ batch_size = 128
 
 n_inputs, iters, n_samples = (20, 2, 2) if args.debug else (args.n_inputs, args.iters, args.n_samples)
 
-savedir = _get_torchvision_savedir(args.architecture, args.dataset, args.architecture, args.inference, args.iters, 
+savedir = _get_savedir(args.architecture, args.dataset, args.architecture, args.inference, args.iters, 
                                     args.debug)
 
 if args.device=="cuda":
@@ -59,7 +59,8 @@ if args.model=="baseNN":
     model = baseNN(architecture=args.architecture, dataset_name=args.dataset)
     params_to_update = model.initialize_model(architecture=args.architecture, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
-    model.load(savedir, iters, device)
+    # model.load(savedir, iters, device)
+    model.load(savedir, device)
 
     if args.load_attack:
         adversarial_data = load_attack(method=args.attack_method, savedir=savedir)
@@ -75,14 +76,15 @@ elif args.model=="redBNN":
     basenet = baseNN(architecture=args.architecture, dataset_name=args.dataset)
     basenet.initialize_model(architecture=args.architecture, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
-    basenet_savedir =  _get_torchvision_savedir("baseNN", args.dataset, args.architecture, 
+    basenet_savedir =  _get_savedir("baseNN", args.dataset, args.architecture, 
                                                 None, args.base_iters, args.debug)
     basenet.load(basenet_savedir, args.base_iters, device)
 
     model = redBNN(architecture=args.architecture, dataset_name=args.dataset, inference=args.inference)
     model.initialize_model(basenet, architecture=args.architecture, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
-    model.load(savedir, iters, device)
+    # model.load(savedir, iters, device)
+    model.load(savedir, device)
 
     if args.load_attack:
         adversarial_data = load_attack(method=args.attack_method, n_samples=n_samples, savedir=savedir)  

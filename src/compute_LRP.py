@@ -32,9 +32,9 @@ parser.add_argument("--debug", default=False, type=eval)
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
+# rel_path=TESTS
 bayesian_samples=[1, 10]#, 50]
-n_inputs=args.n_inputs
-rel_path=TESTS
+n_inputs=100 if args.debug else args.n_inputs
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
@@ -50,10 +50,12 @@ if args.model_type=="baseNN":
 
     _, _, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], 
                                                                          n_inputs=n_inputs)
-    
+    savedir = _get_savedir(model=args.model_type, dataset=model["dataset"], architecture=model["architecture"], 
+                       inference=None, iters=model["epochs"], baseiters=None, debug=args.debug)
+
     images = x_test[:args.n_inputs].to(args.device)
     net = baseNN(inp_shape, out_size, *list(model.values()))
-    net.load(device=args.device, rel_path=rel_path)
+    net.load(savedir=savedir, device=args.device)
 
     attacks = load_attack(method=args.attack_method, filename=net.name, rel_path=rel_path)
     attacks = attacks[:args.n_inputs].detach().to(args.device)
@@ -78,6 +80,8 @@ else:
 
         _, _, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], 
                                                                              n_inputs=n_inputs)
+        savedir = _get_savedir(model=args.model_type, dataset=m["dataset"], architecture=m["architecture"], 
+                               inference=m["inference"], iters=m["epochs"], baseiters=None, debug=args.debug)
 
         net = BNN(m["dataset"], *list(m.values())[1:], inp_shape, out_size)
    
@@ -98,7 +102,7 @@ else:
         raise NotImplementedError
 
     images = x_test[:args.n_inputs].to(args.device)
-    net.load(device=args.device, rel_path=rel_path)
+    net.load(savedir=savedir, device=args.device)
 
     samples_explanations=[]
     samples_attacks_explanations=[]
