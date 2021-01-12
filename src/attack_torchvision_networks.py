@@ -38,7 +38,7 @@ batch_size = 128
 
 n_inputs, iters, n_samples = (20, 2, 2) if args.debug else (args.n_inputs, args.iters, args.n_samples)
 
-savedir = _get_savedir(args.architecture, args.dataset, args.architecture, args.inference, args.iters, 
+savedir = get_savedir(args.architecture, args.dataset, args.architecture, args.inference, args.iters, 
                                     args.debug)
 
 if args.device=="cuda":
@@ -76,7 +76,7 @@ elif args.model=="redBNN":
     basenet = baseNN(architecture=args.architecture, dataset_name=args.dataset)
     basenet.initialize_model(architecture=args.architecture, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
-    basenet_savedir =  _get_savedir("baseNN", args.dataset, args.architecture, 
+    basenet_savedir =  get_savedir("baseNN", args.dataset, args.architecture, 
                                                 None, args.base_iters, args.debug)
     basenet.load(basenet_savedir, args.base_iters, device)
 

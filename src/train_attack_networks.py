@@ -27,7 +27,6 @@ parser.add_argument("--debug", default=False, type=eval)
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-rel_path=TESTS
 n_inputs=100 if args.debug else None
 bayesian_attack_samples=[1, 10, 50]
 atk_inputs=100 if args.debug else args.atk_inputs
@@ -45,8 +44,9 @@ if args.model_type=="baseNN":
     x_train, y_train, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], 
                                                                             n_inputs=n_inputs)
     x_test, y_test, _ = balanced_subset(x_test, y_test, num_classes=out_size, subset_size=atk_inputs)
-    savedir = savedir._get_savedir(model=args.model_type, dataset=model["dataset"], architecture=model["architecture"], 
-                           inference=None, iters=model["epochs"], baseiters=None, debug=args.debug)
+    savedir = get_savedir(model=args.model_type, dataset=model["dataset"], architecture=model["architecture"], 
+                           inference=None, iters=model["epochs"], baseiters=None, debug=args.debug,
+                           model_idx=args.model_idx)
     
     net = baseNN(inp_shape, out_size, *list(model.values()))
 
@@ -56,7 +56,7 @@ if args.model_type=="baseNN":
     else:
         net.load(savedir=savedir, device=args.device)
 
-    x_attack = attack(net=net, x_test=x_test, y_test=y_test,
+    x_attack = attack(net=net, x_test=x_test, y_test=y_test, savedir=savedir,
                       device=args.device, method=args.attack_method, filename=net.name)
 
     attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, device=args.device)
@@ -70,8 +70,9 @@ else:
         x_train, y_train, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"],
                                                                              n_inputs=n_inputs)
         x_test, y_test, _ = balanced_subset(x_test, y_test, num_classes=out_size, subset_size=atk_inputs)
-        savedir = savedir._get_savedir(model=args.model_type, dataset=m["dataset"], architecture=m["architecture"], 
-                           inference=m["inference"], iters=m["epochs"], baseiters=None, debug=args.debug)
+        savedir = get_savedir(model=args.model_type, dataset=m["dataset"], architecture=m["architecture"], 
+                           inference=m["inference"], iters=m["epochs"], baseiters=None, debug=args.debug,
+                           model_idx=args.model_idx)
                             
         net = BNN(m["dataset"], *list(m.values())[1:], inp_shape, out_size)
 
@@ -99,7 +100,7 @@ else:
         net.load(savedir=savedir, device=args.device)
     
     for attack_samples in bayesian_attack_samples:
-        x_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device, 
+        x_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device, savedir=savedir,
                         method=args.attack_method, filename=net.name, n_samples=attack_samples)
 
         defence_samples = attack_samples

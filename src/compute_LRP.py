@@ -32,7 +32,6 @@ parser.add_argument("--debug", default=False, type=eval)
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-# rel_path=TESTS
 bayesian_samples=[1, 10]#, 50]
 n_inputs=100 if args.debug else args.n_inputs
 
@@ -48,29 +47,26 @@ if args.model_type=="baseNN":
 
     model = baseNN_settings["model_"+str(args.model_idx)]
 
-    _, _, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], 
-                                                                         n_inputs=n_inputs)
-    savedir = _get_savedir(model=args.model_type, dataset=model["dataset"], architecture=model["architecture"], 
-                       inference=None, iters=model["epochs"], baseiters=None, debug=args.debug)
+    _, _, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], n_inputs=n_inputs)
+    savedir = get_savedir(model=args.model_type, dataset=model["dataset"], architecture=model["architecture"], 
+                         iters=model["epochs"], debug=args.debug, model_idx=args.model_idx)
 
-    images = x_test[:args.n_inputs].to(args.device)
+    images = x_test.to(args.device)
     net = baseNN(inp_shape, out_size, *list(model.values()))
     net.load(savedir=savedir, device=args.device)
 
-    attacks = load_attack(method=args.attack_method, filename=net.name, rel_path=rel_path)
-    attacks = attacks[:args.n_inputs].detach().to(args.device)
-
     explanations = compute_explanations(images, net, rule=args.rule)
-    attacks_explanations = compute_explanations(attacks, net, rule=args.rule)
-
     images = images.detach().cpu().numpy()
-    attacks = attacks.detach().cpu().numpy()
+    plot_explanations(images, explanations, rule=args.rule, savedir=savedir, 
+                                                    filename=args.rule+"_explanations.png")
 
-    # plot_explanations(images, explanations, rule=args.rule, savedir=rel_path+net.name+"/", 
-    #                                                 filename=args.rule+"_explanations.png")
-    plot_attacks_explanations(images, explanations, attacks, attacks_explanations,
-                                rule=args.rule, savedir=rel_path+net.name+"/", 
-                                filename=args.rule+"_explanations.png")
+    # attacks = load_attack(method=args.attack_method, filename=net.name, savedir=savedir)
+    # attacks = attacks[:args.n_inputs].detach().to(args.device)
+    # attacks_explanations = compute_explanations(attacks, net, rule=args.rule)
+    # attacks = attacks.detach().cpu().numpy()
+    # plot_attacks_explanations(images, explanations, attacks, attacks_explanations,
+    #                             rule=args.rule, savedir=savedir, 
+    #                             filename=args.rule+"_attacks_explanations.png")
 
 else:
 
@@ -80,8 +76,9 @@ else:
 
         _, _, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], 
                                                                              n_inputs=n_inputs)
-        savedir = _get_savedir(model=args.model_type, dataset=m["dataset"], architecture=m["architecture"], 
-                               inference=m["inference"], iters=m["epochs"], baseiters=None, debug=args.debug)
+        savedir = get_savedir(model=args.model_type, dataset=m["dataset"], architecture=m["architecture"], 
+                               inference=m["inference"], iters=m["epochs"],
+                                model_idx=args.model_idx, debug=args.debug)
 
         net = BNN(m["dataset"], *list(m.values())[1:], inp_shape, out_size)
    
@@ -101,7 +98,7 @@ else:
     else:
         raise NotImplementedError
 
-    images = x_test[:args.n_inputs].to(args.device)
+    images = x_test.to(args.device)
     net.load(savedir=savedir, device=args.device)
 
     samples_explanations=[]
@@ -111,30 +108,30 @@ else:
 
         explanations = compute_explanations(images, net, rule=args.rule, n_samples=n_samples)
         images_plt = images.detach().cpu().numpy()
-        plot_explanations(images_plt, explanations, rule=args.rule, savedir=rel_path+net.name+"/", 
-                                            filename=args.rule+"_explanations_"+str(n_samples)+".png")
+        # plot_explanations(images_plt, explanations, rule=args.rule, savedir=savedir, 
+        #                                     filename=args.rule+"_explanations_"+str(n_samples)+".png")
         samples_explanations.append(explanations)
 
         if args.explain_attacks:
-            attacks = load_attack(method=args.attack_method, filename=net.name, 
-                                    n_samples=n_samples, rel_path=rel_path)
+            attacks = load_attack(method=args.attack_method, filename=net.name, savedir=savedir,
+                                    n_samples=n_samples)
             attacks = attacks[:args.n_inputs].detach().to(args.device)
             attacks_explanations = compute_explanations(attacks, net, rule=args.rule, n_samples=n_samples)
             attacks_plt = attacks.detach().cpu().numpy()
 
-            plot_explanations(attacks_plt, attacks_explanations, rule=args.rule, savedir=rel_path+net.name+"/", 
+            plot_explanations(attacks_plt, attacks_explanations, rule=args.rule, savedir=savedir, 
                                                 filename=args.rule+"_atk_explanations_"+str(n_samples)+".png")
             plot_attacks_explanations(images, explanations, attacks, attacks_explanations,
-                                        rule=args.rule, savedir=rel_path+net.name+"/", 
+                                        rule=args.rule, savedir=savedir, 
                                         filename=args.rule+"_explanations.png")
             samples_attacks_explanations.append(attacks_explanations)
 
 
     samples_explanations = np.array(samples_explanations)
     plot_vanishing_explanations(images_plt, samples_explanations, n_samples_list=bayesian_samples,
-        rule=args.rule, savedir=rel_path+net.name+"/", filename=args.rule+"_vanishing_explanations.png")
+        rule=args.rule, savedir=savedir, filename=args.rule+"_vanishing_explanations.png")
 
     if args.explain_attacks:
         samples_attacks_explanations = np.array(samples_attacks_explanations)
         plot_vanishing_explanations(attacks_plt, samples_attacks_explanations, n_samples_list=bayesian_samples,
-            rule=args.rule, savedir=rel_path+net.name+"/", filename=args.rule+"_vanishing_explanations.png")
+            rule=args.rule, savedir=savedir, filename=args.rule+"_vanishing_explanations.png")

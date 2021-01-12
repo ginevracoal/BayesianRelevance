@@ -7,6 +7,9 @@ from tqdm import tqdm
 import matplotlib.colors as colors 
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
+from utils.savedir import *
+
+cmap_name = "RdBu_r"
 
 def compute_explanations(x_test, network, rule, n_samples=None): 
 
@@ -60,13 +63,13 @@ def plot_explanations(images, explanations, rule, savedir, filename):
         print(images.shape, "!=", explanations.shape)
         raise ValueError
 
-    cmap = plt.cm.get_cmap('RdBu')
+    cmap = plt.cm.get_cmap(cmap_name)
     # vmax = max([max(explanations.flatten()), 0.00001])
     # vmin = min([min(explanations.flatten()), -0.00001])
     # norm = colors.TwoSlopeNorm(vcenter=0., vmax=vmax, vmin=vmin)
 
     rows = 2
-    cols = min(len(explanations), 10)
+    cols = min(len(explanations), 6)
     fig, axes = plt.subplots(rows, cols, figsize=(12, 4))
     fig.tight_layout()
 
@@ -88,8 +91,9 @@ def plot_explanations(images, explanations, rule, savedir, filename):
     # cbar.set_label('Relevance', labelpad=10)
 
     plt.show()
-    os.makedirs(os.path.dirname(savedir+"/"), exist_ok=True)
-    plt.savefig(savedir+filename)
+    path = TESTS+savedir+"/"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    plt.savefig(path+filename)
 
 def plot_attacks_explanations(images, explanations, attacks, attacks_explanations, rule, savedir, filename):
 
@@ -97,7 +101,7 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
         print(images.shape, "!=", explanations.shape)
         raise ValueError
 
-    cmap = plt.cm.get_cmap('RdBu')
+    cmap = plt.cm.get_cmap(cmap_name)
     vmax_expl = max([max(explanations.flatten()), 0.000001])
     vmin_expl = min([min(explanations.flatten()), -0.000001])
     norm_expl = colors.TwoSlopeNorm(vcenter=0., vmax=vmax_expl, vmin=vmin_expl)
@@ -106,7 +110,7 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     norm_atk_expl = colors.TwoSlopeNorm(vcenter=0., vmax=vmax_atk_expl, vmin=vmin_atk_expl)
 
     rows = 4
-    cols = min(len(explanations), 10)
+    cols = min(len(explanations), 6)
     fig, axes = plt.subplots(rows, cols, figsize=(10, 4))
     fig.tight_layout()
 
@@ -137,8 +141,9 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     cbar.set_label('Relevance', labelpad=10)
 
     plt.show()
-    os.makedirs(os.path.dirname(savedir+"/"), exist_ok=True)
-    plt.savefig(savedir+filename)    
+    path = TESTS+savedir+"/"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    plt.savefig(path+filename)
 
 def plot_vanishing_explanations(images, samples_explanations, n_samples_list, rule, savedir, filename):
 
@@ -152,7 +157,7 @@ def plot_vanishing_explanations(images, samples_explanations, n_samples_list, ru
         raise ValueError("Not enough examples.")
 
     rows = min(len(n_samples_list), 5)+1
-    cols = min(len(vanishing_idxs), 10)
+    cols = min(len(vanishing_idxs), 6)
 
     fig, axes = plt.subplots(rows, cols, figsize=(10, 10))
     fig.tight_layout()
@@ -160,7 +165,7 @@ def plot_vanishing_explanations(images, samples_explanations, n_samples_list, ru
 
     for samples_idx, n_samples in enumerate(n_samples_list):
 
-        cmap = plt.cm.get_cmap('RdBu_r')
+        cmap = plt.cm.get_cmap(cmap_name)
         vmax = max(samples_explanations[samples_idx].flatten())
         vmin = min(samples_explanations[samples_idx].flatten())
         print(vmin, vmax)
@@ -185,8 +190,9 @@ def plot_vanishing_explanations(images, samples_explanations, n_samples_list, ru
         # cbar.set_label('Relevance', labelpad=10)
 
     plt.show()
-    os.makedirs(os.path.dirname(savedir+"/"), exist_ok=True)
-    plt.savefig(savedir+filename)    
+    path = TESTS+savedir+"/"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    plt.savefig(path+filename)
 
 def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
 

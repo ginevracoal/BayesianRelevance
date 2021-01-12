@@ -87,13 +87,14 @@ def pgd_attack(net, image, label, hyperparams=None, n_samples=None, avg_posterio
     perturbed_image = image.detach()
     return perturbed_image
 
-def attack(net, x_test, y_test, device, method, filename, savedir=None,
+def attack(net, x_test, y_test, device, method, filename, savedir,
            hyperparams=None, n_samples=None, avg_posterior=False):
 
     print(f"\n\nProducing {method} attacks", end="\t")
     if n_samples:
         print(f"with {n_samples} attack samples")
 
+    net.to(device)
     x_test, y_test = x_test.to(device), y_test.to(device)
 
     adversarial_attack = []
@@ -115,7 +116,7 @@ def attack(net, x_test, y_test, device, method, filename, savedir=None,
 
     adversarial_attack = torch.cat(adversarial_attack)
 
-    path = TESTS+filename+"/" if savedir is None else TESTS+savedir+"/"
+    path = TESTS+savedir+"/"
     name = filename+"_"+str(method)
     name = name+"_attackSamp="+str(n_samples)+"_attack.pkl" if n_samples else name+"_attack.pkl"
     save_to_pickle(data=adversarial_attack, path=path, filename=name)
@@ -129,8 +130,8 @@ def attack(net, x_test, y_test, device, method, filename, savedir=None,
 
     return adversarial_attack
 
-def load_attack(method, filename, n_samples=None, rel_path=TESTS):
-    path = rel_path+filename+"/" 
+def load_attack(method, filename, savedir, n_samples=None):
+    path = TESTS+savedir+"/" 
     name = filename+"_"+str(method)
     name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
     return load_from_pickle(path=path+name+".pkl")
