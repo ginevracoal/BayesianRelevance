@@ -242,6 +242,22 @@ def load_dataset(dataset_name, n_inputs=None, channels="first", shuffle=False):
     return torch.from_numpy(x_train), torch.from_numpy(y_train), \
            torch.from_numpy(x_test), torch.from_numpy(y_test), input_shape, num_classes
 
+def balanced_subset(inputs, labels, num_classes, subset_size):
+
+    n_samples = min(subset_size, len(inputs))
+    samples_per_class = int(n_samples/num_classes)
+
+    sampled_idxs = []
+    for target in range(num_classes+1):
+
+        while len(sampled_idxs) < target*samples_per_class:
+            idx = np.random.randint(0, len(inputs))
+
+            if labels[idx].argmax(-1)==(target-1):
+                sampled_idxs.append(idx)
+
+    return inputs[sampled_idxs], labels[sampled_idxs], sampled_idxs
+
 ############
 # pickling #
 ############

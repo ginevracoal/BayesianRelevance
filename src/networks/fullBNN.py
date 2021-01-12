@@ -143,7 +143,6 @@ class BNN(PyroModule):
         name = self.name
         path = rel_path + name +"/"
         filename = name+"_weights"
-
         if self.inference == "svi":
             param_store = pyro.get_param_store()
             param_store.load(path + filename + ".pt")
@@ -164,9 +163,10 @@ class BNN(PyroModule):
 
         self.to(device)
         self.basenet.to(device)
+        self.device=device
 
     def forward(self, inputs, n_samples=10, avg_posterior=False, sample_idxs=None, training=False,
-                expected_out=True):
+                expected_out=True, explain=False, rule=None):
         
         if sample_idxs:
             if len(sample_idxs) != n_samples:
@@ -196,13 +196,37 @@ class BNN(PyroModule):
 
                     for _ in range(n_samples):
                         guide_trace = poutine.trace(self.guide).get_trace(inputs)   
-                        preds.append(guide_trace.nodes['_RETURN']['value'])   
-                
+                        preds.append(guide_trace.nodes['_RETURN']['value'])
+
+                # elif explain:
                 else:
+
                     for seed in sample_idxs:
                         pyro.set_rng_seed(seed)
-                        guide_trace = poutine.trace(self.guide).get_trace(inputs)   
-                        preds.append(guide_trace.nodes['_RETURN']['value'])
+                        guide_trace = poutine.trace(self.guide).get_trace(inputs)  
+
+                        weights = {}
+                        for key, value in self.basenet.state_dict().items():
+                            # loc_name = str(f"{key}_loc")
+                            # scale_name = str(f"{key}_scale")
+                            # loc = pyro.param(loc_name, guide_trace.nodes[loc_name])
+                            # scale = pyro.param(scale_name, guide_trace.nodes[scale_name])
+                            # distr = Normal(loc=loc, scale=softplus(scale))
+                            # w = pyro.sample(str(f"{key}_weights"), distr)
+                            # weights.update({str(key):w})
+
+                            w = guide_trace.nodes[str(f"module$$${key}")]["value"]
+                            weights.update({str(key):w})
+
+                        self.basenet.load_state_dict(weights)
+                        self.basenet.to(self.device)
+                        preds.append(self.basenet.forward(inputs, explain, rule))
+
+                # else:
+                #     for seed in sample_idxs:
+                #         pyro.set_rng_seed(seed)
+                #         guide_trace = poutine.trace(self.guide).get_trace(inputs)   
+                #         preds.append(guide_trace.nodes['_RETURN']['value'])
 
         elif self.inference == "hmc":
 
@@ -304,8 +328,7 @@ class BNN(PyroModule):
     def train(self, train_loader, device):
         self.to(device)
         self.basenet.to(device)
-        random.seed(0)
-        pyro.set_rng_seed(0)
+        self.device=device
 
         if self.inference == "svi":
             self._train_svi(train_loader, self.epochs, self.lr, device)
@@ -317,8 +340,6 @@ class BNN(PyroModule):
     def evaluate(self, test_loader, device, n_samples=10):
         self.to(device)
         self.basenet.to(device)
-        random.seed(0)
-        pyro.set_rng_seed(0)
 
         with torch.no_grad():
 

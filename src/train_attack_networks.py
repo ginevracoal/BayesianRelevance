@@ -16,7 +16,7 @@ from utils.seeding import *
 from attacks.gradient_based import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_inputs", default=60000, type=int, help="number of input points")
+parser.add_argument("--atk_inputs", default=1000, type=int, help="number of input points")
 parser.add_argument("--model_idx", default=0, type=int, help="choose model idx from pre defined settings")
 parser.add_argument("--model_type", default="baseNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--inference", default="svi", type=str, help="svi, hmc")
@@ -27,9 +27,9 @@ parser.add_argument("--debug", default=False, type=eval)
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-bayesian_attack_samples=[3] if args.debug else [10]
-n_inputs=100 if args.debug else args.n_inputs
 rel_path=TESTS
+bayesian_attack_samples=[1, 10, 50]
+atk_inputs=100 if args.debug else args.atk_inputs
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
@@ -41,8 +41,8 @@ if args.model_type=="baseNN":
 
     model = baseNN_settings["model_"+str(args.model_idx)]
 
-    x_train, y_train, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], 
-                                                                         n_inputs=n_inputs)
+    x_train, y_train, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"])
+    x_test, y_test, _ = balanced_subset(x_test, y_test, num_classes=out_size, subset_size=atk_inputs)
     
     net = baseNN(inp_shape, out_size, *list(model.values()))
 
@@ -63,8 +63,8 @@ else:
 
         m = fullBNN_settings["model_"+str(args.model_idx)]
 
-        x_train, y_train, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], 
-                                                                             n_inputs=n_inputs)
+        x_train, y_train, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"])
+        x_test, y_test, _ = balanced_subset(x_test, y_test, num_classes=out_size, subset_size=atk_inputs)
                             
         net = BNN(m["dataset"], *list(m.values())[1:], inp_shape, out_size)
    

@@ -32,7 +32,8 @@ parser.add_argument("--debug", default=False, type=eval)
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-n_inputs=100 if args.debug else args.n_inputs
+bayesian_samples=[1, 10, 50]
+n_inputs=args.n_inputs
 rel_path=TESTS
 
 print("PyTorch Version: ", torch.__version__)
@@ -98,19 +99,31 @@ else:
 
     images = x_test[:args.n_inputs].to(args.device)
     net.load(device=args.device, rel_path=rel_path)
+
+    samples_explanations=[]
     
-    attacks = load_attack(method=args.attack_method, filename=net.name, 
-                            n_samples=args.n_samples, rel_path=rel_path)
-    attacks = attacks[:args.n_inputs].detach().to(args.device)
+    for n_samples in bayesian_samples:
+        attacks = load_attack(method=args.attack_method, filename=net.name, 
+                                n_samples=n_samples, rel_path=rel_path)
+        attacks = attacks[:args.n_inputs].detach().to(args.device)
 
-    explanations = compute_explanations(images, net, rule=args.rule)
-    attacks_explanations = compute_explanations(attacks, net, rule=args.rule)
+        explanations = compute_explanations(images, net, rule=args.rule, n_samples=n_samples)
+        attacks_explanations = compute_explanations(attacks, net, rule=args.rule, n_samples=n_samples)
 
-    images = images.detach().cpu().numpy()
-    attacks = attacks.detach().cpu().numpy()
+        images_plt = images.detach().cpu().numpy()
+        attacks_plt = attacks.detach().cpu().numpy()
 
-    plot_attacks_explanations(images, explanations, attacks, attacks_explanations,
-                                rule=args.rule, savedir=rel_path+net.name+"/", 
-                                filename=args.rule+"_explanations.png")
+        # plot_explanations(images_plt, explanations, rule=args.rule, savedir=rel_path+net.name+"/", 
+        #                                     filename=args.rule+"_explanations_"+str(n_samples)+".png")
+        # plot_explanations(attacks_plt, attacks_explanations, rule=args.rule, savedir=rel_path+net.name+"/", 
+        #                                     filename=args.rule+"_atk_explanations_"+str(n_samples)+".png")
+        # plot_attacks_explanations(images, explanations, attacks, attacks_explanations,
+        #                             rule=args.rule, savedir=rel_path+net.name+"/", 
+        #                             filename=args.rule+"_explanations.png")
 
+        samples_explanations.append(explanations)
 
+    samples_explanations = np.array(samples_explanations)
+
+    plot_vanishing_explanations(images_plt, samples_explanations, n_samples_list=bayesian_samples,
+        rule=args.rule, savedir=rel_path+net.name+"/", filename=args.rule+"_vanishing_explanations.png")
