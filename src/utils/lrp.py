@@ -4,6 +4,9 @@ import copy
 import torch
 import numpy as np
 from tqdm import tqdm
+import matplotlib
+import pandas as pd
+import seaborn as sns
 import matplotlib.colors as colors 
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
@@ -242,3 +245,36 @@ def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
     print(f"null norms = {100*count_null_images/len(inputs)} %")
     print("\nvanishing norms idxs = ", vanishing_norm_idxs)
     return vanishing_norm_idxs
+
+def stripplot_lrp_values(lrp_heatmaps_list, n_samples_list, savedir, filename):
+
+    matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
+    fig, ax = plt.subplots(1, 1, figsize=(10, 5), dpi=150, facecolor='w', edgecolor='k')    
+    sns.set_style("darkgrid")
+
+    lrp_heatmaps_components = []
+    plot_samples = []
+    for samples_idx, n_samples in enumerate(n_samples_list):
+        
+        print("\nsamples = ", n_samples, end="\t")
+        print(f"min = {lrp_heatmaps_list[samples_idx].min():.4f}", end="\t")
+        print(f"max = {lrp_heatmaps_list[samples_idx].max():.4f}")
+
+        avg_loss_gradient = np.array(lrp_heatmaps_list[samples_idx]).flatten()
+        lrp_heatmaps_components.extend(avg_loss_gradient)
+        plot_samples.extend(np.repeat(n_samples, len(avg_loss_gradient)))
+
+    df = pd.DataFrame(data={"lrp_heatmaps": lrp_heatmaps_components, "n_samples": plot_samples})
+
+    sns.stripplot(x="n_samples", y="lrp_heatmaps", data=df, linewidth=-0.1, ax=ax, 
+                  jitter=0.2, alpha=0.4, palette="gist_heat")
+
+    ax.set_ylabel("")
+    ax.set_xlabel("")
+
+    fig.text(0.5, 0.01, "Samples involved in the expectations ($w \sim p(w|D)$)", ha='center')
+    fig.text(0.03, 0.5, r"LRP heatmaps components components", 
+             va='center', rotation='vertical')
+
+    os.makedirs(savedir, exist_ok=True)
+    fig.savefig(os.path.join(savedir, filename+".png"))

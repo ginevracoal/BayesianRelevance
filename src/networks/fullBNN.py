@@ -211,7 +211,7 @@ class BNN(PyroModule):
 
                         self.basenet.load_state_dict(weights)
                         self.basenet.to(self.device)
-                        preds.append(self.basenet.forward(inputs, explain, rule))
+                        preds.append(self.basenet.forward(inputs, explain=explain, rule=rule))
 
                 else:
                     for seed in sample_idxs:

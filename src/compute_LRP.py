@@ -153,6 +153,8 @@ else:
 
     plot_vanishing_explanations(images_plt, samples_explanations, n_samples_list=bayesian_samples,
         rule=args.rule, savedir=savedir, filename=args.rule+"_vanishing_explanations")
+    stripplot_lrp_values(samples_explanations, n_samples_list=bayesian_samples, 
+                        savedir=savedir, filename=args.rule+"_explanations_components")
 
     if args.explain_attacks:
         samples_attacks_explanations = np.array(samples_attacks_explanations)
