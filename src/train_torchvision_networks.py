@@ -56,7 +56,7 @@ elif args.model=="redBNN":
     basenet.initialize_model(architecture=args.architecture, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
     basenet_savedir =  _get_torchvision_savedir("baseNN", args.dataset, args.architecture, 
-                                                None, args.base_iters, args.debug)
+                                                None, args.base_iters, None, args.debug)
 
     basenet.load(basenet_savedir, args.base_iters, device)
 

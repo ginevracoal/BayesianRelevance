@@ -27,12 +27,12 @@ parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd
 parser.add_argument("--rule", default="epsilon", type=str)
 parser.add_argument("--n_samples", default=10, type=int)
 parser.add_argument("--train", default=True, type=eval)
-parser.add_argument("--attack", default=True, type=eval)
+parser.add_argument("--explain_attacks", default=False, type=eval)
 parser.add_argument("--debug", default=False, type=eval)
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-bayesian_samples=[1, 10, 50]
+bayesian_samples=[1, 10]#, 50]
 n_inputs=args.n_inputs
 rel_path=TESTS
 
@@ -101,29 +101,36 @@ else:
     net.load(device=args.device, rel_path=rel_path)
 
     samples_explanations=[]
+    samples_attacks_explanations=[]
     
     for n_samples in bayesian_samples:
-        attacks = load_attack(method=args.attack_method, filename=net.name, 
-                                n_samples=n_samples, rel_path=rel_path)
-        attacks = attacks[:args.n_inputs].detach().to(args.device)
 
         explanations = compute_explanations(images, net, rule=args.rule, n_samples=n_samples)
-        attacks_explanations = compute_explanations(attacks, net, rule=args.rule, n_samples=n_samples)
-
         images_plt = images.detach().cpu().numpy()
-        attacks_plt = attacks.detach().cpu().numpy()
-
-        # plot_explanations(images_plt, explanations, rule=args.rule, savedir=rel_path+net.name+"/", 
-        #                                     filename=args.rule+"_explanations_"+str(n_samples)+".png")
-        # plot_explanations(attacks_plt, attacks_explanations, rule=args.rule, savedir=rel_path+net.name+"/", 
-        #                                     filename=args.rule+"_atk_explanations_"+str(n_samples)+".png")
-        # plot_attacks_explanations(images, explanations, attacks, attacks_explanations,
-        #                             rule=args.rule, savedir=rel_path+net.name+"/", 
-        #                             filename=args.rule+"_explanations.png")
-
+        plot_explanations(images_plt, explanations, rule=args.rule, savedir=rel_path+net.name+"/", 
+                                            filename=args.rule+"_explanations_"+str(n_samples)+".png")
         samples_explanations.append(explanations)
 
-    samples_explanations = np.array(samples_explanations)
+        if args.explain_attacks:
+            attacks = load_attack(method=args.attack_method, filename=net.name, 
+                                    n_samples=n_samples, rel_path=rel_path)
+            attacks = attacks[:args.n_inputs].detach().to(args.device)
+            attacks_explanations = compute_explanations(attacks, net, rule=args.rule, n_samples=n_samples)
+            attacks_plt = attacks.detach().cpu().numpy()
 
+            plot_explanations(attacks_plt, attacks_explanations, rule=args.rule, savedir=rel_path+net.name+"/", 
+                                                filename=args.rule+"_atk_explanations_"+str(n_samples)+".png")
+            plot_attacks_explanations(images, explanations, attacks, attacks_explanations,
+                                        rule=args.rule, savedir=rel_path+net.name+"/", 
+                                        filename=args.rule+"_explanations.png")
+            samples_attacks_explanations.append(attacks_explanations)
+
+
+    samples_explanations = np.array(samples_explanations)
     plot_vanishing_explanations(images_plt, samples_explanations, n_samples_list=bayesian_samples,
         rule=args.rule, savedir=rel_path+net.name+"/", filename=args.rule+"_vanishing_explanations.png")
+
+    if args.explain_attacks:
+        samples_attacks_explanations = np.array(samples_attacks_explanations)
+        plot_vanishing_explanations(attacks_plt, samples_attacks_explanations, n_samples_list=bayesian_samples,
+            rule=args.rule, savedir=rel_path+net.name+"/", filename=args.rule+"_vanishing_explanations.png")
