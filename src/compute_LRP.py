@@ -32,7 +32,7 @@ parser.add_argument("--debug", default=False, type=eval)
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-bayesian_samples=[1, 10]#, 50]
+bayesian_samples=[1, 10, 50]
 n_inputs=100 if args.debug else args.n_inputs
 
 print("PyTorch Version: ", torch.__version__)

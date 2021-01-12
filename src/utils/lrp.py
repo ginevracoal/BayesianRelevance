@@ -151,7 +151,7 @@ def plot_vanishing_explanations(images, samples_explanations, n_samples_list, ru
         print(images.shape, "!=", samples_explanations[0].shape)
         raise ValueError
 
-    vanishing_idxs=compute_vanishing_norm_idxs(samples_explanations, n_samples_list, norm="l2")   
+    vanishing_idxs=compute_vanishing_norm_idxs(samples_explanations, n_samples_list, norm="linfty")   
 
     if len(vanishing_idxs)<=1:
         raise ValueError("Not enough examples.")
@@ -159,30 +159,29 @@ def plot_vanishing_explanations(images, samples_explanations, n_samples_list, ru
     rows = min(len(n_samples_list), 5)+1
     cols = min(len(vanishing_idxs), 6)
 
-    fig, axes = plt.subplots(rows, cols, figsize=(10, 10))
+    chosen_idxs = np.random.choice(vanishing_idxs, cols)
+
+    fig, axes = plt.subplots(rows, cols, figsize=(10, 6))
     fig.tight_layout()
 
-
-    for samples_idx, n_samples in enumerate(n_samples_list):
+    for col_idx in range(cols):
 
         cmap = plt.cm.get_cmap(cmap_name)
-        vmax = max(samples_explanations[samples_idx].flatten())
-        vmin = min(samples_explanations[samples_idx].flatten())
+        vmax = max(samples_explanations[:, chosen_idxs[col_idx]].flatten())
+        vmin = min(samples_explanations[:, chosen_idxs[col_idx]].flatten())
         print(vmin, vmax)
-        norm = colors.TwoSlopeNorm(vcenter=0.)#, vmax=vmax, vmin=vmin)
+        norm = colors.TwoSlopeNorm(vcenter=0., vmax=vmax, vmin=vmin)
 
-        for col_idx in range(cols):
+        for samples_idx, n_samples in enumerate(n_samples_list):
 
-            image = np.squeeze(images[col_idx])
+            image = np.squeeze(images[chosen_idxs[col_idx]])
             image = np.expand_dims(image, axis=0) if len(image.shape) == 1 else image
 
-            expl = np.squeeze(samples_explanations[samples_idx, col_idx])
+            expl = np.squeeze(samples_explanations[samples_idx, chosen_idxs[col_idx]])
             expl = np.expand_dims(expl, axis=0) if len(expl.shape) == 1 else expl
 
-            print(min(expl.flatten()), max(expl.flatten()))
-
             axes[0, col_idx].imshow(image)
-            im = axes[samples_idx+1, col_idx].imshow(expl, cmap=cmap)#, norm=norm)
+            im = axes[samples_idx+1, col_idx].imshow(expl, cmap=cmap, norm=norm)
 
         # fig.subplots_adjust(right=0.83)
         # cbar_ax = fig.add_axes([0.88, 0.12, 0.02, 0.6])
@@ -213,6 +212,8 @@ def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
             inputs_norm = np.max(np.abs(image[0]))
         elif norm == "l2":
             inputs_norm = np.linalg.norm(image[0])  
+        else:
+            raise ValueError("Wrong norm name")
         
         if inputs_norm != 0.0:
             print("idx =",idx, end="\t")
