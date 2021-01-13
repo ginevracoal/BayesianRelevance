@@ -132,7 +132,7 @@ def attack(net, x_test, y_test, device, method, filename, savedir,
 def load_attack(method, filename, savedir, n_samples=None):
     name = filename+"_"+str(method)
     name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
-    return load_from_pickle(path=savedir+name)
+    return load_from_pickle(path=savedir, filename=name)
 
 def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None):
 

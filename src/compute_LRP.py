@@ -15,7 +15,10 @@ from utils.savedir import *
 from utils.seeding import *
 from attacks.gradient_based import *
 from attacks.gradient_based import load_attack
+
 from utils.lrp import *
+from plot.lrp_heatmaps import *
+from plot.lrp_distributions import lrp_labels_distributions, lrp_samples_distributions, lrp_pixels_distributions
 
 
 parser = argparse.ArgumentParser()
@@ -47,22 +50,21 @@ if args.model=="baseNN":
 
     model = baseNN_settings["model_"+str(args.model_idx)]
 
-    _, _, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], 
+    _, _, x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], 
                                                             shuffle=True, n_inputs=n_inputs)
     savedir = get_savedir(model=args.model, dataset=model["dataset"], architecture=model["architecture"], 
                           debug=args.debug, model_idx=args.model_idx)
 
     images = x_test.to(args.device)
-    net = baseNN(inp_shape, out_size, *list(model.values()))
+    net = baseNN(inp_shape, num_classes, *list(model.values()))
     net.load(savedir=savedir, device=args.device)
 
     if args.load:
-        explanations = load_from_pickle(path=savedir, filename=args.rule+"_explanations")
-
+        explanations = load_lrp(path=savedir, filename=args.rule+"_explanations")
 
     else:
         explanations = compute_explanations(images, net, rule=args.rule)
-        save_to_pickle(explanations, path=savedir, filename=args.rule+"_explanations")
+        save_lrp(explanations, path=savedir, filename=args.rule+"_explanations")
 
     images = images.detach().cpu().numpy()
     plot_explanations(images, explanations, rule=args.rule, savedir=savedir,
@@ -71,12 +73,13 @@ if args.model=="baseNN":
     if args.explain_attacks:
 
         if args.load:
-            attacks_explanations = load_from_pickle(path=savedir, filename=args.rule+"_attacks_explanations")
+            attacks_explanations = load_lrp(path=savedir, filename=args.rule+"_attacks_explanations")
     
         else:
             attacks = load_attack(method=args.attack_method, filename=net.name, savedir=savedir)
             attacks = attacks[:args.n_inputs].detach().to(args.device)
             attacks_explanations = compute_explanations(attacks, net, rule=args.rule)
+            save_lrp(attacks_explanations, path=savedir, filename=args.rule+"_attacks_explanations")
             attacks = attacks.detach().cpu().numpy()
             plot_attacks_explanations(images, explanations, attacks, attacks_explanations,
                                 rule=args.rule, savedir=savedir, filename=args.rule+"_attacks_explanations")
@@ -87,19 +90,20 @@ else:
 
         m = fullBNN_settings["model_"+str(args.model_idx)]
 
-        _, _, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], 
+        _, _, x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=m["dataset"], 
                                                                     shuffle=True, n_inputs=n_inputs)
         savedir = get_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
                                 model_idx=args.model_idx, debug=args.debug)
+        plots_savedir = os.path.join(savedir,"lrp")
 
-        net = BNN(m["dataset"], *list(m.values())[1:], inp_shape, out_size)
+        net = BNN(m["dataset"], *list(m.values())[1:], inp_shape, num_classes)
    
     # elif args.model=="redBNN":
 
     #     m = redBNN_settings["model_"+str(args.model_idx)]
-    #     _, _, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], 
+    #     _, _, x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=m["dataset"], 
     #                                                                          n_inputs=n_inputs)
-    #     basenet = baseNN(dataset_name=m["dataset"], input_shape=inp_shape, output_size=out_size,
+    #     basenet = baseNN(dataset_name=m["dataset"], input_shape=inp_shape, output_size=num_classes,
     #               epochs=m["baseNN_epochs"], lr=m["baseNN_lr"], hidden_size=m["hidden_size"], 
     #               activation=m["activation"], architecture=m["architecture"])        
     #     basenet.load(rel_path=rel_path, device=args.device)
@@ -111,15 +115,16 @@ else:
         raise NotImplementedError
 
     images = x_test.to(args.device)
+    labels = y_test.to(args.device)
     images_plt = images.detach().cpu().numpy()
+    labels_plt = labels.argmax(-1).detach().cpu().numpy()
     net.load(savedir=savedir, device=args.device)
 
     if args.load:
-        samples_explanations = load_from_pickle(path=savedir, filename=args.rule+"_explanations")
+        samples_explanations = load_lrp(path=savedir, filename=args.rule+"_explanations")
 
         if args.explain_attacks:
-            samples_attacks_explanations = load_from_pickle(path=savedir, 
-                filename=args.rule+"_attacks_explanations")
+            samples_attacks_explanations = load_lrp(path=savedir, filename=args.rule+"_attacks_explanations")
 
     else:
 
@@ -145,16 +150,25 @@ else:
                 samples_attacks_explanations.append(attacks_explanations)
         
         samples_explanations = np.array(samples_explanations)
-        save_to_pickle(samples_explanations, path=savedir, filename=args.rule+"_explanations")
+        save_lrp(samples_explanations, path=savedir, filename=args.rule+"_explanations")
 
         if args.explain_attacks:
-            save_to_pickle(samples_attacks_explanations, path=savedir, 
+            save_lrp(samples_attacks_explanations, path=savedir, 
                             filename=args.rule+"_attacks_explanations")
 
     plot_vanishing_explanations(images_plt, samples_explanations, n_samples_list=bayesian_samples,
         rule=args.rule, savedir=savedir, filename=args.rule+"_vanishing_explanations")
-    stripplot_lrp_values(samples_explanations, n_samples_list=bayesian_samples, 
-                        savedir=savedir, filename=args.rule+"_explanations_components")
+    # stripplot_lrp_values(samples_explanations, n_samples_list=bayesian_samples, 
+    #                  savedir=savedir, filename=args.rule+"_explanations_components")
+
+    lrp_samples_distributions(samples_explanations, labels=labels_plt, num_classes=num_classes,
+                    n_samples_list=bayesian_samples, savedir=savedir, filename=args.rule+"_lrp_pixel_distr")
+    lrp_labels_distributions(samples_explanations, labels=labels_plt, num_classes=num_classes,
+                    n_samples_list=bayesian_samples, savedir=savedir, 
+                    filename=args.rule+"_lrp_pixel_distr")
+    lrp_pixels_distributions(samples_explanations, labels=labels_plt, num_classes=num_classes,
+                    n_samples_list=bayesian_samples, savedir=savedir, 
+                    filename=args.rule+"_lrp_pixel_distr", topk=10)
 
     if args.explain_attacks:
         samples_attacks_explanations = np.array(samples_attacks_explanations)

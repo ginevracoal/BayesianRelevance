@@ -92,8 +92,13 @@ else:
         raise NotImplementedError
 
     if args.load:
+
         net.load(savedir=savedir, device=args.device)
-        x_attack = load_attack(method=args.attack_method, filename=net.name, savedir=savedir, n_samples=n_samples)
+        for n_samples in bayesian_attack_samples:
+
+            x_attack = load_attack(method=args.attack_method, filename=net.name, savedir=savedir, n_samples=n_samples)
+            attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
+                              device=args.device, n_samples=50)
 
     else:
         batch_size = 5000 if m["inference"] == "hmc" else 128
@@ -106,7 +111,6 @@ else:
             x_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device, savedir=savedir,
                             method=args.attack_method, filename=net.name, n_samples=n_samples)
 
-    attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
-                      device=args.device, n_samples=n_samples)
-
+            attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
+                              device=args.device, n_samples=50)
 
