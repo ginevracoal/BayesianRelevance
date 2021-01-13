@@ -3,6 +3,8 @@ import sys
 
 DATA = "../data/"
 TESTS = "../experiments/" 
+LRP_DIR="lrp/"
+ATK_DIR="attacks/"
 
 def get_savedir(model, dataset, architecture, iters=None, inference=None, baseiters=None,
                 model_idx=None, debug=False):

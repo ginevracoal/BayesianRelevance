@@ -16,7 +16,6 @@ from utils.seeding import set_seed
 from utils.data import load_from_pickle, save_to_pickle
 
 cmap_name = "RdBu_r"
-LRP_DIR="lrp/"
 
 def compute_explanations(x_test, network, rule, n_samples=None): 
 

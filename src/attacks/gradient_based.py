@@ -118,6 +118,8 @@ def attack(net, x_test, y_test, device, method, filename, savedir,
 
     name = filename+"_"+str(method)
     name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
+
+    savedir = os.path.join(path, ATK_DIR)
     save_to_pickle(data=adversarial_attack, path=savedir, filename=name)
 
     idxs = np.random.choice(len(x_test), 10, replace=False)
@@ -130,6 +132,7 @@ def attack(net, x_test, y_test, device, method, filename, savedir,
     return adversarial_attack
 
 def load_attack(method, filename, savedir, n_samples=None):
+    savedir = os.path.join(path, ATK_DIR)
     name = filename+"_"+str(method)
     name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
     return load_from_pickle(path=savedir, filename=name)
