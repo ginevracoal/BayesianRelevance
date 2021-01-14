@@ -37,13 +37,13 @@ fullBNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation
                              "lr":0.01, "n_samples":None, "warmup":None},
                     "model_1":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
-                             "lr":None, "n_samples":100, "warmup":50}, 
+                             "lr":None, "n_samples":10, "warmup":50}, 
                     "model_2":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
-                             "architecture":"fc2", "inference":"svi", "epochs":15,
+                             "architecture":"conv", "inference":"svi", "epochs":15,
                              "lr":0.001, "n_samples":None, "warmup":None},
                     "model_3":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
-                             "lr":None, "n_samples":100, "warmup":50},
+                             "lr":None, "n_samples":10, "warmup":50},
                     }  
 
 
@@ -112,7 +112,7 @@ class BNN(PyroModule):
         with pyro.plate("data", len(x_data)):
             logits = lifted_module(x_data)
 
-        return logits
+        return nnf.softmax(logits, dim=-1)
 
     def save(self, savedir):
         filename=self.name+"_weights"
@@ -208,8 +208,9 @@ class BNN(PyroModule):
                         guide_trace = poutine.trace(self.guide).get_trace(inputs)   
                         preds.append(guide_trace.nodes['_RETURN']['value'])
 
-                elif explain:
+                # elif explain:
 
+                else:
                     for seed in sample_idxs:
                         pyro.set_rng_seed(seed)
                         guide_trace = poutine.trace(self.guide).get_trace(inputs)  
@@ -224,11 +225,11 @@ class BNN(PyroModule):
                         self.basenet.to(self.device)
                         preds.append(self.basenet.forward(inputs, explain=explain, rule=rule))
 
-                else:
-                    for seed in sample_idxs:
-                        pyro.set_rng_seed(seed)
-                        guide_trace = poutine.trace(self.guide).get_trace(inputs)   
-                        preds.append(guide_trace.nodes['_RETURN']['value'])
+                # else:
+                #     for seed in sample_idxs:
+                #         pyro.set_rng_seed(seed)
+                #         guide_trace = poutine.trace(self.guide).get_trace(inputs)   
+                #         preds.append(guide_trace.nodes['_RETURN']['value'])
 
         elif self.inference == "hmc":
 
@@ -255,7 +256,8 @@ class BNN(PyroModule):
         return logits.mean(0) if expected_out else logits
 
     def _train_hmc(self, train_loader, n_samples, warmup, step_size, num_steps, savedir, device):
-        print("\n == HMC training ==")
+        print("\n == fullBNN HMC training ==")
+        print("\nnum_chains =", len(train_loader), "\n")
         pyro.clear_param_store()
         batch_samples = 1 
 
@@ -323,7 +325,7 @@ class BNN(PyroModule):
     #     self.save(savedir)
 
     def _train_svi(self, train_loader, epochs, lr, savedir, device):
-        print("\n == SVI training ==")
+        print("\n == fullBNN SVI training ==")
 
         optimizer = pyro.optim.Adam({"lr":lr})
         elbo = TraceMeanField_ELBO()

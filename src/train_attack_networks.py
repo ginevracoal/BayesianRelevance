@@ -27,7 +27,6 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 n_inputs=100 if args.debug else None
-bayesian_attack_samples=[1] if args.debug else [1, 10, 50]
 atk_inputs=100 if args.debug else args.atk_inputs
 
 print("PyTorch Version: ", torch.__version__)
@@ -48,13 +47,12 @@ if args.model=="baseNN":
     
     net = baseNN(inp_shape, out_size, *list(model.values()))
 
-
     if args.load:
         net.load(savedir=savedir, device=args.device)
         x_attack = load_attack(method=args.attack_method, filename=net.name, savedir=savedir)
     
     else:
-        train_loader = DataLoader(dataset=list(zip(x_train, y_train)), batch_size=128, shuffle=False)
+        train_loader = DataLoader(dataset=list(zip(x_train, y_train)), batch_size=128, shuffle=True)
         net.train(train_loader=train_loader, savedir=savedir, device=args.device)
         x_attack = attack(net=net, x_test=x_test, y_test=y_test, savedir=savedir,
                       device=args.device, method=args.attack_method, filename=net.name)
@@ -74,22 +72,38 @@ else:
                               debug=args.debug, model_idx=args.model_idx)
 
         net = BNN(m["dataset"], *list(m.values())[1:], inp_shape, out_size)
+    
 
-    # elif args.model=="redBNN":
+    elif args.model=="redBNN":
 
-    #     m = redBNN_settings["model_"+str(args.model_idx)]
-    #     x_train, y_train, x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], 
-    #                                                                          n_inputs=n_inputs)
-    #     basenet = baseNN(dataset_name=m["dataset"], input_shape=inp_shape, output_size=out_size,
-    #               epochs=m["baseNN_epochs"], lr=m["baseNN_lr"], hidden_size=m["hidden_size"], 
-    #               activation=m["activation"], architecture=m["architecture"])        
-    #     basenet.load(rel_path=rel_path, device=args.device)
+        m = redBNN_settings["model_"+str(args.model_idx)]
+        x_train, y_train, _, _, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], n_inputs=n_inputs)
+        x_test, y_test = load_dataset(dataset_name=m["dataset"], n_inputs=atk_inputs)[2:4]
 
-    #     hyp = get_hyperparams(m)
-    #     net = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=basenet, hyperparams=hyp)
+        savedir = get_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
+                              debug=args.debug, model_idx=args.model_idx)
+
+        basenet = baseNN(dataset_name=m["dataset"], input_shape=inp_shape, output_size=out_size,
+                  epochs=m["baseNN_epochs"], lr=m["baseNN_lr"], hidden_size=m["hidden_size"], 
+                  activation=m["activation"], architecture=m["architecture"]) 
+        basenet_savedir = get_savedir(model="baseNN", dataset=m["dataset"], architecture=m["architecture"], 
+                                      debug=args.debug, model_idx=args.model_idx) # todo: refactor this 
+        basenet.load(savedir=basenet_savedir, device=args.device)
+
+        hyp = get_hyperparams(m)
+        net = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=basenet, hyperparams=hyp)
 
     else:
         raise NotImplementedError
+
+    if args.debug:
+        bayesian_attack_samples=[1]
+    else:
+        if m["inference"]=="svi":
+            bayesian_attack_samples=[1,10,50]
+
+        elif m["inference"]=="hmc":
+            bayesian_attack_samples=[1,5,10]
 
     if args.load:
 
@@ -98,13 +112,13 @@ else:
 
             x_attack = load_attack(method=args.attack_method, filename=net.name, savedir=savedir, n_samples=n_samples)
             attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
-                              device=args.device, n_samples=50)
+                              device=args.device, n_samples=10)
 
     else:
         batch_size = int(len(x_train)/m["n_samples"]) if m["inference"] == "hmc" else 128 
         num_workers = 0 if args.device=="cuda" else 4
         train_loader = DataLoader(dataset=list(zip(x_train, y_train)), batch_size=batch_size, 
-                                  num_workers=num_workers, shuffle=False)
+                                  num_workers=num_workers, shuffle=True)
         net.train(train_loader=train_loader, savedir=savedir, device=args.device)
         # net.load(savedir=savedir, device=args.device)
 
@@ -113,5 +127,5 @@ else:
                             method=args.attack_method, filename=net.name, n_samples=n_samples)
 
             attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
-                              device=args.device, n_samples=50)
+                              device=args.device, n_samples=n_samples)
 
