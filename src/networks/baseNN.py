@@ -169,7 +169,7 @@ class baseNN(nn.Module):
     def forward(self, inputs, *args, **kwargs):
         x = self.model(inputs)
         x = self.out(x)
-        return nnf.log_softmax(x, dim=-1)
+        return x
 
     def save(self, savedir):
 

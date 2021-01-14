@@ -2,21 +2,17 @@
 FGSM and PGD classic & bayesian adversarial attacks 
 """
 
+import os
 import sys
-import argparse
-from tqdm import tqdm
-import pyro
-import random
 import copy
 import torch
 import numpy as np
+from tqdm import tqdm
 from torch.utils.data import DataLoader
-import torch.nn.functional as nnf
-import pandas
-import os
 
-from utils.savedir import *
 from utils.data import *
+from utils.seeding import *
+from utils.savedir import *
 from utils.networks import *
 from attacks.robustness_measures import *
 from attacks.plot import plot_grid_attacks
@@ -52,7 +48,6 @@ def loss_gradient_sign(net, n_samples, image, label):
             loss_gradient = copy.deepcopy(x_copy.grad.data[0].sign())
             loss_gradients.append(loss_gradient)
 
-        # gradient_sign = torch.stack(loss_gradients,0).sign().mean(0)
         gradient_sign = torch.stack(loss_gradients,0).mean(0)
 
     return gradient_sign
@@ -119,9 +114,10 @@ def attack(net, x_test, y_test, device, method, filename, savedir,
     name = filename+"_"+str(method)
     name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
 
-    savedir = os.path.join(path, ATK_DIR)
+    savedir = os.path.join(savedir, ATK_DIR)
     save_to_pickle(data=adversarial_attack, path=savedir, filename=name)
 
+    set_seed(0)
     idxs = np.random.choice(len(x_test), 10, replace=False)
     original_images_plot = torch.stack([x_test[i].squeeze() for i in idxs])
     perturbed_images_plot = torch.stack([adversarial_attack[i].squeeze() for i in idxs])
@@ -132,7 +128,7 @@ def attack(net, x_test, y_test, device, method, filename, savedir,
     return adversarial_attack
 
 def load_attack(method, filename, savedir, n_samples=None):
-    savedir = os.path.join(path, ATK_DIR)
+    savedir = os.path.join(savedir, ATK_DIR)
     name = filename+"_"+str(method)
     name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
     return load_from_pickle(path=savedir, filename=name)
@@ -143,8 +139,7 @@ def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None):
     if n_samples:
         print(f" with {n_samples} defence samples")
 
-    random.seed(0)
-    pyro.set_rng_seed(0)
+    set_seed(0)
     
     x_test, x_attack, y_test = x_test.to(device), x_attack.to(device), y_test.to(device)
 

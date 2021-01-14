@@ -37,16 +37,13 @@ fullBNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation
                              "lr":0.01, "n_samples":None, "warmup":None},
                     "model_1":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
-                             "lr":None, "n_samples":100, "warmup":50},
+                             "lr":None, "n_samples":100, "warmup":50}, 
                     "model_2":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
                              "architecture":"fc2", "inference":"svi", "epochs":15,
                              "lr":0.001, "n_samples":None, "warmup":None},
                     "model_3":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
                              "lr":None, "n_samples":100, "warmup":50},
-                    "model_4":{"dataset":"fashion_mnist", "hidden_size":2048, "activation":"leaky",
-                             "architecture":"fc2", "inference":"svi", "epochs":10,
-                             "lr":0.01, "n_samples":None, "warmup":None},
                     }  
 
 
@@ -60,10 +57,10 @@ class BNN(PyroModule):
         self.architecture = architecture
         self.epochs = epochs
         self.lr = lr
-        self.n_samples = n_samples
-        self.warmup = warmup
+        self.n_samples = 10 if DEBUG else n_samples
+        self.warmup = 5 if DEBUG else warmup
         self.step_size = 0.001
-        self.num_steps = 30
+        self.num_steps = 10
         self.basenet = baseNN(dataset_name=dataset_name, input_shape=input_shape, 
                               output_size=output_size, hidden_size=hidden_size, 
                               activation=activation, architecture=architecture, 
@@ -114,12 +111,12 @@ class BNN(PyroModule):
         
         with pyro.plate("data", len(x_data)):
             logits = lifted_module(x_data)
-            preds = nnf.log_softmax(logits, dim=-1)
 
-        return preds
+        return logits
 
     def save(self, savedir):
         filename=self.name+"_weights"
+        savedir=os.path.join(savedir, "weights")
         os.makedirs(savedir, exist_ok=True)
 
         if self.inference == "svi":
@@ -136,15 +133,17 @@ class BNN(PyroModule):
             self.basenet.to("cpu")
             self.to("cpu")
 
-            for key, value in self.posterior_predictive.items():
-                fullpath=os.path.join(savedir, filename+"_"+str(key)+".pt")    
-                torch.save(value.state_dict(), fullpath)
+            # for key, value in self.posterior_samples.items():
+                # fullpath=os.path.join(savedir, filename+"_"+str(key)+".pt")    
+                # torch.save(value.state_dict(), fullpath)
 
-                if DEBUG:
-                    print(value.state_dict()["model.5.bias"])
+            for idx, weights in enumerate(self.posterior_samples):
+                fullpath=os.path.join(savedir, filename+"_"+str(idx)+".pt")    
+                torch.save(weights.state_dict(), fullpath)
 
     def load(self, savedir, device):
         filename=self.name+"_weights"
+        savedir=os.path.join(savedir, "weights")
 
         if self.inference == "svi":
             param_store = pyro.get_param_store()
@@ -155,13 +154,21 @@ class BNN(PyroModule):
 
         elif self.inference == "hmc":
 
-            self.posterior_predictive={}
-            for model_idx in range(self.n_samples):
-                net_copy = copy.deepcopy(self.basenet)
-                net_copy.load_state_dict(torch.load(os.path.join(savedir, filename+"_"+str(model_idx)+".pt")))
-                self.posterior_predictive.update({model_idx:net_copy})      
+            # self.posterior_samples={}
+            # for model_idx in range(self.n_samples):
+            #     net_copy = copy.deepcopy(self.basenet)
+            #     fullpath=os.path.join(savedir, filename+"_"+str(model_idx)+".pt")    
+            #     net_copy.load_state_dict(torch.load(fullpath))
+            #     self.posterior_samples.update({model_idx:net_copy})   
 
-            if len(self.posterior_predictive)!=self.n_samples:
+            self.posterior_samples=[]
+            for idx in range(self.n_samples):
+                net_copy = copy.deepcopy(self.basenet)
+                fullpath=os.path.join(savedir, filename+"_"+str(idx)+".pt")    
+                net_copy.load_state_dict(torch.load(fullpath))
+                self.posterior_samples.append(net_copy)  
+
+            if len(self.posterior_samples)!=self.n_samples:
                 raise AttributeError("wrong number of posterior models")
 
         self.to(device)
@@ -170,7 +177,7 @@ class BNN(PyroModule):
 
     def forward(self, inputs, n_samples=10, avg_posterior=False, sample_idxs=None, training=False,
                 expected_out=True, explain=False, rule=None):
-        
+
         if sample_idxs:
             if len(sample_idxs) != n_samples:
                 raise ValueError("Number of sample_idxs should match number of samples.")
@@ -225,11 +232,24 @@ class BNN(PyroModule):
 
         elif self.inference == "hmc":
 
-            preds = []
-            posterior_predictive = list(self.posterior_predictive.values())
-            for seed in sample_idxs:
-                net = posterior_predictive[seed]
-                preds.append(net.forward(inputs))
+            if n_samples>len(self.posterior_samples):
+                raise ValueError("Too many samples. Max available samples =", len(self.posterior_samples))
+
+            if explain:
+                preds = []
+                # posterior_predictive = list(self.posterior_samples.values())
+                posterior_predictive = self.posterior_samples
+                for seed in sample_idxs:
+                    net = posterior_predictive[seed]
+                    preds.append(net.forward(inputs, explain=explain, rule=rule))
+
+            else:
+                preds = []
+                # posterior_predictive = list(self.posterior_samples.values())
+                posterior_predictive = self.posterior_samples
+                for seed in sample_idxs:
+                    net = posterior_predictive[seed]
+                    preds.append(net.forward(inputs))
         
         logits = torch.stack(preds)
         return logits.mean(0) if expected_out else logits
@@ -237,43 +257,70 @@ class BNN(PyroModule):
     def _train_hmc(self, train_loader, n_samples, warmup, step_size, num_steps, savedir, device):
         print("\n == HMC training ==")
         pyro.clear_param_store()
-
-        num_batches = int(len(train_loader.dataset)/train_loader.batch_size)+1
-        batch_samples = int(n_samples/num_batches)
-        print("\nn_batches=",num_batches,"\tbatch_samples =", batch_samples)
+        batch_samples = 1 
 
         kernel = HMC(self.model, step_size=step_size, num_steps=num_steps)
         mcmc = MCMC(kernel=kernel, num_samples=batch_samples, warmup_steps=warmup, num_chains=1)
 
+        self.posterior_samples=[]
+        state_dict_keys = list(self.basenet.state_dict().keys())
         start = time.time()
+
         for x_batch, y_batch in train_loader:
             x_batch = x_batch.to(device)
             labels = y_batch.to(device).argmax(-1)
             mcmc.run(x_batch, labels)
 
-        execution_time(start=start, end=time.time())     
-
-        self.posterior_predictive={}
-        posterior_samples = mcmc.get_samples(n_samples)
-        state_dict_keys = list(self.basenet.state_dict().keys())
-
-        if DEBUG:
-            print("\n", list(posterior_samples.values())[-1])
-
-        for model_idx in range(n_samples):
+            posterior_sample = mcmc.get_samples(batch_samples)
             net_copy = copy.deepcopy(self.basenet)
 
             model_dict=OrderedDict({})
-            for weight_idx, weights in enumerate(posterior_samples.values()):
-                model_dict.update({state_dict_keys[weight_idx]:weights[model_idx]})
-            
+            for weight_idx, weights in enumerate(posterior_sample.values()):
+                model_dict.update({state_dict_keys[weight_idx]:weights[0]})
+
             net_copy.load_state_dict(model_dict)
-            self.posterior_predictive.update({str(model_idx):net_copy})
+            self.posterior_samples.append(net_copy)
 
-        if DEBUG:
-            print("\n", weights[model_idx]) 
+            if DEBUG:
+                print(net_copy.state_dict()['out.weight'][0,:5])
 
+        execution_time(start=start, end=time.time())     
         self.save(savedir)
+
+    # def _train_hmc(self, train_loader, n_samples, warmup, step_size, num_steps, savedir, device):
+    #     print("\n == HMC training ==")
+    #     pyro.clear_param_store()
+
+    #     num_batches = int(len(train_loader.dataset)/train_loader.batch_size)+1
+    #     batch_samples = int(n_samples/num_batches)
+    #     print("\nn_batches =",num_batches,"\tbatch_samples =", batch_samples)
+
+    #     kernel = HMC(self.model, step_size=step_size, num_steps=num_steps)
+    #     mcmc = MCMC(kernel=kernel, num_samples=batch_samples, warmup_steps=warmup, num_chains=1)
+
+    #     start = time.time()
+    #     for x_batch, y_batch in train_loader:
+    #         x_batch = x_batch.to(device)
+    #         labels = y_batch.to(device).argmax(-1)
+    #         mcmc.run(x_batch, labels)
+
+    #     execution_time(start=start, end=time.time())     
+
+    #     self.posterior_samples={}
+    #     posterior_samples = mcmc.get_samples(n_samples)
+    #     state_dict_keys = list(self.basenet.state_dict().keys())
+
+    #     for model_idx in range(n_samples):
+    #         net_copy = copy.deepcopy(self.basenet)
+
+    #         model_dict=OrderedDict({})
+    #         for weight_idx, weights in enumerate(posterior_samples.values()):
+    #             model_dict.update({state_dict_keys[weight_idx]:weights[model_idx]})
+
+    #         net_copy.load_state_dict(model_dict)
+    #         self.posterior_samples.update({str(model_idx):net_copy})
+
+    #     self.save(savedir)
 
     def _train_svi(self, train_loader, epochs, lr, savedir, device):
         print("\n == SVI training ==")
