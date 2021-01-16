@@ -260,7 +260,7 @@ class BNN(PyroModule):
         pyro.clear_param_store()
 
         batch_samples = 1
-        print("\nnum_batches =", len(train_loader), "\nbatch_samples=", batch_samples)
+        print("\nnum_batches =", len(train_loader), "\nbatch_samples =", batch_samples)
 
         kernel = HMC(self.model, step_size=step_size, num_steps=num_steps)
         mcmc = MCMC(kernel=kernel, num_samples=batch_samples, warmup_steps=warmup, num_chains=1)
@@ -289,41 +289,6 @@ class BNN(PyroModule):
 
         execution_time(start=start, end=time.time())     
         self.save(savedir)
-
-    # def _train_hmc(self, train_loader, n_samples, warmup, step_size, num_steps, savedir, device):
-    #     print("\n == HMC training ==")
-    #     pyro.clear_param_store()
-
-    #     num_batches = int(len(train_loader.dataset)/train_loader.batch_size)+1
-    #     batch_samples = int(n_samples/num_batches)
-    #     print("\nn_batches =",num_batches,"\tbatch_samples =", batch_samples)
-
-    #     kernel = HMC(self.model, step_size=step_size, num_steps=num_steps)
-    #     mcmc = MCMC(kernel=kernel, num_samples=batch_samples, warmup_steps=warmup, num_chains=1)
-
-    #     start = time.time()
-    #     for x_batch, y_batch in train_loader:
-    #         x_batch = x_batch.to(device)
-    #         labels = y_batch.to(device).argmax(-1)
-    #         mcmc.run(x_batch, labels)
-
-    #     execution_time(start=start, end=time.time())     
-
-    #     self.posterior_samples={}
-    #     posterior_samples = mcmc.get_samples(n_samples)
-    #     state_dict_keys = list(self.basenet.state_dict().keys())
-
-    #     for model_idx in range(n_samples):
-    #         net_copy = copy.deepcopy(self.basenet)
-
-    #         model_dict=OrderedDict({})
-    #         for weight_idx, weights in enumerate(posterior_samples.values()):
-    #             model_dict.update({state_dict_keys[weight_idx]:weights[model_idx]})
-
-    #         net_copy.load_state_dict(model_dict)
-    #         self.posterior_samples.update({str(model_idx):net_copy})
-
-    #     self.save(savedir)
 
     def _train_svi(self, train_loader, epochs, lr, savedir, device):
         print("\n == fullBNN SVI training ==")
