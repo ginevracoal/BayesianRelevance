@@ -47,7 +47,7 @@ def plot_explanations(images, explanations, rule, savedir, filename):
         axes[0, col].imshow(image)
         im = axes[1, col].imshow(expl, cmap=cmap)
 
-    plt.show()
+    plt.show(block=False)
     os.makedirs(savedir, exist_ok=True)
     plt.savefig(os.path.join(savedir,filename+".png"))
 
@@ -98,7 +98,7 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     cbar = fig.colorbar(atk_expl, ax=axes[2, :].ravel().tolist(), cax=cbar_ax)
     cbar.set_label('Relevance', labelpad=10)
 
-    plt.show()
+    plt.show(block=False)
     os.makedirs(savedir, exist_ok=True)
     plt.savefig(os.path.join(savedir,filename+".png"))
 
@@ -147,6 +147,6 @@ def plot_vanishing_explanations(images, samples_explanations, n_samples_list, ru
         # cbar = fig.colorbar(im, ax=axes[samples_idx+1, :].ravel().tolist(), cax=cbar_ax)
         # cbar.set_label('Relevance', labelpad=10)
 
-    plt.show()
+    plt.show(block=False)
     os.makedirs(savedir, exist_ok=True)
     plt.savefig(os.path.join(savedir, filename+".png"))
