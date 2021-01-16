@@ -15,7 +15,7 @@ from utils.seeding import *
 from utils.savedir import *
 from utils.networks import *
 from attacks.robustness_measures import *
-from attacks.plot import plot_grid_attacks
+from plot.attacks import plot_grid_attacks
 
 
 DEBUG=False

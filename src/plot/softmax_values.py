@@ -133,33 +133,33 @@ def plot_maxSoftmax(model_type, data_loader, net, n_samples_list, device, load_d
         plt.savefig(path+model_type+"_maxSoftmax_vs"+vs+"_inp="+str(n_inputs)+".png")
 
 
-def main(args):
+# def main(args):
 
-    n_samples_list=[1,50,100]
+#     n_samples_list=[1,50,100]
 
-    if args.device=="cuda":
-        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+#     if args.device=="cuda":
+#         torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
-    load_dir = DATA if args.load_dir=="DATA" else TESTS
-    test_loader, net = load_test_net(model_idx=args.model_idx, model_type=args.model_type, 
-                                     device=args.device, load_dir=load_dir, n_inputs=args.n_inputs)
+#     load_dir = DATA if args.load_dir=="DATA" else TESTS
+#     test_loader, net = load_test_net(model_idx=args.model_idx, model_type=args.model_type, 
+#                                      device=args.device, load_dir=load_dir, n_inputs=args.n_inputs)
 
-    if args.allSoftmax:
-        plot_allSoftmax(data_loader=test_loader, net=net, n_samples_list=n_samples_list, 
-                        device=args.device, model_type=args.model_type)
+#     if args.allSoftmax:
+#         plot_allSoftmax(data_loader=test_loader, net=net, n_samples_list=n_samples_list, 
+#                         device=args.device, model_type=args.model_type)
 
-    if args.maxSoftmax:
-        plot_maxSoftmax(data_loader=test_loader, net=net, n_samples_list=n_samples_list, 
-                        device=args.device, model_type=args.model_type)
+#     if args.maxSoftmax:
+#         plot_maxSoftmax(data_loader=test_loader, net=net, n_samples_list=n_samples_list, 
+#                         device=args.device, model_type=args.model_type)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--n_inputs", default=500, type=int)
-    parser.add_argument("--model_idx", default=0, type=int)
-    parser.add_argument("--model_type", default="fullBNN", type=str, help="fullBNN, redBNN, laplBNN")
-    parser.add_argument("--load_dir", default="DATA", type=str, help="DATA, TESTS")
-    parser.add_argument("--allSoftmax", default=False, type=eval)
-    parser.add_argument("--maxSoftmax", default=True, type=eval)
-    parser.add_argument("--device", default='cuda', type=str, help='cpu, cuda')   
-    main(args=parser.parse_args())
+# if __name__ == "__main__":
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument("--n_inputs", default=500, type=int)
+#     parser.add_argument("--model_idx", default=0, type=int)
+#     parser.add_argument("--model_type", default="fullBNN", type=str, help="fullBNN, redBNN, laplBNN")
+#     parser.add_argument("--load_dir", default="DATA", type=str, help="DATA, TESTS")
+#     parser.add_argument("--allSoftmax", default=False, type=eval)
+#     parser.add_argument("--maxSoftmax", default=True, type=eval)
+#     parser.add_argument("--device", default='cuda', type=str, help='cpu, cuda')   
+#     main(args=parser.parse_args())

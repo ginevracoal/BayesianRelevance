@@ -1,5 +1,5 @@
 from utils.savedir import *
-from utils.torchvision import plot_grid_attacks
+from plot.attacks import plot_grid_attacks
 from attacks.gradient_based import *
 
 def attack(network, dataloader, method, device, savedir, n_samples=None, hyperparams=None):

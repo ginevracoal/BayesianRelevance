@@ -11,7 +11,7 @@ def plot_grid_attacks(original_images, perturbed_images, filename, savedir):
         axes[0, i].imshow(original_images[i])
         axes[1, i].imshow(perturbed_images[i])
 
-    plt.show()
+    plt.show(block=False)
     os.makedirs(os.path.dirname(savedir+"/"), exist_ok=True)
     plt.savefig(os.path.join(savedir, filename+".png"))
 

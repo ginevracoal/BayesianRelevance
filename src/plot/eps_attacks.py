@@ -81,42 +81,42 @@ def lineplot_increasing_eps(df, model_type, bnn, method, n_inputs):
     plt.savefig(TESTS + filename)
 
 
-def main(args):
+# def main(args):
 
-    epsilon_list=[0.3, 0.4, 0.5, 0.6]
-    n_samples_list=[1, 10, 50]
+#     epsilon_list=[0.3, 0.4, 0.5, 0.6]
+#     n_samples_list=[1, 10, 50]
 
-    if args.device=="cuda":
-        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+#     if args.device=="cuda":
+#         torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
-    load_dir = DATA if args.load_dir=="DATA" else TESTS
-    (x_test, y_test), bnn = load_test_net(model_idx=args.model_idx, model_type=args.model_type, 
-                        device=args.device, load_dir=load_dir, n_inputs=args.n_inputs,
-                        return_data_loader=False)
+#     load_dir = DATA if args.load_dir=="DATA" else TESTS
+#     (x_test, y_test), bnn = load_test_net(model_idx=args.model_idx, model_type=args.model_type, 
+#                         device=args.device, load_dir=load_dir, n_inputs=args.n_inputs,
+#                         return_data_loader=False)
 
-    if args.load_df:
-        df = load_eps_attacks_df(bnn=bnn, method=args.attack_method, load_dir=TESTS)
+#     if args.load_df:
+#         df = load_eps_attacks_df(bnn=bnn, method=args.attack_method, load_dir=TESTS)
 
-    else:
-        df = build_eps_attacks_df(bnn=bnn, device=args.device, 
-                                 x_test=x_test, y_test=y_test, method=args.attack_method, 
-                                 attack_samples_list=n_samples_list, 
-                                 defence_samples_list=n_samples_list, 
-                                 epsilon_list=epsilon_list)
+#     else:
+#         df = build_eps_attacks_df(bnn=bnn, device=args.device, 
+#                                  x_test=x_test, y_test=y_test, method=args.attack_method, 
+#                                  attack_samples_list=n_samples_list, 
+#                                  defence_samples_list=n_samples_list, 
+#                                  epsilon_list=epsilon_list)
 
-    lineplot_increasing_eps(df=df, model_type=args.model_type, bnn=bnn, 
-                            method=args.attack_method, n_inputs=args.n_inputs)
+#     lineplot_increasing_eps(df=df, model_type=args.model_type, bnn=bnn, 
+#                             method=args.attack_method, n_inputs=args.n_inputs)
 
 
 
-if __name__ == "__main__":
-    assert pyro.__version__.startswith('1.3.0')
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--n_inputs", default=500, type=int, help="inputs to be attacked")
-    parser.add_argument("--model_idx", default=0, type=int, help="choose idx from saved_NNs")
-    parser.add_argument("--model_type", default="redBNN", type=str, help="fullBNN, redBNN, laplBNN")
-    parser.add_argument("--load_dir", default='DATA', type=str, help="DATA, TESTS")  
-    parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-    parser.add_argument("--load_df", default=False, type=eval)
-    parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")   
-    main(args=parser.parse_args())
+# if __name__ == "__main__":
+#     assert pyro.__version__.startswith('1.3.0')
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument("--n_inputs", default=500, type=int, help="inputs to be attacked")
+#     parser.add_argument("--model_idx", default=0, type=int, help="choose idx from saved_NNs")
+#     parser.add_argument("--model_type", default="redBNN", type=str, help="fullBNN, redBNN, laplBNN")
+#     parser.add_argument("--load_dir", default='DATA', type=str, help="DATA, TESTS")  
+#     parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
+#     parser.add_argument("--load_df", default=False, type=eval)
+#     parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")   
+#     main(args=parser.parse_args())

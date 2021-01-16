@@ -23,7 +23,7 @@ parser.add_argument("--load", default=False, type=eval)
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--atk_inputs", default=1000, type=int, help="number of input points")
 parser.add_argument("--debug", default=False, type=eval)
-parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
+parser.add_argument("--device", default='cpu', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
 n_inputs=100 if args.debug else None

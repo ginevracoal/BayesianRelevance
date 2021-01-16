@@ -17,7 +17,6 @@ from torchvision import datasets, transforms
 
 from utils.savedir import *
 from utils.seeding import *
-from attacks.plot import plot_grid_attacks
 
 
 class TransformDataset(Dataset):
