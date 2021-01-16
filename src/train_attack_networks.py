@@ -112,15 +112,15 @@ else:
 
             x_attack = load_attack(method=args.attack_method, filename=net.name, savedir=savedir, n_samples=n_samples)
             attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
-                              device=args.device, n_samples=10)
+                              device=args.device, n_samples=n_samples)
 
     else:
-        batch_size = int(len(x_train)/m["n_samples"]) if m["inference"] == "hmc" else 128 
+        # batch_size = int(len(x_train)/m["n_samples"]) if m["inference"] == "hmc" else 128 
+        batch_size = int(len(x_train)/max(bayesian_attack_samples)) if m["inference"] == "hmc" else 128 
         num_workers = 0 if args.device=="cuda" else 4
         train_loader = DataLoader(dataset=list(zip(x_train, y_train)), batch_size=batch_size, 
                                   num_workers=num_workers, shuffle=True)
         net.train(train_loader=train_loader, savedir=savedir, device=args.device)
-        # net.load(savedir=savedir, device=args.device)
 
         for n_samples in bayesian_attack_samples:
             x_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device, savedir=savedir,

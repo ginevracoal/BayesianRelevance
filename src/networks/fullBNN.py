@@ -257,9 +257,10 @@ class BNN(PyroModule):
 
     def _train_hmc(self, train_loader, n_samples, warmup, step_size, num_steps, savedir, device):
         print("\n == fullBNN HMC training ==")
-        print("\nnum_chains =", len(train_loader), "\n")
         pyro.clear_param_store()
-        batch_samples = 1 
+
+        batch_samples = 1
+        print("\nnum_batches =", len(train_loader), "\nbatch_samples=", batch_samples)
 
         kernel = HMC(self.model, step_size=step_size, num_steps=num_steps)
         mcmc = MCMC(kernel=kernel, num_samples=batch_samples, warmup_steps=warmup, num_chains=1)
