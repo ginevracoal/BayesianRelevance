@@ -132,20 +132,23 @@ class redBNN(PyroModule):
 
     def save(self, savedir):
         filename=self.name+"_weights"
-        savedir=os.path.join(savedir, "weights")
-
-        filepath, filename = (TESTS+self.name+"/", self.name+"_weights")
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
         if self.inference == "svi":
+            os.makedirs(savedir, exist_ok=True)
+
             self.basenet.to("cpu")
             self.to("cpu")
             param_store = pyro.get_param_store()
-            print("\nSaving: ", filepath + filename +".pt")
             print(f"\nlearned params = {param_store.get_all_param_names()}")
-            param_store.save(filepath + filename +".pt")
+
+            fullpath=os.path.join(savedir, filename+".pt")
+            print("\nSaving: ", fullpath)
+            param_store.save(fullpath)
 
         elif self.inference == "hmc":
+            savedir=os.path.join(savedir, "weights")
+            os.makedirs(savedir, exist_ok=True)  
+
             self.basenet.to("cpu")
             self.to("cpu")
 
@@ -155,9 +158,10 @@ class redBNN(PyroModule):
 
     def load(self, savedir, device):
         filename=self.name+"_weights"
-        savedir=os.path.join(savedir, "weights")
 
         if self.inference == "svi":
+            os.makedirs(savedir, exist_ok=True)
+
             param_store = pyro.get_param_store()
             param_store.load(os.path.join(savedir, filename + ".pt"))
             for key, value in param_store.items():
@@ -165,6 +169,8 @@ class redBNN(PyroModule):
             print("\nLoading ", os.path.join(savedir, filename + ".pt"))
 
         elif self.inference == "hmc":
+            savedir=os.path.join(savedir, "weights")
+            os.makedirs(savedir, exist_ok=True)  
 
             self.posterior_samples=[]
             for idx in range(self.n_samples):

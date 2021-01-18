@@ -98,18 +98,24 @@ else:
 
         net = BNN(m["dataset"], *list(m.values())[1:], inp_shape, num_classes)
    
-    # elif args.model=="redBNN":
+    elif args.model=="redBNN":
 
-    #     m = redBNN_settings["model_"+str(args.model_idx)]
-    #     _, _, x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=m["dataset"], 
-    #                                                                          n_inputs=n_inputs)
-    #     basenet = baseNN(dataset_name=m["dataset"], input_shape=inp_shape, output_size=num_classes,
-    #               epochs=m["baseNN_epochs"], lr=m["baseNN_lr"], hidden_size=m["hidden_size"], 
-    #               activation=m["activation"], architecture=m["architecture"])        
-    #     basenet.load(rel_path=rel_path, device=args.device)
+        m = redBNN_settings["model_"+str(args.model_idx)]
+        x_train, y_train, _, _, inp_shape, num_classes = load_dataset(dataset_name=m["dataset"], n_inputs=n_inputs)
+        x_test, y_test = load_dataset(dataset_name=m["dataset"], n_inputs=n_inputs)[2:4]
 
-    #     hyp = get_hyperparams(m)
-    #     net = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=basenet, hyperparams=hyp)
+        savedir = get_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
+                              debug=args.debug, model_idx=args.model_idx)
+
+        basenet = baseNN(dataset_name=m["dataset"], input_shape=inp_shape, output_size=num_classes,
+                  epochs=m["baseNN_epochs"], lr=m["baseNN_lr"], hidden_size=m["hidden_size"], 
+                  activation=m["activation"], architecture=m["architecture"]) 
+        basenet_savedir = get_savedir(model="baseNN", dataset=m["dataset"], architecture=m["architecture"], 
+                                      debug=args.debug, model_idx=args.model_idx) # todo: refactor this 
+        basenet.load(savedir=basenet_savedir, device=args.device)
+
+        hyp = get_hyperparams(m)
+        net = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=basenet, hyperparams=hyp)
 
     else:
         raise NotImplementedError
