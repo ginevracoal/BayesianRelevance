@@ -166,10 +166,16 @@ class baseNN(nn.Module):
         execution_time(start=start, end=time.time())
         self.save(savedir)
 
-    def forward(self, inputs, *args, **kwargs):
-        x = self.model(inputs)
-        x = self.out(x)
-        return x
+    def forward(self, inputs, explain=False, rule=None, layer_idx=-1):
+
+        if layer_idx==-1:
+            x = self.model(inputs)
+            x = self.out(x)
+            return x
+
+        else:
+            x = nn.Sequential(*list(self.model.children())[:layer_idx+1])(inputs)
+            return x
 
     def save(self, savedir):
 

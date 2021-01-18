@@ -42,7 +42,7 @@ def select_informative_pixels(lrp_heatmaps, topk):
 
     return chosen_images_lrp, chosen_pxl_idxs
 
-def stripplot_lrp_values(lrp_heatmaps_list, n_samples_list, savedir, filename):
+def stripplot_lrp_values(lrp_heatmaps_list, n_samples_list, savedir, filename, layer_idx=-1):
 
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
     fig, ax = plt.subplots(1, 1, figsize=(10, 5), dpi=150, facecolor='w', edgecolor='k')    
@@ -72,14 +72,15 @@ def stripplot_lrp_values(lrp_heatmaps_list, n_samples_list, savedir, filename):
     fig.text(0.03, 0.5, r"LRP heatmaps components components", 
              va='center', rotation='vertical')
 
-    savedir=os.path.join(savedir, LRP_DIR)
+    savedir = os.path.join(savedir, lrp_savedir(layer_idx))
     os.makedirs(savedir, exist_ok=True)
     fig.savefig(os.path.join(savedir, filename+".png"))
 
 
-def lrp_labels_distributions(lrp_heatmaps, labels, num_classes, n_samples_list, savedir, filename, topk=None):
+def lrp_labels_distributions(lrp_heatmaps, labels, num_classes, n_samples_list, savedir, filename, topk=None,
+                            layer_idx=-1):
 
-    savedir = os.path.join(savedir, LRP_DIR, "labels_distributions")
+    savedir = os.path.join(savedir, lrp_savedir(layer_idx), "labels_distributions")
     os.makedirs(savedir, exist_ok=True)
 
     if topk is not None:
@@ -131,9 +132,10 @@ def lrp_labels_distributions(lrp_heatmaps, labels, num_classes, n_samples_list, 
         plt.close(fig)
 
 
-def lrp_samples_distributions(lrp_heatmaps, labels, num_classes, n_samples_list, savedir, filename):
+def lrp_samples_distributions(lrp_heatmaps, labels, num_classes, n_samples_list, savedir, 
+                              filename, layer_idx=-1):
 
-    savedir = os.path.join(savedir, LRP_DIR, "samples_distributions")
+    savedir = os.path.join(savedir, lrp_savedir(layer_idx), "samples_distributions")
     os.makedirs(savedir, exist_ok=True)
     
     flat_lrp_heatmaps = lrp_heatmaps.reshape(*lrp_heatmaps.shape[:2], -1)
@@ -180,9 +182,10 @@ def lrp_samples_distributions(lrp_heatmaps, labels, num_classes, n_samples_list,
         fig.savefig(os.path.join(savedir, filename+"_samp="+str(n_samples)+".png"))
         plt.close(fig)
 
-def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, savedir, filename, topk=1):
+def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, savedir, filename, topk=1,
+                             layer_idx=-1):
     
-    savedir = os.path.join(savedir, LRP_DIR, "pixels_distributions")
+    savedir = os.path.join(savedir, lrp_savedir(layer_idx), "pixels_distributions")
     os.makedirs(savedir, exist_ok=True) 
 
     ### dataframe

@@ -29,6 +29,7 @@ parser.add_argument("--inference", default="svi", type=str, help="svi, hmc")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--rule", default="epsilon", type=str)
 parser.add_argument("--n_samples", default=10, type=int)
+parser.add_argument("--layer_idx", default=-1, type=int)
 parser.add_argument("--load", default=False, type=eval)
 parser.add_argument("--explain_attacks", default=False, type=eval)
 parser.add_argument("--debug", default=False, type=eval)
@@ -60,29 +61,32 @@ if args.model=="baseNN":
     net.load(savedir=savedir, device=args.device)
 
     if args.load:
-        explanations = load_lrp(path=savedir, filename=args.rule+"_explanations")
+        explanations = load_lrp(path=savedir, filename=args.rule+"_explanations", layer_idx=args.layer_idx)
 
     else:
-        explanations = compute_explanations(images, net, rule=args.rule)
-        save_lrp(explanations, path=savedir, filename=args.rule+"_explanations")
+        explanations = compute_explanations(images, net, rule=args.rule, layer_idx=args.layer_idx)
+        save_lrp(explanations, path=savedir, filename=args.rule+"_explanations", layer_idx=args.layer_idx)
 
     images = images.detach().cpu().numpy()
     plot_explanations(images, explanations, rule=args.rule, savedir=savedir,
-                     filename=args.rule+"_explanations")
+                     filename=args.rule+"_explanations", layer_idx=args.layer_idx)
 
     if args.explain_attacks:
 
         if args.load:
-            attacks_explanations = load_lrp(path=savedir, filename=args.rule+"_attacks_explanations")
+            attacks_explanations = load_lrp(path=savedir, filename=args.rule+"_attacks_explanations",
+                                            layer_idx=args.layer_idx)
     
         else:
             attacks = load_attack(method=args.attack_method, filename=net.name, savedir=savedir)
             attacks = attacks[:args.n_inputs].detach().to(args.device)
-            attacks_explanations = compute_explanations(attacks, net, rule=args.rule)
-            save_lrp(attacks_explanations, path=savedir, filename=args.rule+"_attacks_explanations")
+            attacks_explanations = compute_explanations(attacks, net, rule=args.rule, layer_idx=args.layer_idx)
+            save_lrp(attacks_explanations, path=savedir, filename=args.rule+"_attacks_explanations", 
+                        layer_idx=args.layer_idx)
             attacks = attacks.detach().cpu().numpy()
             plot_attacks_explanations(images, explanations, attacks, attacks_explanations,
-                                rule=args.rule, savedir=savedir, filename=args.rule+"_attacks_explanations")
+                                rule=args.rule, savedir=savedir, filename=args.rule+"_attacks_explanations",
+                                layer_idx=args.layer_idx)
 
 else:
 

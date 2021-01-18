@@ -17,9 +17,9 @@ from utils.lrp import *
 
 cmap_name = "RdBu_r"
 
-def plot_explanations(images, explanations, rule, savedir, filename):
+def plot_explanations(images, explanations, rule, savedir, filename, layer_idx=-1):
 
-    savedir = os.path.join(savedir, LRP_DIR)
+    savedir = os.path.join(savedir, lrp_savedir(layer_idx))
 
     if images.shape != explanations.shape:
         print(images.shape, "!=", explanations.shape)
@@ -50,9 +50,10 @@ def plot_explanations(images, explanations, rule, savedir, filename):
     os.makedirs(savedir, exist_ok=True)
     plt.savefig(os.path.join(savedir,filename+".png"))
 
-def plot_attacks_explanations(images, explanations, attacks, attacks_explanations, rule, savedir, filename):
+def plot_attacks_explanations(images, explanations, attacks, attacks_explanations, rule, savedir, 
+                                filename, layer_idx=-1):
 
-    savedir = os.path.join(savedir, LRP_DIR)
+    savedir = os.path.join(savedir, lrp_savedir(layer_idx))
 
     if images.shape != explanations.shape:
         print(images.shape, "!=", explanations.shape)
@@ -100,9 +101,10 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     os.makedirs(savedir, exist_ok=True)
     plt.savefig(os.path.join(savedir,filename+".png"))
 
-def plot_vanishing_explanations(images, samples_explanations, n_samples_list, rule, savedir, filename):
+def plot_vanishing_explanations(images, samples_explanations, n_samples_list, rule, savedir, filename,
+                                layer_idx=-1):
     
-    savedir = os.path.join(savedir, LRP_DIR)
+    savedir = os.path.join(savedir, lrp_savedir(layer_idx))
 
     if images.shape != samples_explanations[0].shape:
         print(images.shape, "!=", samples_explanations[0].shape)

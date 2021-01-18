@@ -4,7 +4,7 @@ import time
 
 DATA = "../data/"
 TESTS = "../experiments/" 
-LRP_DIR="lrp/"
+LRP_DIR="lrp"
 ATK_DIR="attacks/"
 
 def get_savedir(model, dataset, architecture, iters=None, inference=None, baseiters=None,
@@ -29,3 +29,6 @@ def get_savedir(model, dataset, architecture, iters=None, inference=None, baseit
     else:
         return os.path.join(TESTS, savedir)
 
+
+def lrp_savedir(layer_idx):
+    return LRP_DIR+"_layer_idx="+str(layer_idx)+"/"

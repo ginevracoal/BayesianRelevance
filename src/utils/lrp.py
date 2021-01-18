@@ -18,7 +18,7 @@ from utils.data import load_from_pickle, save_to_pickle
 cmap_name = "RdBu_r"
 DEBUG=False
 
-def compute_explanations(x_test, network, rule, n_samples=None): 
+def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1): 
 
     if n_samples is None:
 
@@ -27,7 +27,7 @@ def compute_explanations(x_test, network, rule, n_samples=None):
         for x in tqdm(x_test):
             x.requires_grad=True
             # Forward pass
-            y_hat = network.forward(x.unsqueeze(0), explain=True, rule=rule)
+            y_hat = network.forward(x.unsqueeze(0), explain=True, rule=rule, layer_idx=layer_idx)
 
             # Choose argmax
             y_hat = y_hat[torch.arange(x.shape[0]), y_hat.max(1)[1]]
@@ -50,7 +50,8 @@ def compute_explanations(x_test, network, rule, n_samples=None):
                 # Forward pass
                 x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
                 x_copy.requires_grad = True
-                y_hat = network.forward(inputs=x_copy, n_samples=1, sample_idxs=[j], explain=True, rule=rule)
+                y_hat = network.forward(inputs=x_copy, n_samples=1, sample_idxs=[j], 
+                                        explain=True, rule=rule, layer_idx=layer_idx)
 
                 # Choose argmax
                 y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
@@ -64,7 +65,7 @@ def compute_explanations(x_test, network, rule, n_samples=None):
 
         return np.array(avg_explanations)
 
-def compute_posterior_explanations(x_test, network, rule, n_samples): 
+def compute_posterior_explanations(x_test, network, rule, n_samples): # todo: add layer_idx
 
     posterior_explanations = []
     for x in tqdm(x_test):
@@ -151,11 +152,11 @@ def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
     print("\nvanishing norms idxs = ", vanishing_norm_idxs)
     return vanishing_norm_idxs, non_null_idxs
 
-def save_lrp(explanations, path, filename):
-    savedir = os.path.join(path, LRP_DIR)
+def save_lrp(explanations, path, filename, layer_idx):
+    savedir = os.path.join(path, lrp_savedir(layer_idx))
     save_to_pickle(explanations, path=savedir, filename=filename)
 
-def load_lrp(path, filename):
-    savedir = os.path.join(path, LRP_DIR)
+def load_lrp(path, filename, layer_idx):
+    savedir = os.path.join(path, lrp_savedir(layer_idx))
     explanations = load_from_pickle(path=savedir, filename=filename)
     return explanations
