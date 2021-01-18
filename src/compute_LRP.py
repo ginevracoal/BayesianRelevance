@@ -161,14 +161,11 @@ else:
     # stripplot_lrp_values(samples_explanations, n_samples_list=bayesian_samples, 
     #                  savedir=savedir, filename=args.rule+"_explanations_components")
 
-    lrp_samples_distributions(samples_explanations, labels=labels_plt, num_classes=num_classes,
-                    n_samples_list=bayesian_samples, savedir=savedir, filename=args.rule+"_lrp_pixel_distr")
+    # lrp_samples_distributions(samples_explanations, labels=labels_plt, num_classes=num_classes,
+    #                 n_samples_list=bayesian_samples, savedir=savedir, filename=args.rule+"_lrp_pixel_distr")
     lrp_labels_distributions(samples_explanations, labels=labels_plt, num_classes=num_classes,
                     n_samples_list=bayesian_samples, savedir=savedir, 
                     filename=args.rule+"_lrp_pixel_distr")
-    lrp_pixels_distributions(samples_explanations, labels=labels_plt, num_classes=num_classes,
-                    n_samples_list=bayesian_samples, savedir=savedir, 
-                    filename=args.rule+"_lrp_pixel_distr", topk=10)
 
     if args.explain_attacks:
         samples_attacks_explanations = np.array(samples_attacks_explanations)

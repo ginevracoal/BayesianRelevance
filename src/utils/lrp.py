@@ -16,6 +16,7 @@ from utils.seeding import set_seed
 from utils.data import load_from_pickle, save_to_pickle
 
 cmap_name = "RdBu_r"
+DEBUG=False
 
 def compute_explanations(x_test, network, rule, n_samples=None): 
 
@@ -87,7 +88,8 @@ def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
             raise ValueError("Wrong norm name")
         
         if inputs_norm != 0.0:
-            print("idx =",idx, end="\t")
+            if DEBUG:
+                print("idx =",idx, end="\t")
             count_samples_idx = 0
             for samples_idx, n_samples in enumerate(n_samples_list):
 
@@ -97,20 +99,23 @@ def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
                     new_inputs_norm = np.linalg.norm(image[samples_idx])
 
                 if new_inputs_norm <= inputs_norm:
-                    print(new_inputs_norm, end="\t")
+                    if DEBUG:
+                        print(new_inputs_norm, end="\t")
                     inputs_norm = copy.deepcopy(new_inputs_norm)
                     count_samples_idx += 1
 
             if count_samples_idx == len(n_samples_list):
                 vanishing_norm_idxs.append(idx)
                 non_null_idxs.append(idx)
-                print("\tcount=", count_van_images)
+                if DEBUG:
+                    print("\tcount=", count_van_images)
                 count_van_images += 1
             else: 
                 non_null_idxs.append(idx)
                 count_incr_images += 1
 
-            print("\n")
+            if DEBUG:
+                print("\n")
 
         else:
             count_null_images += 1
