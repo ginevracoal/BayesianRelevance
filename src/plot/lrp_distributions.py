@@ -180,11 +180,10 @@ def lrp_samples_distributions(lrp_heatmaps, labels, num_classes, n_samples_list,
         fig.savefig(os.path.join(savedir, filename+"_samp="+str(n_samples)+".png"))
         plt.close(fig)
 
-def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, savedir, filename, 
-                             n_images=10, topk=1):
+def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, savedir, filename, topk=1):
     
     savedir = os.path.join(savedir, LRP_DIR, "pixels_distributions")
-    os.makedirs(savedir, exist_ok=True)
+    os.makedirs(savedir, exist_ok=True) 
 
     ### dataframe
 
@@ -193,10 +192,7 @@ def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, saved
     samples_list=[]
     pixel_idxs_list=[]
 
-    print(lrp_heatmaps.shape)
-
-    im_idxs = np.random.choice(lrp_heatmaps.shape[0], size=n_images, replace=False)
-    for im_idx in im_idxs:
+    for im_idx in range(len(lrp_heatmaps)):
 
         image_lrp_heatmaps = np.expand_dims(lrp_heatmaps[im_idx,:], axis=1)
         image_label = labels[im_idx]
