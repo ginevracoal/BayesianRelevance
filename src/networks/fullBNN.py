@@ -146,7 +146,6 @@ class BNN(PyroModule):
 
     def load(self, savedir, device):
         filename=self.name+"_weights"
-        savedir=os.path.join(savedir, "weights")
 
         if self.inference == "svi":
             os.makedirs(savedir, exist_ok=True)
