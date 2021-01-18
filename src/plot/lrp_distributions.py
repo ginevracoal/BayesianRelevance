@@ -180,18 +180,11 @@ def lrp_samples_distributions(lrp_heatmaps, labels, num_classes, n_samples_list,
         fig.savefig(os.path.join(savedir, filename+"_samp="+str(n_samples)+".png"))
         plt.close(fig)
 
-def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples_list, savedir, filename, topk=10):
+def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, savedir, filename, 
+                             n_images=10, topk=1):
     
     savedir = os.path.join(savedir, LRP_DIR, "pixels_distributions")
     os.makedirs(savedir, exist_ok=True)
-
-    ths = 200
-    lrp_list = []
-    labels_list = []
-    samples_list = []
-    pixel_idx_list = []
-
-    flat_lrp_heatmaps, chosen_pxl_idxs = select_informative_pixels(lrp_heatmaps, topk)
 
     ### dataframe
 
@@ -200,40 +193,45 @@ def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples_list, 
     samples_list=[]
     pixel_idxs_list=[]
 
-    for samples_idx, n_samples in enumerate(n_samples_list):
+    print(lrp_heatmaps.shape)
 
-        print("\nsamples =", n_samples, end="\t")
-        print(f"min = {flat_lrp_heatmaps[samples_idx].min():.4f}", end=" \t")
-        print(f"max = {flat_lrp_heatmaps[samples_idx].max():.4f}")
+    im_idxs = np.random.choice(lrp_heatmaps.shape[0], size=n_images, replace=False)
+    for im_idx in im_idxs:
+
+        image_lrp_heatmaps = np.expand_dims(lrp_heatmaps[im_idx,:], axis=1)
+        image_label = labels[im_idx]
+        flat_lrp_heatmaps, chosen_pxl_idxs = select_informative_pixels(image_lrp_heatmaps, topk)
+
+        for samples_idx in range(n_samples):
+            for array_idx, pixel_idx in enumerate(chosen_pxl_idxs):
+
+                pixel_lrp = flat_lrp_heatmaps[samples_idx, array_idx][0]
+
+                lrp_list.append(pixel_lrp)
+                samples_list.append(n_samples)
+                pixel_idxs_list.append(pixel_idx)
+                labels_list.append(image_label)
+
+        df = pd.DataFrame(data={"lrp":lrp_list, "samples":samples_list,
+                               "label":labels_list, "pixel_idx":pixel_idxs_list})
+
+        ### plot 
 
         for array_idx, pixel_idx in enumerate(chosen_pxl_idxs):
 
-            pixel_lrp = flat_lrp_heatmaps[samples_idx, :, array_idx]
-            lrp_list.extend(pixel_lrp)
-            samples_list.extend(np.repeat(n_samples, len(pixel_lrp)))
-            pixel_idxs_list.extend(np.repeat(pixel_idx, len(pixel_lrp)))
-            labels_list.extend(labels)
+            sns.set_style("darkgrid")
+            matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
+            fig, ax = plt.subplots(1, 1, figsize=(10, 5), dpi=150, facecolor='w', edgecolor='k')    
 
-        df = pd.DataFrame(data={"lrp": lrp_list, "samples": samples_list,
-                               "label":labels_list, "pixel_idx":pixel_idxs_list})
+            pxl_df = df.loc[df['pixel_idx'] == pixel_idx]
 
-    ### plot 
+            for samples_idx in range(n_samples):
 
-    for array_idx, pixel_idx in enumerate(chosen_pxl_idxs):
-
-        sns.set_style("darkgrid")
-        matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5), dpi=150, facecolor='w', edgecolor='k')    
-
-        pxl_df = df.loc[df['pixel_idx'] == pixel_idx]
-
-        for samples_idx, n_samples in enumerate(n_samples_list):
-
-            samp_df = pxl_df.loc[pxl_df['samples'] == n_samples]
-            sns.distplot(samp_df["lrp"], label=f"samples ={n_samples}", ax=ax, kde=False)
-            ax.set_yscale('log')
+                samp_df = pxl_df.loc[pxl_df['samples'] == n_samples]
+                sns.distplot(samp_df["lrp"], label=f"sample_idx ={samples_idx}", ax=ax, kde=False)
+                ax.set_yscale('log')
 
         plt.legend()
-        fig.savefig(os.path.join(savedir, filename+"_pixel_idx="+str(pixel_idx)+".png"))
+        fig.savefig(os.path.join(savedir, filename+"_im_idx="+str(im_idx)+".png"))
         plt.close(fig)
 

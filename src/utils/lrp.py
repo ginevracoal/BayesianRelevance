@@ -64,6 +64,31 @@ def compute_explanations(x_test, network, rule, n_samples=None):
 
         return np.array(avg_explanations)
 
+def compute_posterior_explanations(x_test, network, rule, n_samples): 
+
+    posterior_explanations = []
+    for x in tqdm(x_test):
+
+        explanations = []
+        for j in range(n_samples):
+
+            # Forward pass
+            x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
+            x_copy.requires_grad = True
+            y_hat = network.forward(inputs=x_copy, n_samples=1, sample_idxs=[j], explain=True, rule=rule)
+
+            # Choose argmax
+            y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
+            y_hat = y_hat.sum()
+
+            # Backward pass (compute explanation)
+            y_hat.backward()
+            explanations.append(x_copy.grad.squeeze(1).detach().cpu().numpy())
+
+        posterior_explanations.append(np.array(explanations))
+
+    return np.array(posterior_explanations)        
+
 def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
 
     if inputs.shape[0] != len(n_samples_list):

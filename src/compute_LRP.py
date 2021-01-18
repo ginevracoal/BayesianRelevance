@@ -35,7 +35,7 @@ parser.add_argument("--debug", default=False, type=eval)
 parser.add_argument("--device", default='cpu', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-bayesian_samples=[1] if args.debug else [1, 10, 50]
+bayesian_samples=[1,2] if args.debug else [1, 10, 50]
 n_inputs=100 if args.debug else args.n_inputs
 
 print("PyTorch Version: ", torch.__version__)
@@ -162,16 +162,24 @@ else:
             save_lrp(samples_attacks_explanations, path=savedir, 
                             filename=args.rule+"_attacks_explanations")
 
-    plot_vanishing_explanations(images_plt, samples_explanations, n_samples_list=bayesian_samples,
-        rule=args.rule, savedir=savedir, filename=args.rule+"_vanishing_explanations")
+        n_samples=max(bayesian_samples)
+        post_explanations = compute_posterior_explanations(images, net, rule=args.rule, n_samples=n_samples)
+        save_lrp(samples_explanations, path=savedir, filename=args.rule+"post_explanations")
+        lrp_pixels_distributions(post_explanations, labels=labels_plt, num_classes=num_classes, 
+                    n_samples=n_samples, savedir=savedir, filename=args.rule+"_lrp_pixel_distr")
+
+
+    # plot_vanishing_explanations(images_plt, samples_explanations, n_samples_list=bayesian_samples,
+    #     rule=args.rule, savedir=savedir, filename=args.rule+"_vanishing_explanations")
     # stripplot_lrp_values(samples_explanations, n_samples_list=bayesian_samples, 
     #                  savedir=savedir, filename=args.rule+"_explanations_components")
 
     # lrp_samples_distributions(samples_explanations, labels=labels_plt, num_classes=num_classes,
     #                 n_samples_list=bayesian_samples, savedir=savedir, filename=args.rule+"_lrp_pixel_distr")
-    lrp_labels_distributions(samples_explanations, labels=labels_plt, num_classes=num_classes,
-                    n_samples_list=bayesian_samples, savedir=savedir, 
-                    filename=args.rule+"_lrp_pixel_distr")
+    # lrp_labels_distributions(samples_explanations, labels=labels_plt, num_classes=num_classes,
+    #                 n_samples_list=bayesian_samples, savedir=savedir, 
+    #                 filename=args.rule+"_lrp_pixel_distr")
+
 
     if args.explain_attacks:
         samples_attacks_explanations = np.array(samples_attacks_explanations)
