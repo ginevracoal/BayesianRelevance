@@ -14,9 +14,9 @@ from utils import savedir
 from utils.seeding import *
 from attacks.gradient_based import *
 
-from networks.baseNN_new import *
+from networks.baseNN import *
 from networks.fullBNN import *
-from networks.redBNN_new import *
+from networks.redBNN import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, redBNN")

@@ -51,7 +51,7 @@ def get_hyperparams(model_dict):
 
 class redBNN(PyroModule):
 
-    def __init__(self, dataset_name, inference, hyperparams, base_net, layer_idx):
+    def __init__(self, dataset_name, inference, hyperparams, base_net):
         super(redBNN, self).__init__()
         self.dataset_name = dataset_name
         self.hidden_size=base_net.hidden_size
@@ -60,7 +60,6 @@ class redBNN(PyroModule):
         self.inference = inference
         self.basenet = base_net
         self.hyperparams = hyperparams
-        self.layer_idx = layer_idx
         self.name = self.set_name()
 
     def set_name(self):
@@ -76,18 +75,7 @@ class redBNN(PyroModule):
             return name+"_samp="+str(self.hyperparams["hmc_samples"])+\
                    "_warm="+str(self.hyperparams["warmup"])+"_"+str(self.inference)
 
-    def _intermediate_layer(self):
-
-        name, module = list(self.basenet.model.named_modules())[self.layer_idx]
-        print(name, module)
-        exit()
-
-        return w, b, w_name, b_name
-
-
     def model(self, x_data, y_data):
-
-        self._intermediate_layer()
 
         net=self.basenet
 
@@ -338,6 +326,7 @@ class redBNN(PyroModule):
 
             loss_list.append(loss)
             accuracy_list.append(accuracy)
+
 
             if DEBUG:
                 print("\nmodule$$$model.0.weight should be fixed:\n",

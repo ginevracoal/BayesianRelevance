@@ -46,7 +46,7 @@ class baseNN(nn.Module):
         self.name = str(dataset_name)+"_baseNN_hid="+str(hidden_size)+\
                     "_arch="+str(self.architecture)+"_act="+str(self.activation)+\
                     "_ep="+str(self.epochs)+"_lr="+str(self.lr)
-        print("\nbaseNN total number of weights =", sum(p.numel() for p in self.parameters()))
+        print("\nTotal number of weights =", sum(p.numel() for p in self.parameters()))
 
     def set_model(self, architecture, activation, input_shape, output_size, hidden_size):
 
@@ -69,8 +69,8 @@ class baseNN(nn.Module):
             self.model = nn.Sequential(
                 nn.Flatten(), 
                 nn.Linear(input_size, hidden_size),
-                activ(),
-                nn.Linear(hidden_size, output_size))
+                activ())
+            self.out = nn.Linear(hidden_size, output_size)
 
         elif architecture == "fc2":
             self.model = nn.Sequential(
@@ -78,9 +78,8 @@ class baseNN(nn.Module):
                 nn.Linear(input_size, hidden_size),
                 activ(),
                 nn.Linear(hidden_size, hidden_size),
-                activ(),
-                nn.Linear(hidden_size, output_size)
-                )
+                activ())
+            self.out = nn.Linear(hidden_size, output_size)
 
         elif architecture == "fc4":
             self.model = nn.Sequential(
@@ -92,8 +91,8 @@ class baseNN(nn.Module):
                 nn.Linear(hidden_size, hidden_size),
                 activ(),
                 nn.Linear(hidden_size, hidden_size),
-                activ(),
-                nn.Linear(hidden_size, output_size))
+                activ())
+            self.out = nn.Linear(hidden_size, output_size)
 
         elif architecture == "conv":
 
@@ -106,8 +105,8 @@ class baseNN(nn.Module):
                     nn.Conv2d(16, hidden_size, kernel_size=5),
                     activ(),
                     nn.MaxPool2d(kernel_size=2, stride=1),
-                    nn.Flatten(),
-                    nn.Linear(int(hidden_size/(4*4))*input_size, output_size))
+                    nn.Flatten())
+                self.out = nn.Linear(int(hidden_size/(4*4))*input_size, output_size)
 
             else:
                 raise NotImplementedError()
@@ -149,9 +148,16 @@ class baseNN(nn.Module):
         execution_time(start=start, end=time.time())
         self.save(savedir)
 
-    def forward(self, inputs, explain=False, rule=None, layer_idx=-1):
+    def forward(self, inputs, layer_idx=-1, *args, **kwargs):
 
-        return nn.Sequential(*list(self.model.children())[:layer_idx])(inputs)
+        if layer_idx==-1:
+            x = self.model(inputs)
+            x = self.out(x)
+            return x
+
+        else:
+            x = nn.Sequential(*list(self.model.children())[:layer_idx+1])(inputs)
+            return x
 
     def save(self, savedir):
 

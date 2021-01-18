@@ -51,7 +51,7 @@ def get_hyperparams(model_dict):
 
 class redBNN(PyroModule):
 
-    def __init__(self, dataset_name, inference, hyperparams, base_net):
+    def __init__(self, dataset_name, inference, hyperparams, base_net, layer_idx):
         super(redBNN, self).__init__()
         self.dataset_name = dataset_name
         self.hidden_size=base_net.hidden_size
@@ -60,7 +60,12 @@ class redBNN(PyroModule):
         self.inference = inference
         self.basenet = base_net
         self.hyperparams = hyperparams
+        self.layer_idx = layer_idx
         self.name = self.set_name()
+
+        w, b, w_name, b_name = self._intermediate_layer()
+        print("\nBayesian layer:", w_name, b_name)
+
 
     def set_name(self):
 
@@ -75,21 +80,36 @@ class redBNN(PyroModule):
             return name+"_samp="+str(self.hyperparams["hmc_samples"])+\
                    "_warm="+str(self.hyperparams["warmup"])+"_"+str(self.inference)
 
+    def _intermediate_layer(self):
+
+        learnable_params = self.basenet.model.state_dict()
+        # print(learnable_params.keys())
+
+        if self.layer_idx > len(learnable_params)/2:
+            raise ValueError(f"\n\nThere are only {int(len(learnable_params)/2)} learnable layers.\n")
+
+        w_name, w = list(learnable_params.items())[2*self.layer_idx]
+        b_name, b = list(learnable_params.items())[2*self.layer_idx+1]
+
+        return w, b, w_name, b_name
+
     def model(self, x_data, y_data):
 
-        net=self.basenet
+        w, b, w_name, b_name = self._intermediate_layer()
 
-        if self.inference == "svi":
-            for weights_name in pyro.get_param_store():
-                if weights_name not in ["outw_mu","outw_sigma","outb_mu","outb_sigma"]:
-                    pyro.get_param_store()[weights_name].requires_grad=False
+        net=self.basenet.model
 
-        outw_prior = Normal(loc=torch.zeros_like(net.out.weight), 
-                            scale=torch.ones_like(net.out.weight))
-        outb_prior = Normal(loc=torch.zeros_like(net.out.bias), 
-                            scale=torch.ones_like(net.out.bias))
+        for weights_name in pyro.get_param_store().keys():
+            if weights_name not in ["w_loc", "w_scale", "b_loc", "b_scale"]:
+                print(weights_name)
+                pyro.get_param_store()[weights_name].requires_grad=False
+
+        print(pyro.get_param_store().get_all_param_names())
+        exit()
+        w_prior = Normal(loc=torch.zeros_like(w), scale=torch.ones_like(w))
+        b_prior = Normal(loc=torch.zeros_like(b), scale=torch.ones_like(b))
         
-        priors = {'out.weight': outw_prior, 'out.bias': outb_prior}
+        priors = {w_name: w_prior, b_name: b_prior}
         lifted_module = pyro.random_module("module", net, priors)()
 
         with pyro.plate("data", len(x_data)):
@@ -99,21 +119,19 @@ class redBNN(PyroModule):
 
     def guide(self, x_data, y_data=None):
 
-        net=self.basenet
+        w, b, w_name, b_name = self._intermediate_layer()
 
-        outw_mu = torch.randn_like(net.out.weight)
-        outw_sigma = torch.randn_like(net.out.weight)
-        outw_mu_param = pyro.param("outw_mu", outw_mu)
-        outw_sigma_param = softplus(pyro.param("outw_sigma", outw_sigma))
-        outw_prior = Normal(loc=outw_mu_param, scale=outw_sigma_param)
+        net=self.basenet.model
 
-        outb_mu = torch.randn_like(net.out. bias)
-        outb_sigma = torch.randn_like(net.out.bias)
-        outb_mu_param = pyro.param("outb_mu", outb_mu)
-        outb_sigma_param = softplus(pyro.param("outb_sigma", outb_sigma))
-        outb_prior = Normal(loc=outb_mu_param, scale=outb_sigma_param)
+        w_loc = pyro.param("w_loc", torch.randn_like(w))
+        w_scale = pyro.param("w_scale", torch.randn_like(w))
+        w_prior = Normal(loc=w_loc, scale=w_scale)
 
-        priors = {'out.weight': outw_prior, 'out.bias': outb_prior}
+        b_loc = pyro.param("b_loc", torch.randn_like(b))
+        b_scale = pyro.param("b_scale", torch.randn_like(b))
+        b_prior = Normal(loc=b_loc, scale=b_scale)
+
+        priors = {w_name: w_prior, b_name: b_prior}
         lifted_module = pyro.random_module("module", net, priors)()
 
         with pyro.plate("data", len(x_data)):
@@ -326,7 +344,6 @@ class redBNN(PyroModule):
 
             loss_list.append(loss)
             accuracy_list.append(accuracy)
-
 
             if DEBUG:
                 print("\nmodule$$$model.0.weight should be fixed:\n",
