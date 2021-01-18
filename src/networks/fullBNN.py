@@ -116,10 +116,10 @@ class BNN(PyroModule):
 
     def save(self, savedir):
         filename=self.name+"_weights"
-        savedir=os.path.join(savedir, "weights")
-        os.makedirs(savedir, exist_ok=True)
 
         if self.inference == "svi":
+            os.makedirs(savedir, exist_ok=True)
+
             self.basenet.to("cpu")
             self.to("cpu")
             param_store = pyro.get_param_store()
@@ -130,6 +130,9 @@ class BNN(PyroModule):
             param_store.save(fullpath)
 
         elif self.inference == "hmc":
+            savedir=os.path.join(savedir, "weights")
+            os.makedirs(savedir, exist_ok=True)  
+
             self.basenet.to("cpu")
             self.to("cpu")
 
@@ -146,6 +149,8 @@ class BNN(PyroModule):
         savedir=os.path.join(savedir, "weights")
 
         if self.inference == "svi":
+            os.makedirs(savedir, exist_ok=True)
+     
             param_store = pyro.get_param_store()
             param_store.load(os.path.join(savedir, filename + ".pt"))
             for key, value in param_store.items():
@@ -153,6 +158,8 @@ class BNN(PyroModule):
             print("\nLoading ", os.path.join(savedir, filename + ".pt"))
 
         elif self.inference == "hmc":
+            savedir=os.path.join(savedir, "weights")
+            os.makedirs(savedir, exist_ok=True)  
 
             # self.posterior_samples={}
             # for model_idx in range(self.n_samples):
