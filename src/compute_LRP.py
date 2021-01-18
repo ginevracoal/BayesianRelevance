@@ -125,6 +125,7 @@ else:
     images_plt = images.detach().cpu().numpy()
     labels_plt = labels.argmax(-1).detach().cpu().numpy()
     net.load(savedir=savedir, device=args.device)
+    post_samples=100
 
     if args.load:
 
@@ -137,7 +138,6 @@ else:
     else:
 
         ### Posterior explanations
-        post_samples=100
         idxs = np.random.choice(images.shape[0], size=10, replace=False)
         images=images[idxs]
         labels_plt=labels_plt[idxs]
