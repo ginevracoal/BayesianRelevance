@@ -34,7 +34,7 @@ def select_informative_pixels(lrp_heatmaps, topk):
     flat_lrp_heatmaps = lrp_heatmaps.reshape(*lrp_heatmaps.shape[:squeeze_dim], -1)
     lrp_sum = flat_lrp_heatmaps.sum(0).sum(0) if len(flat_lrp_heatmaps.shape)>2 else flat_lrp_heatmaps.sum(0)
 
-    chosen_pxl_idxs = np.argsort(np.abs(lrp_sum))[-topk:]
+    chosen_pxl_idxs = np.argsort(lrp_sum)[-topk:]
     chosen_images_lrp = flat_lrp_heatmaps[..., chosen_pxl_idxs] 
 
     print("out shape =", chosen_images_lrp.shape)
@@ -228,10 +228,10 @@ def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, saved
             for samples_idx in range(n_samples):
 
                 samp_df = pxl_df.loc[pxl_df['samples'] == n_samples]
-                sns.distplot(samp_df["lrp"], label=f"sample_idx ={samples_idx}", ax=ax, kde=False)
+                sns.distplot(samp_df["lrp"], ax=ax, kde=False)
                 ax.set_yscale('log')
 
-        plt.legend()
+        # plt.legend()
         fig.savefig(os.path.join(savedir, filename+"_im_idx="+str(im_idx)+".png"))
         plt.close(fig)
 
