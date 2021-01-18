@@ -3,17 +3,20 @@ import argparse
 import numpy as np
 
 import torch
-import torchvision
-from torch import nn
-import torch.nn.functional as nnf
-import torch.optim as torchopt
-import torch.nn.functional as F
+# import torchvision
+# from torch import nn
+# import torch.nn.functional as nnf
+# import torch.optim as torchopt
+# import torch.nn.functional as F
 
 from utils.data import *
-from utils.networks import *
 from utils import savedir
 from utils.seeding import *
 from attacks.gradient_based import *
+
+from networks.baseNN_new import *
+from networks.fullBNN import *
+from networks.redBNN_new import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, redBNN")
@@ -22,6 +25,7 @@ parser.add_argument("--inference", default="svi", type=str, help="svi, hmc")
 parser.add_argument("--load", default=False, type=eval)
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--atk_inputs", default=1000, type=int, help="number of input points")
+parser.add_argument("--layer_idx", default=-1, type=int)
 parser.add_argument("--debug", default=False, type=eval)
 parser.add_argument("--device", default='cpu', type=str, help="cpu, cuda")  
 args = parser.parse_args()
@@ -30,7 +34,6 @@ n_inputs=100 if args.debug else None
 atk_inputs=100 if args.debug else args.atk_inputs
 
 print("PyTorch Version: ", torch.__version__)
-print("Torchvision Version: ", torchvision.__version__)
 
 if args.device=="cuda":
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -89,7 +92,8 @@ else:
         basenet.load(savedir=basenet_savedir, device=args.device)
 
         hyp = get_hyperparams(m)
-        net = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=basenet, hyperparams=hyp)
+        net = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=basenet, hyperparams=hyp,
+                     layer_idx=args.layer_idx)
 
     else:
         raise NotImplementedError

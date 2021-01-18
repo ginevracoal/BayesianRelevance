@@ -1,5 +1,5 @@
 """
-Bayesian Neural Network model
+Neural network with bayesian last layer.
 """
 
 import argparse
@@ -32,86 +32,105 @@ from networks.baseNN import baseNN
 DEBUG=False
 
 
-fullBNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
-                             "architecture":"conv", "inference":"svi", "epochs":5, 
-                             "lr":0.01, "n_samples":None, "warmup":None},
-                    "model_1":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
-                             "architecture":"fc2", "inference":"svi", "epochs":15,
-                             "lr":0.001, "n_samples":None, "warmup":None},
-                    # "model_2":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
-                    #          "architecture":"fc2", "inference":"hmc", "epochs":None,
-                    #          "lr":None, "n_samples":10, "warmup":50}, 
-                    # "model_3":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
-                    #          "architecture":"fc2", "inference":"hmc", "epochs":None,
-                    #          "lr":None, "n_samples":10, "warmup":50},
-                    }  
+redBNN_settings = {"model_0":{"dataset":"mnist", "inference":"svi", "hidden_size":512, 
+                            "n_inputs":60000, "epochs":5, "lr":0.01, 
+                            "activation":"leaky", "architecture":"conv", "baseNN_idx":0},
+                   "model_1":{"dataset":"fashion_mnist", "inference":"svi", "hidden_size":1024, 
+                            "n_inputs":60000, "epochs":5, "lr":0.01, 
+                            "activation":"leaky", "architecture":"fc2", "baseNN_idx":1},
+                    }
+                   
+def get_hyperparams(model_dict):
+
+    if model_dict["inference"] == "svi":
+        return {"epochs":model_dict["epochs"], "lr":model_dict["lr"]}
+
+    elif model_dict["inference"] == "hmc":
+        return {"hmc_samples":model_dict["hmc_samples"], "warmup":model_dict["warmup"]}
 
 
-class BNN(PyroModule):
+class redBNN(PyroModule):
 
-    def __init__(self, dataset_name, hidden_size, activation, architecture, inference, 
-                 epochs, lr, n_samples, warmup, input_shape, output_size):
-        super(BNN, self).__init__()
+    def __init__(self, dataset_name, inference, hyperparams, base_net, layer_idx):
+        super(redBNN, self).__init__()
         self.dataset_name = dataset_name
+        self.hidden_size=base_net.hidden_size
+        self.architecture=base_net.architecture
+        self.activation=base_net.activation
         self.inference = inference
-        self.architecture = architecture
-        self.epochs = epochs
-        self.lr = lr
-        self.n_samples = 10 if DEBUG else n_samples
-        self.warmup = 5 if DEBUG else warmup
-        self.step_size = 0.001
-        self.num_steps = 10
-        self.basenet = baseNN(dataset_name=dataset_name, input_shape=input_shape, 
-                              output_size=output_size, hidden_size=hidden_size, 
-                              activation=activation, architecture=architecture, 
-                              epochs=epochs, lr=lr)
-        self.name = self.get_name()
+        self.basenet = base_net
+        self.hyperparams = hyperparams
+        self.layer_idx = layer_idx
+        self.name = self.set_name()
 
-    def get_name(self, n_inputs=None):
-        
-        name = str(self.dataset_name)+"_fullBNN_"+str(self.inference)+"_hid="+\
-               str(self.basenet.hidden_size)+"_act="+str(self.basenet.activation)+\
-               "_arch="+str(self.basenet.architecture)
+    def set_name(self):
 
-        if n_inputs:
-            name = name+"_inp="+str(n_inputs)
+        name = str(self.basenet.dataset_name)+"_redBNN_hid="+str(self.hidden_size)+\
+                    "_arch="+str(self.architecture)+"_act="+str(self.activation)
 
         if self.inference == "svi":
-            return name+"_ep="+str(self.epochs)+"_lr="+str(self.lr)
+            return name+"_ep="+str(self.hyperparams["epochs"])+"_lr="+\
+                   str(self.hyperparams["lr"])+"_"+str(self.inference)
+
         elif self.inference == "hmc":
-            return name+"_samp="+str(self.n_samples)+"_warm="+str(self.warmup)+\
-                   "_stepsize="+str(self.step_size)+"_numsteps="+str(self.num_steps)
+            return name+"_samp="+str(self.hyperparams["hmc_samples"])+\
+                   "_warm="+str(self.hyperparams["warmup"])+"_"+str(self.inference)
+
+    def _intermediate_layer(self):
+
+        name, module = list(self.basenet.model.named_modules())[self.layer_idx]
+        print(name, module)
+        exit()
+
+        return w, b, w_name, b_name
+
 
     def model(self, x_data, y_data):
 
-        priors = {}
-        for key, value in self.basenet.state_dict().items():
-            loc = torch.zeros_like(value)
-            scale = torch.ones_like(value)
-            prior = Normal(loc=loc, scale=scale)
-            priors.update({str(key):prior})
+        self._intermediate_layer()
 
-        lifted_module = pyro.random_module("module", self.basenet, priors)()
+        net=self.basenet
+
+        if self.inference == "svi":
+            for weights_name in pyro.get_param_store():
+                if weights_name not in ["outw_mu","outw_sigma","outb_mu","outb_sigma"]:
+                    pyro.get_param_store()[weights_name].requires_grad=False
+
+        outw_prior = Normal(loc=torch.zeros_like(net.out.weight), 
+                            scale=torch.ones_like(net.out.weight))
+        outb_prior = Normal(loc=torch.zeros_like(net.out.bias), 
+                            scale=torch.ones_like(net.out.bias))
+        
+        priors = {'out.weight': outw_prior, 'out.bias': outb_prior}
+        lifted_module = pyro.random_module("module", net, priors)()
 
         with pyro.plate("data", len(x_data)):
             logits = lifted_module(x_data)
             lhat = nnf.log_softmax(logits, dim=-1)
-            obs = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
+            cond_model = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
 
     def guide(self, x_data, y_data=None):
 
-        dists = {}
-        for key, value in self.basenet.state_dict().items():
-            loc = pyro.param(str(f"{key}_loc"), torch.randn_like(value)) 
-            scale = pyro.param(str(f"{key}_scale"), torch.randn_like(value))
-            distr = Normal(loc=loc, scale=softplus(scale))
-            dists.update({str(key):distr})
+        net=self.basenet
 
-        lifted_module = pyro.random_module("module", self.basenet, dists)()
-        
+        outw_mu = torch.randn_like(net.out.weight)
+        outw_sigma = torch.randn_like(net.out.weight)
+        outw_mu_param = pyro.param("outw_mu", outw_mu)
+        outw_sigma_param = softplus(pyro.param("outw_sigma", outw_sigma))
+        outw_prior = Normal(loc=outw_mu_param, scale=outw_sigma_param)
+
+        outb_mu = torch.randn_like(net.out. bias)
+        outb_sigma = torch.randn_like(net.out.bias)
+        outb_mu_param = pyro.param("outb_mu", outb_mu)
+        outb_sigma_param = softplus(pyro.param("outb_sigma", outb_sigma))
+        outb_prior = Normal(loc=outb_mu_param, scale=outb_sigma_param)
+
+        priors = {'out.weight': outw_prior, 'out.bias': outb_prior}
+        lifted_module = pyro.random_module("module", net, priors)()
+
         with pyro.plate("data", len(x_data)):
             logits = lifted_module(x_data)
-
+        
         return nnf.softmax(logits, dim=-1)
 
     def save(self, savedir):
@@ -136,10 +155,6 @@ class BNN(PyroModule):
             self.basenet.to("cpu")
             self.to("cpu")
 
-            # for key, value in self.posterior_samples.items():
-                # fullpath=os.path.join(savedir, filename+"_"+str(key)+".pt")    
-                # torch.save(value.state_dict(), fullpath)
-
             for idx, weights in enumerate(self.posterior_samples):
                 fullpath=os.path.join(savedir, filename+"_"+str(idx)+".pt")    
                 torch.save(weights.state_dict(), fullpath)
@@ -149,7 +164,7 @@ class BNN(PyroModule):
 
         if self.inference == "svi":
             os.makedirs(savedir, exist_ok=True)
-     
+
             param_store = pyro.get_param_store()
             param_store.load(os.path.join(savedir, filename + ".pt"))
             for key, value in param_store.items():
@@ -159,13 +174,6 @@ class BNN(PyroModule):
         elif self.inference == "hmc":
             savedir=os.path.join(savedir, "weights")
             os.makedirs(savedir, exist_ok=True)  
-
-            # self.posterior_samples={}
-            # for model_idx in range(self.n_samples):
-            #     net_copy = copy.deepcopy(self.basenet)
-            #     fullpath=os.path.join(savedir, filename+"_"+str(model_idx)+".pt")    
-            #     net_copy.load_state_dict(torch.load(fullpath))
-            #     self.posterior_samples.update({model_idx:net_copy})   
 
             self.posterior_samples=[]
             for idx in range(self.n_samples):
@@ -181,8 +189,8 @@ class BNN(PyroModule):
         self.basenet.to(device)
         self.device=device
 
-    def forward(self, inputs, n_samples=10, avg_posterior=False, sample_idxs=None, training=False,
-                expected_out=True, explain=False, rule=None):
+    def forward(self, inputs, n_samples, sample_idxs=None, training=False, expected_out=True, 
+                explain=False, rule=None):
 
         if sample_idxs:
             if len(sample_idxs) != n_samples:
@@ -192,42 +200,38 @@ class BNN(PyroModule):
 
         if self.inference == "svi":
 
-            if avg_posterior is True:
+            if DEBUG:
+                print("\nguide_trace =", 
+                    list(poutine.trace(self.guide).get_trace(inputs).nodes.keys()))
 
-                guide_trace = poutine.trace(self.guide).get_trace(inputs)   
+            preds = []  
 
-                avg_state_dict = {}
-                for key in self.basenet.state_dict().keys():
-                    avg_weights = guide_trace.nodes[str(key)+"_loc"]['value']
-                    avg_state_dict.update({str(key):avg_weights})
-
-                self.basenet.load_state_dict(avg_state_dict)
-                preds = [self.basenet.model(inputs)]
+            if training:
+                for _ in range(n_samples):
+                    guide_trace = poutine.trace(self.guide).get_trace(inputs)   
+                    preds.append(guide_trace.nodes['_RETURN']['value'])
 
             else:
+                for seed in sample_idxs:
+                    pyro.set_rng_seed(seed)
+                    guide_trace = poutine.trace(self.guide).get_trace(inputs)  
 
-                preds = []  
+                    weights = {}
+                    for key, value in self.basenet.state_dict().items():
 
-                if training:
+                        w = guide_trace.nodes[str(f"module$$${key}")]["value"]
+                        weights.update({str(key):w})
 
-                    for _ in range(n_samples):
-                        guide_trace = poutine.trace(self.guide).get_trace(inputs)   
-                        preds.append(guide_trace.nodes['_RETURN']['value'])
+                    self.basenet.load_state_dict(weights)
+                    self.basenet.to(self.device)
+                    preds.append(self.basenet.forward(inputs, explain=explain, rule=rule))
 
-                else:
-                    for seed in sample_idxs:
-                        pyro.set_rng_seed(seed)
-                        guide_trace = poutine.trace(self.guide).get_trace(inputs)  
-
-                        weights = {}
-                        for key, value in self.basenet.state_dict().items():
-
-                            w = guide_trace.nodes[str(f"module$$${key}")]["value"]
-                            weights.update({str(key):w})
-
-                        self.basenet.load_state_dict(weights)
-                        self.basenet.to(self.device)
-                        preds.append(self.basenet.forward(inputs, explain=explain, rule=rule))
+            if DEBUG:
+                print("\nmodule$$$model.0.weight shoud be fixed:\n", 
+                      guide_trace.nodes['module$$$model.0.weight']['value'][0,0,:3])
+                print("\noutw_mu shoud be fixed:\n", guide_trace.nodes['outw_mu']['value'][:3])
+                print("\nmodule$$$out.weight shoud change:\n", 
+                      guide_trace.nodes['module$$$out.weight']['value'][0][:3]) 
 
         elif self.inference == "hmc":
 
@@ -253,18 +257,19 @@ class BNN(PyroModule):
         logits = torch.stack(preds)
         return logits.mean(0) if expected_out else logits
 
-    def _train_hmc(self, train_loader, n_samples, warmup, step_size, num_steps, savedir, device):
-        print("\n == fullBNN HMC training ==")
-        pyro.clear_param_store()
+    def _train_hmc(self, train_loader, savedir, device): # todo: check inferred weights 
+        print("\n == redBNN HMC training ==")
 
-        batch_samples = 1
-        print("\nnum_batches =", len(train_loader), "\nbatch_samples =", batch_samples)
+        num_samples, warmup_steps = (self.hyperparams["hmc_samples"], self.hyperparams["warmup"])
+        print("\nnum_chains =", len(train_loader), "\n")
+        pyro.clear_param_store()
+        batch_samples = 1 
 
         kernel = HMC(self.model, step_size=step_size, num_steps=num_steps)
         mcmc = MCMC(kernel=kernel, num_samples=batch_samples, warmup_steps=warmup, num_chains=1)
 
         self.posterior_samples=[]
-        state_dict_keys = list(self.basenet.state_dict().keys())
+        state_dict_keys = ['out.weight','out.bias']
         start = time.time()
 
         for x_batch, y_batch in train_loader:
@@ -276,8 +281,8 @@ class BNN(PyroModule):
             net_copy = copy.deepcopy(self.basenet)
 
             model_dict=OrderedDict({})
-            for weight_idx, weights in enumerate(posterior_sample.values()):
-                model_dict.update({state_dict_keys[weight_idx]:weights[0]})
+            for weights_key in state_dict_keys:
+                model_dict.update({weights_key:posterior_sample['module$$$'+weights_key][0]})
 
             net_copy.load_state_dict(model_dict)
             self.posterior_samples.append(net_copy)
@@ -285,11 +290,18 @@ class BNN(PyroModule):
             if DEBUG:
                 print(net_copy.state_dict()['out.weight'][0,:5])
 
+        execution_time(start=start, end=time.time())
+
+        out_weight, out_bias = (torch.cat(out_weight), torch.cat(out_bias))
+        self.posterior_samples = {"module$$$out.weight":out_weight, "module$$$out.bias":out_bias}
+
         execution_time(start=start, end=time.time())     
         self.save(savedir)
 
-    def _train_svi(self, train_loader, epochs, lr, savedir, device):
-        print("\n == fullBNN SVI training ==")
+    def _train_svi(self, train_loader, savedir, device):
+        print("\n == redBNN SVI training ==")
+
+        epochs, lr = (self.hyperparams["epochs"], self.hyperparams["lr"])
 
         optimizer = pyro.optim.Adam({"lr":lr})
         elbo = TraceMeanField_ELBO()
@@ -327,6 +339,12 @@ class BNN(PyroModule):
             loss_list.append(loss)
             accuracy_list.append(accuracy)
 
+            if DEBUG:
+                print("\nmodule$$$model.0.weight should be fixed:\n",
+                      pyro.get_param_store()["module$$$model.0.weight"][0][0][:3])
+                print("\noutw_mu should change:\n", pyro.get_param_store()["outw_mu"][:3])
+
+
         execution_time(start=start, end=time.time())
         self.save(savedir)
 
@@ -339,13 +357,12 @@ class BNN(PyroModule):
         self.device=device
 
         if self.inference == "svi":
-            self._train_svi(train_loader, self.epochs, self.lr, savedir, device)
+            self._train_svi(train_loader, savedir, device)
 
         elif self.inference == "hmc":
-            self._train_hmc(train_loader, self.n_samples, self.warmup,
-                            self.step_size, self.num_steps, savedir, device)
+            self._train_hmc(train_loader, savedir, device)
 
-    def evaluate(self, test_loader, device, n_samples=10):
+    def evaluate(self, test_loader, device, n_samples):
         self.to(device)
         self.basenet.to(device)
 
@@ -363,3 +380,4 @@ class BNN(PyroModule):
             accuracy = 100 * correct_predictions / len(test_loader.dataset)
             print("Accuracy: %.2f%%" % (accuracy))
             return accuracy
+
