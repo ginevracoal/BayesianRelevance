@@ -178,8 +178,8 @@ else:
     lrp_pixels_distributions(post_explanations, labels=labels_post_exp, num_classes=num_classes, 
                              n_samples=post_samples, savedir=savedir, filename=args.rule+"_lrp_pixel_distr")
 
-    # plot_vanishing_explanations(images_plt, samples_explanations, n_samples_list=bayesian_samples,
-    #     rule=args.rule, savedir=savedir, filename=args.rule+"_vanishing_explanations")
+    plot_vanishing_explanations(images_plt, samples_explanations, n_samples_list=bayesian_samples,
+        rule=args.rule, savedir=savedir, filename=args.rule+"_vanishing_explanations")
     # stripplot_lrp_values(samples_explanations, n_samples_list=bayesian_samples, 
     #                  savedir=savedir, filename=args.rule+"_explanations_components")
 

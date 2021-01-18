@@ -42,7 +42,7 @@ redBNN_settings = {"model_0":{"dataset":"mnist", "inference":"svi", "hidden_size
                    "model_2":{"dataset":"fashion_mnist", "inference":"svi", "hidden_size":1024, 
                             "baseNN_inputs":60000, "baseNN_epochs":15, "baseNN_lr":0.001,
                             "BNN_inputs":60000, "BNN_epochs":5, "BNN_lr":0.01, 
-                            "activation":"leaky", "architecture":"conv"},
+                            "activation":"leaky", "architecture":"fc2"},
                    # "model_3":{"dataset":"fashion_mnist", "inference":"hmc", "hidden_size":1024, 
                    #          "baseNN_inputs":60000, "baseNN_epochs":None, "baseNN_lr":None,
                    #          "BNN_inputs":60000, "BNN_epochs":None, "BNN_lr":None, 
