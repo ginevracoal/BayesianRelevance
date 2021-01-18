@@ -125,7 +125,11 @@ else:
     images_plt = images.detach().cpu().numpy()
     labels_plt = labels.argmax(-1).detach().cpu().numpy()
     net.load(savedir=savedir, device=args.device)
+
     post_samples=100
+    idxs = np.random.choice(images.shape[0], size=10, replace=False)
+    images_post_exp=images[idxs]
+    labels_post_exp=labels_plt[idxs]
 
     if args.load:
 
@@ -138,10 +142,6 @@ else:
     else:
 
         ### Posterior explanations
-        idxs = np.random.choice(images.shape[0], size=10, replace=False)
-        images_post_exp=images[idxs]
-        labels_post_exp=labels_plt[idxs]
-
         post_explanations = compute_posterior_explanations(images_post_exp, net, rule=args.rule, 
                                                             n_samples=post_samples)
         save_lrp(post_explanations, path=savedir, filename=args.rule+"post_explanations")
