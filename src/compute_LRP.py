@@ -139,10 +139,11 @@ else:
 
         ### Posterior explanations
         idxs = np.random.choice(images.shape[0], size=10, replace=False)
-        images=images[idxs]
-        labels_plt=labels_plt[idxs]
+        images_post_exp=images[idxs]
+        labels_post_exp=labels_plt[idxs]
 
-        post_explanations = compute_posterior_explanations(images, net, rule=args.rule, n_samples=post_samples)
+        post_explanations = compute_posterior_explanations(images_post_exp, net, rule=args.rule, 
+                                                            n_samples=post_samples)
         save_lrp(post_explanations, path=savedir, filename=args.rule+"post_explanations")
 
         ### Average posterior explanations
@@ -174,7 +175,7 @@ else:
             save_lrp(samples_attacks_explanations, path=savedir, 
                             filename=args.rule+"_attacks_explanations")
 
-    lrp_pixels_distributions(post_explanations, labels=labels_plt, num_classes=num_classes, 
+    lrp_pixels_distributions(post_explanations, labels=labels_post_exp, num_classes=num_classes, 
                              n_samples=post_samples, savedir=savedir, filename=args.rule+"_lrp_pixel_distr")
 
     # plot_vanishing_explanations(images_plt, samples_explanations, n_samples_list=bayesian_samples,

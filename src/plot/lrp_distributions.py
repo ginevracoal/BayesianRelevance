@@ -123,7 +123,7 @@ def lrp_labels_distributions(lrp_heatmaps, labels, num_classes, n_samples_list, 
             label_df = df.loc[df['label'] == label]
             label_df = label_df.loc[label_df['samples'] == n_samples]
             sns.distplot(label_df["lrp"], color=colors[idx], label=f"{n_samples} samples", ax=ax, kde=False)
-            ax.set_yscale('log')
+            # ax.set_yscale('log')
 
         plt.legend()
         os.makedirs(savedir, exist_ok=True)
