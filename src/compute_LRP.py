@@ -32,7 +32,7 @@ parser.add_argument("--n_samples", default=10, type=int)
 parser.add_argument("--load", default=False, type=eval)
 parser.add_argument("--explain_attacks", default=False, type=eval)
 parser.add_argument("--debug", default=False, type=eval)
-parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
+parser.add_argument("--device", default='cpu', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
 bayesian_samples=[1] if args.debug else [1, 10, 50]
