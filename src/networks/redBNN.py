@@ -31,28 +31,19 @@ from networks.baseNN import baseNN
 
 DEBUG=False
 
+
 redBNN_settings = {"model_0":{"dataset":"mnist", "inference":"svi", "hidden_size":512, 
-                            "baseNN_inputs":60000, "baseNN_epochs":5, "baseNN_lr":0.001,
-                            "BNN_inputs":60000, "BNN_epochs":5, "BNN_lr":0.01, 
-                            "activation":"leaky", "architecture":"conv"},
-                   # "model_0":{"dataset":"mnist", "inference":"hmc", "hidden_size":512, 
-                   #          "baseNN_inputs":60000, "baseNN_epochs":None, "baseNN_lr":None,
-                   #          "BNN_inputs":60000, "BNN_epochs":None, "BNN_lr":None, 
-                   #          "activation":"leaky", "architecture":"fc2"},        
-                   "model_2":{"dataset":"fashion_mnist", "inference":"svi", "hidden_size":1024, 
-                            "baseNN_inputs":60000, "baseNN_epochs":15, "baseNN_lr":0.001,
-                            "BNN_inputs":60000, "BNN_epochs":5, "BNN_lr":0.01, 
-                            "activation":"leaky", "architecture":"fc2"},
-                   # "model_3":{"dataset":"fashion_mnist", "inference":"hmc", "hidden_size":1024, 
-                   #          "baseNN_inputs":60000, "baseNN_epochs":None, "baseNN_lr":None,
-                   #          "BNN_inputs":60000, "BNN_epochs":None, "BNN_lr":None, 
-                   #          "activation":"leaky", "architecture":"fc2"}}
-                   }
+                            "n_inputs":60000, "epochs":5, "lr":0.01, 
+                            "activation":"leaky", "architecture":"conv", "baseNN_idx":0},
+                   "model_1":{"dataset":"fashion_mnist", "inference":"svi", "hidden_size":1024, 
+                            "n_inputs":60000, "epochs":5, "lr":0.01, 
+                            "activation":"leaky", "architecture":"fc2", "baseNN_idx":1},
+                    }
                    
 def get_hyperparams(model_dict):
 
     if model_dict["inference"] == "svi":
-        return {"epochs":model_dict["BNN_epochs"], "lr":model_dict["BNN_lr"]}
+        return {"epochs":model_dict["epochs"], "lr":model_dict["lr"]}
 
     elif model_dict["inference"] == "hmc":
         return {"hmc_samples":model_dict["hmc_samples"], "warmup":model_dict["warmup"]}

@@ -21,7 +21,7 @@ DEBUG = False
 baseNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
                             "architecture":"conv", "epochs":5, "lr":0.001},
                    "model_1":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
-                            "architecture":"conv", "epochs":15, "lr":0.001},
+                            "architecture":"fc2", "epochs":15, "lr":0.001},
                    # "model_2":{"dataset":"cifar", "hidden_size":512, "activation":"leaky",
                    #          "architecture":"conv", "epochs":20, "lr":0.01}
                             }

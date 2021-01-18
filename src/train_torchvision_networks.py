@@ -49,7 +49,7 @@ if args.model=="baseNN":
     model.to(device)
 
     model.train(dataloaders_dict, params_to_update, num_iters=iters, device=device)
-    model.save(savedir)#, iters)
+    model.save(savedir)
 
 elif args.model=="redBNN":
     basenet = baseNN(architecture=args.architecture, dataset_name=args.dataset)
@@ -66,7 +66,7 @@ elif args.model=="redBNN":
     model.to(device)
 
     model.train(dataloaders_dict, num_iters=iters, device=device)
-    model.save(savedir)#, iters)
+    model.save(savedir)
 
 else:
     raise ValueError

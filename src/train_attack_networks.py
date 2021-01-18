@@ -75,19 +75,17 @@ else:
     
 
     elif args.model=="redBNN":
-
         m = redBNN_settings["model_"+str(args.model_idx)]
+        base_m = baseNN_settings["model_"+str(m["baseNN_idx"])]
+
         x_train, y_train, _, _, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], n_inputs=n_inputs)
         x_test, y_test = load_dataset(dataset_name=m["dataset"], n_inputs=atk_inputs)[2:4]
 
         savedir = get_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
                               debug=args.debug, model_idx=args.model_idx)
-
-        basenet = baseNN(dataset_name=m["dataset"], input_shape=inp_shape, output_size=out_size,
-                  epochs=m["baseNN_epochs"], lr=m["baseNN_lr"], hidden_size=m["hidden_size"], 
-                  activation=m["activation"], architecture=m["architecture"]) 
-        basenet_savedir = get_savedir(model="baseNN", dataset=m["dataset"], architecture=m["architecture"], 
-                                      debug=args.debug, model_idx=args.model_idx) # todo: refactor this 
+        basenet = baseNN(inp_shape, out_size, *list(base_m.values()))
+        basenet_savedir = get_savedir(model="baseNN", dataset=m["dataset"], 
+                          architecture=m["architecture"], debug=args.debug, model_idx=m["baseNN_idx"])
         basenet.load(savedir=basenet_savedir, device=args.device)
 
         hyp = get_hyperparams(m)
