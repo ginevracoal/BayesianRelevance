@@ -22,17 +22,17 @@ from plot.lrp_distributions import lrp_labels_distributions, lrp_samples_distrib
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_inputs", default=1000, type=int, help="number of input points")
-parser.add_argument("--model_idx", default=0, type=int, help="choose model idx from pre defined settings")
+parser.add_argument("--n_inputs", default=1000, type=int, help="Number of test points")
+parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--inference", default="svi", type=str, help="svi, hmc")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-parser.add_argument("--rule", default="epsilon", type=str)
-parser.add_argument("--n_samples", default=10, type=int)
-parser.add_argument("--layer_idx", default=-1, type=int)
-parser.add_argument("--load", default=False, type=eval)
+parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
+parser.add_argument("--n_samples", default=10, type=int, help="Number of bayesian samples.")
+parser.add_argument("--layer_idx", default=-1, type=int, help="Layer idx for LRP computation.")
+parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--explain_attacks", default=False, type=eval)
-parser.add_argument("--debug", default=False, type=eval)
+parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cpu', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
@@ -60,33 +60,34 @@ if args.model=="baseNN":
     net = baseNN(inp_shape, num_classes, *list(model.values()))
     net.load(savedir=savedir, device=args.device)
 
+    filename = args.rule+"_explanations_layer_idx="+str(args.layer_idx)
+
     if args.load:
-        explanations = load_lrp(path=savedir, filename=args.rule+"_explanations", layer_idx=args.layer_idx)
+        explanations = load_lrp(path=savedir, filename=filename, layer_idx=args.layer_idx)
 
     else:
         explanations = compute_explanations(images, net, rule=args.rule, layer_idx=args.layer_idx)
-        save_lrp(explanations, path=savedir, filename=args.rule+"_explanations", layer_idx=args.layer_idx)
+        save_lrp(explanations, path=savedir, filename=filename, layer_idx=args.layer_idx)
 
     images = images.detach().cpu().numpy()
     plot_explanations(images, explanations, rule=args.rule, savedir=savedir,
-                     filename=args.rule+"_explanations", layer_idx=args.layer_idx)
+                     filename=filename, layer_idx=args.layer_idx)
 
     if args.explain_attacks:
 
+        filename = args.rule+"_attacks_explanations_layer_idx="+str(args.layer_idx)
+
         if args.load:
-            attacks_explanations = load_lrp(path=savedir, filename=args.rule+"_attacks_explanations",
-                                            layer_idx=args.layer_idx)
+            attacks_explanations = load_lrp(path=savedir, filename=filename, layer_idx=args.layer_idx)
     
         else:
             attacks = load_attack(method=args.attack_method, filename=net.name, savedir=savedir)
             attacks = attacks[:args.n_inputs].detach().to(args.device)
             attacks_explanations = compute_explanations(attacks, net, rule=args.rule, layer_idx=args.layer_idx)
-            save_lrp(attacks_explanations, path=savedir, filename=args.rule+"_attacks_explanations", 
-                        layer_idx=args.layer_idx)
+            save_lrp(attacks_explanations, path=savedir, filename=filename, layer_idx=args.layer_idx)
             attacks = attacks.detach().cpu().numpy()
             plot_attacks_explanations(images, explanations, attacks, attacks_explanations,
-                                rule=args.rule, savedir=savedir, filename=args.rule+"_attacks_explanations",
-                                layer_idx=args.layer_idx)
+                                rule=args.rule, savedir=savedir, filename=filename, layer_idx=args.layer_idx)
 
 else:
 
@@ -134,20 +135,23 @@ else:
     images_post_exp=images[idxs]
     labels_post_exp=labels_plt[idxs]
 
+    post_filename = args.rule+"_post_explanations_layer_idx="+str(args.layer_idx)
+    filename = args.rule+"_explanations_layer_idx="+str(args.layer_idx)
+
     if args.load:
 
-        post_explanations = load_lrp(path=savedir, filename=args.rule+"post_explanations")
-        samples_explanations = load_lrp(path=savedir, filename=args.rule+"_explanations")
+        post_explanations = load_lrp(path=savedir, filename=post_filename)
+        samples_explanations = load_lrp(path=savedir, filename=filename)
 
         if args.explain_attacks:
-            samples_attacks_explanations = load_lrp(path=savedir, filename=args.rule+"_attacks_explanations")
+            samples_attacks_explanations = load_lrp(path=savedir, filename=filename)
 
     else:
 
         ### Posterior explanations
         post_explanations = compute_posterior_explanations(images_post_exp, net, rule=args.rule, 
                                                             n_samples=post_samples)
-        save_lrp(post_explanations, path=savedir, filename=args.rule+"post_explanations")
+        save_lrp(post_explanations, path=savedir, filename=post_filename)
 
         ### Average posterior explanations
         samples_explanations=[]
@@ -159,6 +163,9 @@ else:
             samples_explanations.append(explanations)
 
             if args.explain_attacks:
+
+                atk_filename = args.rule+"_atk_explanations_layer_idx="+str(args.layer_idx)
+
                 attacks = load_attack(method=args.attack_method, filename=net.name, savedir=savedir,
                                         n_samples=n_samples)
                 attacks = attacks[:args.n_inputs].detach().to(args.device)
@@ -166,20 +173,19 @@ else:
                 attacks_plt = attacks.detach().cpu().numpy()
 
                 plot_explanations(attacks_plt, attacks_explanations, rule=args.rule, savedir=savedir, 
-                                                    filename=args.rule+"_atk_explanations_"+str(n_samples))
+                                                    filename=atk_filename)
                 plot_attacks_explanations(images, explanations, attacks, attacks_explanations,
-                                            rule=args.rule, savedir=savedir, filename=args.rule+"_explanations")
+                                            rule=args.rule, savedir=savedir, filename=atk_filename)
                 samples_attacks_explanations.append(attacks_explanations)
         
         samples_explanations = np.array(samples_explanations)
-        save_lrp(samples_explanations, path=savedir, filename=args.rule+"_explanations")
+        save_lrp(samples_explanations, path=savedir, filename=filename)
 
         if args.explain_attacks:
-            save_lrp(samples_attacks_explanations, path=savedir, 
-                            filename=args.rule+"_attacks_explanations")
+            save_lrp(samples_attacks_explanations, path=savedir, filename=atk_filename)
 
     lrp_pixels_distributions(post_explanations, labels=labels_post_exp, num_classes=num_classes, 
-                             n_samples=post_samples, savedir=savedir, filename=args.rule+"_lrp_pixel_distr")
+                             n_samples=post_samples, savedir=savedir, filename=filename+"_lrp_pixel_distr")
 
     plot_vanishing_explanations(images_plt, samples_explanations, n_samples_list=bayesian_samples,
         rule=args.rule, savedir=savedir, filename=args.rule+"_vanishing_explanations")
@@ -187,13 +193,13 @@ else:
     #                  savedir=savedir, filename=args.rule+"_explanations_components")
 
     lrp_samples_distributions(samples_explanations, labels=labels_plt, num_classes=num_classes,
-                    n_samples_list=bayesian_samples, savedir=savedir, filename=args.rule+"_lrp_pixel_distr")
+                    n_samples_list=bayesian_samples, savedir=savedir, filename=filename+"_lrp_pixel_distr")
     lrp_labels_distributions(samples_explanations, labels=labels_plt, num_classes=num_classes,
                     n_samples_list=bayesian_samples, savedir=savedir, 
-                    filename=args.rule+"_lrp_pixel_distr")
+                    filename=filename+"_lrp_pixel_distr")
 
 
     if args.explain_attacks:
         samples_attacks_explanations = np.array(samples_attacks_explanations)
         plot_vanishing_explanations(attacks_plt, samples_attacks_explanations, n_samples_list=bayesian_samples,
-            rule=args.rule, savedir=savedir, filename=args.rule+"_vanishing_explanations")
+            rule=args.rule, savedir=savedir, filename=filename+"_vanishing_explanations")

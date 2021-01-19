@@ -1,13 +1,7 @@
 import os
+import torch
 import argparse
 import numpy as np
-
-import torch
-# import torchvision
-# from torch import nn
-# import torch.nn.functional as nnf
-# import torch.optim as torchopt
-# import torch.nn.functional as F
 
 from utils.data import *
 from utils import savedir
@@ -20,13 +14,13 @@ from networks.redBNN import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, redBNN")
-parser.add_argument("--model_idx", default=0, type=int, help="choose model idx from pre defined settings")
+parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings.")
 parser.add_argument("--inference", default="svi", type=str, help="svi, hmc")
-parser.add_argument("--load", default=False, type=eval)
+parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-parser.add_argument("--atk_inputs", default=1000, type=int, help="number of input points")
-parser.add_argument("--layer_idx", default=-1, type=int)
-parser.add_argument("--debug", default=False, type=eval)
+parser.add_argument("--atk_inputs", default=1000, type=int, help="Number of test points to be attacked.")
+parser.add_argument("--bayesian_layer_idx", default=-1, type=int, help="Index for the Bayesian layer in redBNN.")
+parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cpu', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
@@ -93,7 +87,7 @@ else:
 
         hyp = get_hyperparams(m)
         net = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=basenet, hyperparams=hyp,
-                     layer_idx=args.layer_idx)
+                     layer_idx=args.bayesian_layer_idx)
 
     else:
         raise NotImplementedError

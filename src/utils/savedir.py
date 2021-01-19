@@ -31,4 +31,4 @@ def get_savedir(model, dataset, architecture, iters=None, inference=None, baseit
 
 
 def lrp_savedir(layer_idx):
-    return LRP_DIR+"_layer_idx="+str(layer_idx)+"/"
+    return LRP_DIR

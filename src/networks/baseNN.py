@@ -148,7 +148,19 @@ class baseNN(nn.Module):
         execution_time(start=start, end=time.time())
         self.save(savedir)
 
-    def forward(self, inputs, layer_idx=None, *args, **kwargs):
+    def forward(self, inputs, layer_idx=-1, *args, **kwargs):
+
+        if layer_idx==-1:
+            layer_idx=None
+        else:
+            if layer_idx<0:
+                layer_idx+=1
+
+        max_layer_idx = len(list(self.model.children()))
+
+        if abs(layer_idx)>max_layer_idx:
+            raise ValueError(f"Max number of available layers is {max_layer_idx}")
+                
         return nn.Sequential(*list(self.model.children())[:layer_idx])(inputs)
 
     def save(self, savedir):
