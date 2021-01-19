@@ -18,7 +18,7 @@ from utils.data import load_from_pickle, save_to_pickle
 cmap_name = "RdBu_r"
 DEBUG=False
 
-def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1): 
+def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1): # todo: add nnf.softmax
 
     if n_samples is None:
 

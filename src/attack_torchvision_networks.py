@@ -59,7 +59,6 @@ if args.model=="baseNN":
     model = baseNN(architecture=args.architecture, dataset_name=args.dataset)
     params_to_update = model.initialize_model(architecture=args.architecture, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
-    # model.load(savedir, iters, device)
     model.load(savedir, device)
 
     if args.load_attack:
@@ -83,7 +82,6 @@ elif args.model=="redBNN":
     model = redBNN(architecture=args.architecture, dataset_name=args.dataset, inference=args.inference)
     model.initialize_model(basenet, architecture=args.architecture, num_classes=num_classes, 
                                                 feature_extract=True, use_pretrained=True)
-    # model.load(savedir, iters, device)
     model.load(savedir, device)
 
     if args.load_attack:
