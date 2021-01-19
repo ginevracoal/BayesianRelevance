@@ -89,7 +89,7 @@ def pgd_attack(net, image, label, hyperparams=None, n_samples=None, sample_idxs=
     return perturbed_image
 
 def attack(net, x_test, y_test, device, method, filename, savedir,
-           hyperparams=None, n_samples=None, sample_idxs=None, avg_posterior=False):
+           hyperparams=None, n_samples=None, sample_idxs=None, avg_posterior=False, save=True):
 
     print(f"\n\nProducing {method} attacks", end="\t")
     if n_samples:
@@ -120,8 +120,9 @@ def attack(net, x_test, y_test, device, method, filename, savedir,
     name = filename+"_"+str(method)
     name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
 
-    savedir = os.path.join(savedir, ATK_DIR)
-    save_to_pickle(data=adversarial_attack, path=savedir, filename=name)
+    if save:
+        savedir = os.path.join(savedir, ATK_DIR)
+        save_to_pickle(data=adversarial_attack, path=savedir, filename=name)
 
     set_seed(0)
     idxs = np.random.choice(len(x_test), 10, replace=False)

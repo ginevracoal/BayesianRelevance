@@ -209,19 +209,21 @@ def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, saved
 
 def lrp_robustness_distributions(lrp_robustness, posterior_lrp_robustness, savedir, filename):
 
-    savedir = os.path.join(savedir, lrp_savedir(layer_idx=-1))
     os.makedirs(savedir, exist_ok=True) 
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5), dpi=150, facecolor='w', edgecolor='k')    
+    fig, ax = plt.subplots(2, 1, figsize=(10, 5), dpi=150, facecolor='w', edgecolor='k') 
 
-    sns.distplot(lrp_robustness, ax=ax, kde=False)
-    # ax.set_yscale('log')
+    print(lrp_robustness.min(), lrp_robustness.max())   
+    print(posterior_lrp_robustness.min(), posterior_lrp_robustness.max())   
+
+    sns.distplot(lrp_robustness, ax=ax[0], label="deterministic lrp rob.", kde=True)
+    sns.distplot(posterior_lrp_robustness.mean(0), ax=ax[0], label="avg bayesian lrp rob.", kde=True)
+    ax[0].legend()
 
     for sample_lrp_robustness in posterior_lrp_robustness:
-        sns.distplot(sample_lrp_robustness, ax=ax, kde=False)
-        # ax.set_yscale('log')
-
-    fig.savefig(os.path.join(savedir, filename+"_png"))
+        sns.distplot(sample_lrp_robustness, ax=ax[1], kde=True, hist=False)
+    
+    fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)    

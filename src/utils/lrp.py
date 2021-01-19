@@ -35,7 +35,7 @@ def select_informative_pixels(lrp_heatmaps, topk):
     chosen_pxl_idxs = torch.argsort(lrp_sum)[-topk:]
     chosen_images_lrp = flat_lrp_heatmaps[..., chosen_pxl_idxs] 
 
-    print("out shape =", chosen_images_lrp.shape)
+    # print("out shape =", chosen_images_lrp.shape)
     print("\nchosen pixels idxs =", chosen_pxl_idxs)
 
     return chosen_images_lrp, chosen_pxl_idxs
@@ -197,13 +197,14 @@ def load_lrp(path, filename, layer_idx=-1):
     explanations = load_from_pickle(path=savedir, filename=filename)
     return explanations
 
-def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk):
+def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, pxl_idxs=None):
 
-    pxl_idxs = select_informative_pixels(original_heatmaps+adversarial_heatmaps, topk=topk)[1]
+    if pxl_idxs is None:
+        pxl_idxs = select_informative_pixels(original_heatmaps+adversarial_heatmaps, topk=topk)[1]
 
     original_heatmaps = original_heatmaps.reshape(*original_heatmaps.shape[:1], -1)[:, pxl_idxs]
     adversarial_heatmaps = adversarial_heatmaps.reshape(*adversarial_heatmaps.shape[:1], -1)[:, pxl_idxs]
 
     distances = torch.norm(original_heatmaps-adversarial_heatmaps, dim=1)
     robustness = torch.ones_like(distances)-distances
-    return distances
+    return distances, pxl_idxs
