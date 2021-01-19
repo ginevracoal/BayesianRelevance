@@ -168,10 +168,10 @@ class BNN(PyroModule):
 
         self.to(device)
         self.basenet.to(device)
-        self.device=device
+        # self.device=device
 
     def forward(self, inputs, n_samples=10, avg_posterior=False, sample_idxs=None, training=False,
-                expected_out=True, explain=False, rule=None):
+                expected_out=True, *args, **kwargs):
 
         if sample_idxs:
             if len(sample_idxs) != n_samples:
@@ -191,7 +191,7 @@ class BNN(PyroModule):
                     avg_state_dict.update({str(key):avg_weights})
 
                 self.basenet.load_state_dict(avg_state_dict)
-                preds = [self.basenet.model(inputs)]
+                preds = [self.basenet.model(inputs, *args, **kwargs)]
 
             else:
 
@@ -215,8 +215,8 @@ class BNN(PyroModule):
                             weights.update({str(key):w})
 
                         self.basenet.load_state_dict(weights)
-                        self.basenet.to(self.device)
-                        preds.append(self.basenet.forward(inputs, explain=explain, rule=rule))
+                        # self.basenet.to(self.device)
+                        preds.append(self.basenet.forward(inputs, *args, **kwargs))
 
         elif self.inference == "hmc":
 
@@ -323,7 +323,7 @@ class BNN(PyroModule):
     def train(self, train_loader, savedir, device):
         self.to(device)
         self.basenet.to(device)
-        self.device=device
+        # self.device=device
 
         if self.inference == "svi":
             self._train_svi(train_loader, self.epochs, self.lr, savedir, device)

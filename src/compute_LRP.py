@@ -60,7 +60,7 @@ if args.model=="baseNN":
     net = baseNN(inp_shape, num_classes, *list(model.values()))
     net.load(savedir=savedir, device=args.device)
 
-    filename = args.rule+"_explanations_layer_idx="+str(args.layer_idx)
+    filename = args.rule+"_explanations"
 
     if args.load:
         explanations = load_lrp(path=savedir, filename=filename, layer_idx=args.layer_idx)
@@ -135,8 +135,8 @@ else:
     images_post_exp=images[idxs]
     labels_post_exp=labels_plt[idxs]
 
-    post_filename = args.rule+"_post_explanations_layer_idx="+str(args.layer_idx)
-    filename = args.rule+"_explanations_layer_idx="+str(args.layer_idx)
+    post_filename = args.rule+"_posterior_explanations"
+    filename = args.rule+"_explanations"
 
     if args.load:
 
@@ -164,7 +164,7 @@ else:
 
             if args.explain_attacks:
 
-                atk_filename = args.rule+"_atk_explanations_layer_idx="+str(args.layer_idx)
+                atk_filename = args.rule+"_atk_explanations"
 
                 attacks = load_attack(method=args.attack_method, filename=net.name, savedir=savedir,
                                         n_samples=n_samples)

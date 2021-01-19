@@ -15,33 +15,6 @@ from utils.savedir import *
 from utils.seeding import set_seed
 from utils.lrp import *
 
-
-def select_informative_pixels(lrp_heatmaps, topk):
-
-    print(f"\nTop {topk} most informative pixels:")
-
-    if len(lrp_heatmaps.shape)==4:
-        print(f"\n(n. images, image shape) = {lrp_heatmaps.shape[0], lrp_heatmaps.shape[1:]}")
-        squeeze_dim=1
-
-    elif len(lrp_heatmaps.shape)==5:
-        print(f"\n(samples_list_size, n. images, image shape) = {lrp_heatmaps.shape[0], lrp_heatmaps.shape[1], lrp_heatmaps.shape[2:]}")
-        squeeze_dim=2
-
-    else:
-        raise ValueError("Wrong array shape.")
-
-    flat_lrp_heatmaps = lrp_heatmaps.reshape(*lrp_heatmaps.shape[:squeeze_dim], -1)
-    lrp_sum = flat_lrp_heatmaps.sum(0).sum(0) if len(flat_lrp_heatmaps.shape)>2 else flat_lrp_heatmaps.sum(0)
-
-    chosen_pxl_idxs = np.argsort(lrp_sum)[-topk:]
-    chosen_images_lrp = flat_lrp_heatmaps[..., chosen_pxl_idxs] 
-
-    print("out shape =", chosen_images_lrp.shape)
-    print("\nchosen pixels idxs =", chosen_pxl_idxs)
-
-    return chosen_images_lrp, chosen_pxl_idxs
-
 def stripplot_lrp_values(lrp_heatmaps_list, n_samples_list, savedir, filename, layer_idx=-1):
 
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
@@ -233,3 +206,7 @@ def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, saved
         fig.savefig(os.path.join(savedir, filename+"_im_idx="+str(im_idx)+".png"))
         plt.close(fig)
 
+
+def lrp_robustness_distributions(lrp_robustness, posterior_lrp_robustness, savedir, filename):
+
+    print(lrp_robustness.shape, posterior_lrp_robustness.shape)

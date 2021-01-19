@@ -13,6 +13,34 @@ from utils.data import load_from_pickle, save_to_pickle
 cmap_name = "RdBu_r"
 DEBUG=False
 
+
+def select_informative_pixels(lrp_heatmaps, topk):
+
+    print(f"\nTop {topk} most informative pixels:")
+
+    if len(lrp_heatmaps.shape)==4:
+        print(f"\n(n. images, image shape) = {lrp_heatmaps.shape[0], lrp_heatmaps.shape[1:]}")
+        squeeze_dim=1
+
+    elif len(lrp_heatmaps.shape)==5:
+        print(f"\n(samples_list_size, n. images, image shape) = {lrp_heatmaps.shape[0], lrp_heatmaps.shape[1], lrp_heatmaps.shape[2:]}")
+        squeeze_dim=2
+
+    else:
+        raise ValueError("Wrong array shape.")
+
+    flat_lrp_heatmaps = lrp_heatmaps.reshape(*lrp_heatmaps.shape[:squeeze_dim], -1)
+    lrp_sum = flat_lrp_heatmaps.sum(0).sum(0) if len(flat_lrp_heatmaps.shape)>2 else flat_lrp_heatmaps.sum(0)
+
+    chosen_pxl_idxs = torch.argsort(lrp_sum)[-topk:]
+    chosen_images_lrp = flat_lrp_heatmaps[..., chosen_pxl_idxs] 
+
+    print("out shape =", chosen_images_lrp.shape)
+    print("\nchosen pixels idxs =", chosen_pxl_idxs)
+
+    return chosen_images_lrp, chosen_pxl_idxs
+
+
 def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1):
 
     print("\nLRP layer idx =", layer_idx)
@@ -33,9 +61,11 @@ def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1):
 
             # Backward pass (compute explanation)
             y_hat.backward()
-            explanations.append(x.grad.detach().cpu().numpy())
+            # explanations.append(x.grad.detach().cpu().numpy())
+            explanations.append(x.grad)#.detach().cpu().numpy())
 
-        return np.array(explanations)
+        # return np.array(explanations)
+        return torch.stack(explanations)
 
     else:
 
@@ -58,13 +88,15 @@ def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1):
 
                 # Backward pass (compute explanation)
                 y_hat.backward()
-                explanations.append(x_copy.grad.detach().cpu().numpy())
+                explanations.append(x_copy.grad)#.detach().cpu().numpy())
 
-            avg_explanations.append(np.array(explanations).mean(0).squeeze(0))
+            # avg_explanations.append(np.array(explanations).mean(0).squeeze(0))
+            avg_explanations.append(explanations.mean(0).squeeze(0))
 
-        return np.array(avg_explanations)
+        # return np.array(avg_explanations)
+        return torch.stack(avg_explanations)
 
-def compute_posterior_explanations(x_test, network, rule, n_samples, layer_idx):
+def compute_posterior_explanations(x_test, network, rule, n_samples, layer_idx=-1):
 
     posterior_explanations = []
     for x in tqdm(x_test):
@@ -85,11 +117,12 @@ def compute_posterior_explanations(x_test, network, rule, n_samples, layer_idx):
 
             # Backward pass (compute explanation)
             y_hat.backward()
-            explanations.append(x_copy.grad.squeeze(1).detach().cpu().numpy())
+            explanations.append(x_copy.grad.squeeze(1))#.detach().cpu().numpy())
 
-        posterior_explanations.append(np.array(explanations))
+        posterior_explanations.append(torch.stack(explanations))#np.array(explanations))
 
-    return np.array(posterior_explanations)        
+    # return np.array(posterior_explanations)  
+    return torch.stack(posterior_explanations)        
 
 def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
 
@@ -153,11 +186,26 @@ def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
     print("\nvanishing norms idxs = ", vanishing_norm_idxs)
     return vanishing_norm_idxs, non_null_idxs
 
-def save_lrp(explanations, path, filename, layer_idx):
+def save_lrp(explanations, path, filename, layer_idx=-1):
+    filename = filename if layer_idx==-1 else filename+"_layer_idx="+str(layer_idx) 
     savedir = os.path.join(path, lrp_savedir(layer_idx))
     save_to_pickle(explanations, path=savedir, filename=filename)
 
-def load_lrp(path, filename, layer_idx):
+def load_lrp(path, filename, layer_idx=-1):
+    filename = filename if layer_idx==-1 else filename+"_layer_idx="+str(layer_idx) 
     savedir = os.path.join(path, lrp_savedir(layer_idx))
     explanations = load_from_pickle(path=savedir, filename=filename)
     return explanations
+
+def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk):
+
+    print(original_heatmaps.shape, adversarial_heatmaps.shape)
+
+    pxl_idxs = select_informative_pixels(original_heatmaps+adversarial_heatmaps, topk=topk)[1]
+
+    original_heatmaps = original_heatmaps.reshape(*original_heatmaps.shape[:1], -1)[:, pxl_idxs]
+    adversarial_heatmaps = adversarial_heatmaps.reshape(*adversarial_heatmaps.shape[:1], -1)[:, pxl_idxs]
+
+    distances = torch.norm(original_heatmaps-adversarial_heatmaps)
+    robustness = torch.ones_like(distances)-distances
+    return robustness

@@ -36,3 +36,5 @@ def softmax_robustness(original_outputs, adversarial_outputs):
     robustness = (torch.ones_like(softmax_differences)-softmax_differences)
     print(f"avg softmax robustness = {robustness.mean().item():.2f}")
     return robustness
+
+

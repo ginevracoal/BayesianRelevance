@@ -62,16 +62,17 @@ else:
 
         m = fullBNN_settings["model_"+str(args.model_idx)]
 
-        x_train, y_train, _, _, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], n_inputs=n_inputs)
+        x_train, y_train, _, _, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], shuffle=True, 
+                                                                    n_inputs=n_inputs)
         x_test, y_test = load_dataset(dataset_name=m["dataset"], n_inputs=atk_inputs)[2:4]
 
         savedir = get_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
                               debug=args.debug, model_idx=args.model_idx)
 
         net = BNN(m["dataset"], *list(m.values())[1:], inp_shape, out_size)
-    
 
     elif args.model=="redBNN":
+        
         m = redBNN_settings["model_"+str(args.model_idx)]
         base_m = baseNN_settings["model_"+str(m["baseNN_idx"])]
 
