@@ -20,7 +20,7 @@ from plot.attacks import plot_grid_attacks
 
 DEBUG=False
 
-def loss_gradient_sign(net, n_samples, image, label):
+def loss_gradient_sign(net, n_samples, image, label, sample_idxs=None):
 
     if n_samples is None:
 
@@ -34,13 +34,19 @@ def loss_gradient_sign(net, n_samples, image, label):
 
     else:
 
+        if sample_idxs is not None:
+            if len(sample_idxs) != n_samples:
+                raise ValueError("Number of sample_idxs should match number of samples.")
+        else:
+            sample_idxs = list(range(n_samples))
+
         loss_gradients=[]
 
-        for i in range(n_samples):
+        for idx in sample_idxs:
 
             x_copy = copy.deepcopy(image)
             x_copy.requires_grad = True
-            output = net.forward(inputs=x_copy, n_samples=1, sample_idxs=[i])#, exp=True)[0]
+            output = net.forward(inputs=x_copy, n_samples=1, sample_idxs=[idx])
 
             loss = torch.nn.CrossEntropyLoss()(output.to(dtype=torch.double), label)
             net.zero_grad()
@@ -53,17 +59,17 @@ def loss_gradient_sign(net, n_samples, image, label):
     return gradient_sign
 
 
-def fgsm_attack(net, image, label, hyperparams=None, n_samples=None, avg_posterior=False):
+def fgsm_attack(net, image, label, hyperparams=None, n_samples=None, sample_idxs=None, avg_posterior=False):
 
     epsilon = hyperparams["epsilon"] if hyperparams is not None else 0.25
     
-    gradient_sign = loss_gradient_sign(net, n_samples, image, label)
+    gradient_sign = loss_gradient_sign(net, n_samples, image, label, sample_idxs)
     perturbed_image = image + epsilon * gradient_sign
     perturbed_image = torch.clamp(perturbed_image, 0, 1)
     return perturbed_image
 
 
-def pgd_attack(net, image, label, hyperparams=None, n_samples=None, avg_posterior=False):
+def pgd_attack(net, image, label, hyperparams=None, n_samples=None, sample_idxs=None, avg_posterior=False):
 
     if hyperparams is not None: 
         epsilon, alpha, iters = (hyperparams["epsilon"], 2/image.max(), 40)
@@ -74,7 +80,7 @@ def pgd_attack(net, image, label, hyperparams=None, n_samples=None, avg_posterio
     
     for i in range(iters):
 
-        gradient_sign = loss_gradient_sign(net, n_samples, image, label)
+        gradient_sign = loss_gradient_sign(net, n_samples, image, label, sample_idxs)
         perturbed_image = image + alpha * gradient_sign
         eta = torch.clamp(perturbed_image - original_image, min=-epsilon, max=epsilon)
         image = torch.clamp(original_image + eta, min=0, max=1)
@@ -83,7 +89,7 @@ def pgd_attack(net, image, label, hyperparams=None, n_samples=None, avg_posterio
     return perturbed_image
 
 def attack(net, x_test, y_test, device, method, filename, savedir,
-           hyperparams=None, n_samples=None, avg_posterior=False):
+           hyperparams=None, n_samples=None, sample_idxs=None, avg_posterior=False):
 
     print(f"\n\nProducing {method} attacks", end="\t")
     if n_samples:
@@ -101,11 +107,11 @@ def attack(net, x_test, y_test, device, method, filename, savedir,
         if method == "fgsm":
             perturbed_image = fgsm_attack(net=net, image=image, label=label, 
                                           hyperparams=hyperparams, n_samples=n_samples,
-                                          avg_posterior=avg_posterior)
+                                          avg_posterior=avg_posterior, sample_idxs=sample_idxs)
         elif method == "pgd":
             perturbed_image = pgd_attack(net=net, image=image, label=label, 
                                           hyperparams=hyperparams, n_samples=n_samples,
-                                          avg_posterior=avg_posterior)
+                                          avg_posterior=avg_posterior, sample_idxs=sample_idxs)
 
         adversarial_attack.append(perturbed_image)
 

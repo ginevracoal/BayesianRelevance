@@ -124,9 +124,10 @@ else:
 bay_lrp_robustness = []
 for sample_idx in range(n_samples):
     post_lrp_attack = attack(net=net, x_test=post_lrp[:,sample_idx], y_test=y_test, savedir=atk_savedir,
-                      device=args.device, method=args.attack_method, filename=net.name)
+                      device=args.device, method=args.attack_method, filename=net.name, 
+                      n_samples=1, sample_idxs=[sample_idx])
     bay_lrp_robustness.append(lrp_robustness(original_heatmaps=post_lrp[:,sample_idx], 
-                                        adversarial_heatmaps=post_lrp_attack[sample_idx], topk=topk))
+                                        adversarial_heatmaps=post_lrp_attack, topk=topk))
 
 bay_lrp_robustness = torch.stack(bay_lrp_robustness)
 

@@ -199,13 +199,11 @@ def load_lrp(path, filename, layer_idx=-1):
 
 def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk):
 
-    print(original_heatmaps.shape, adversarial_heatmaps.shape)
-
     pxl_idxs = select_informative_pixels(original_heatmaps+adversarial_heatmaps, topk=topk)[1]
 
     original_heatmaps = original_heatmaps.reshape(*original_heatmaps.shape[:1], -1)[:, pxl_idxs]
     adversarial_heatmaps = adversarial_heatmaps.reshape(*adversarial_heatmaps.shape[:1], -1)[:, pxl_idxs]
 
-    distances = torch.norm(original_heatmaps-adversarial_heatmaps)
+    distances = torch.norm(original_heatmaps-adversarial_heatmaps, dim=1)
     robustness = torch.ones_like(distances)-distances
-    return robustness
+    return distances

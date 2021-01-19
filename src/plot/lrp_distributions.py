@@ -209,4 +209,19 @@ def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, saved
 
 def lrp_robustness_distributions(lrp_robustness, posterior_lrp_robustness, savedir, filename):
 
-    print(lrp_robustness.shape, posterior_lrp_robustness.shape)
+    savedir = os.path.join(savedir, lrp_savedir(layer_idx=-1))
+    os.makedirs(savedir, exist_ok=True) 
+
+    sns.set_style("darkgrid")
+    matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
+    fig, ax = plt.subplots(1, 1, figsize=(10, 5), dpi=150, facecolor='w', edgecolor='k')    
+
+    sns.distplot(lrp_robustness, ax=ax, kde=False)
+    # ax.set_yscale('log')
+
+    for sample_lrp_robustness in posterior_lrp_robustness:
+        sns.distplot(sample_lrp_robustness, ax=ax, kde=False)
+        # ax.set_yscale('log')
+
+    fig.savefig(os.path.join(savedir, filename+"_png"))
+    plt.close(fig)    
