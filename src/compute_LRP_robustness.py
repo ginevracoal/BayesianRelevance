@@ -120,12 +120,12 @@ if args.load:
 else:
     post_lrp = compute_posterior_explanations(images, net, rule=args.rule, n_samples=n_samples)
     save_lrp(post_lrp, path=savedir, filename=post_filename)
-    post_lrp_attack = attack(net=net, x_test=post_lrp, y_test=y_test, savedir=atk_savedir,
-                      device=args.device, method=args.attack_method, filename=net.name)
 
 bay_lrp_robustness = []
 for sample_idx in range(n_samples):
-    bay_lrp_robustness.append(lrp_robustness(original_heatmaps=post_lrp[sample_idx], 
+    post_lrp_attack = attack(net=net, x_test=post_lrp[:,sample_idx], y_test=y_test, savedir=atk_savedir,
+                      device=args.device, method=args.attack_method, filename=net.name)
+    bay_lrp_robustness.append(lrp_robustness(original_heatmaps=post_lrp[:,sample_idx], 
                                         adversarial_heatmaps=post_lrp_attack[sample_idx], topk=topk))
 
 bay_lrp_robustness = torch.stack(bay_lrp_robustness)
