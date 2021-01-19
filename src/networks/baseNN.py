@@ -21,7 +21,7 @@ DEBUG = False
 baseNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
                             "architecture":"conv", "epochs":5, "lr":0.001},
                    "model_1":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
-                            "architecture":"fc2", "epochs":15, "lr":0.001},
+                            "architecture":"conv", "epochs":15, "lr":0.001},
                    # "model_2":{"dataset":"cifar", "hidden_size":512, "activation":"leaky",
                    #          "architecture":"conv", "epochs":20, "lr":0.01}
                             }
@@ -117,7 +117,6 @@ class baseNN(nn.Module):
 
     def train(self, train_loader, savedir, device):
         print("\n == baseNN training ==")
-        random.seed(0)
         self.to(device)
 
         optimizer = torchopt.Adam(params=self.parameters(), lr=self.lr)
@@ -149,8 +148,7 @@ class baseNN(nn.Module):
         execution_time(start=start, end=time.time())
         self.save(savedir)
 
-    def forward(self, inputs, layer_idx=-1, *args, **kwargs):
-
+    def forward(self, inputs, layer_idx=None, *args, **kwargs):
         return nn.Sequential(*list(self.model.children())[:layer_idx])(inputs)
 
     def save(self, savedir):
@@ -180,7 +178,6 @@ class baseNN(nn.Module):
 
     def evaluate(self, test_loader, device, *args, **kwargs):
         self.to(device)
-        random.seed(0)
 
         with torch.no_grad():
             correct_predictions = 0.0

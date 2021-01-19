@@ -36,7 +36,7 @@ fullBNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation
                              "architecture":"conv", "inference":"svi", "epochs":5, 
                              "lr":0.01, "n_samples":None, "warmup":None},
                     "model_1":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
-                             "architecture":"fc2", "inference":"svi", "epochs":15,
+                             "architecture":"conv", "inference":"svi", "epochs":15,
                              "lr":0.001, "n_samples":None, "warmup":None},
                     # "model_2":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
                     #          "architecture":"fc2", "inference":"hmc", "epochs":None,
@@ -112,7 +112,7 @@ class BNN(PyroModule):
         with pyro.plate("data", len(x_data)):
             logits = lifted_module(x_data)
 
-        return nnf.softmax(logits, dim=-1)
+        return logits 
 
     def save(self, savedir):
         filename=self.name+"_weights"
@@ -136,10 +136,6 @@ class BNN(PyroModule):
             self.basenet.to("cpu")
             self.to("cpu")
 
-            # for key, value in self.posterior_samples.items():
-                # fullpath=os.path.join(savedir, filename+"_"+str(key)+".pt")    
-                # torch.save(value.state_dict(), fullpath)
-
             for idx, weights in enumerate(self.posterior_samples):
                 fullpath=os.path.join(savedir, filename+"_"+str(idx)+".pt")    
                 torch.save(weights.state_dict(), fullpath)
@@ -159,13 +155,6 @@ class BNN(PyroModule):
         elif self.inference == "hmc":
             savedir=os.path.join(savedir, "weights")
             os.makedirs(savedir, exist_ok=True)  
-
-            # self.posterior_samples={}
-            # for model_idx in range(self.n_samples):
-            #     net_copy = copy.deepcopy(self.basenet)
-            #     fullpath=os.path.join(savedir, filename+"_"+str(model_idx)+".pt")    
-            #     net_copy.load_state_dict(torch.load(fullpath))
-            #     self.posterior_samples.update({model_idx:net_copy})   
 
             self.posterior_samples=[]
             for idx in range(self.n_samples):
@@ -236,7 +225,6 @@ class BNN(PyroModule):
 
             if explain:
                 preds = []
-                # posterior_predictive = list(self.posterior_samples.values())
                 posterior_predictive = self.posterior_samples
                 for seed in sample_idxs:
                     net = posterior_predictive[seed]
@@ -244,7 +232,6 @@ class BNN(PyroModule):
 
             else:
                 preds = []
-                # posterior_predictive = list(self.posterior_samples.values())
                 posterior_predictive = self.posterior_samples
                 for seed in sample_idxs:
                     net = posterior_predictive[seed]

@@ -99,7 +99,7 @@ else:
         raise NotImplementedError
 
     if args.debug:
-        bayesian_attack_samples=[1]
+        bayesian_attack_samples=[2]
     else:
         if m["inference"]=="svi":
             bayesian_attack_samples=[1,10,50]
