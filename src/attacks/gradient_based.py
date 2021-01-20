@@ -151,9 +151,6 @@ def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None, sam
     
     x_test, x_attack, y_test = x_test.to(device), x_attack.to(device), y_test.to(device)
 
-    # if hasattr(net, 'net'):
-    #     net.basenet.to(device) # fixed layers in BNN
-
     test_loader = DataLoader(dataset=list(zip(x_test, y_test)), batch_size=128, shuffle=False)
     attack_loader = DataLoader(dataset=list(zip(x_attack, y_test)), batch_size=128, shuffle=False)
 

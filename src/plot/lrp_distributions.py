@@ -215,7 +215,7 @@ def lrp_robustness_distributions(lrp_robustness, bayesian_lrp_robustness, savedi
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
-    fig, ax = plt.subplots(2, 1, figsize=(10, 5), dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(2, 1, figsize=(9, 7), dpi=150, facecolor='w', edgecolor='k') 
 
     sns.distplot(lrp_robustness, ax=ax[0], label="deterministic lrp rob.", kde=True)
     # sns.distplot(bayesian_lrp_robustness.mean(0), ax=ax[0], label="avg bayesian lrp rob.", kde=True)
@@ -223,23 +223,31 @@ def lrp_robustness_distributions(lrp_robustness, bayesian_lrp_robustness, savedi
         sns.distplot(sample_lrp_robustness, ax=ax[1], kde=True, hist=False)
     
     ax[0].legend()
-    ax[0].set_xlim(lrp_robustness.min(), lrp_robustness.max()+0.5)    
-    ax[1].set_xlim(lrp_robustness.min(), lrp_robustness.max()+0.5)    
+    ax[0].set_xlim(lrp_robustness.min(), lrp_robustness.max())
+    ax[1].set_xlim(lrp_robustness.min(), lrp_robustness.max())
+    ax[1].set_xlabel("LRP robustness")
 
     fig.savefig(os.path.join(savedir, filename+".png"))
-    plt.close(fig)    
+    plt.close(fig)
 
 def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robustness,
                                lrp_robustness, bayesian_lrp_robustness,
                                savedir, filename):
 
-    os.makedirs(savedir, exist_ok=True) 
+    os.makedirs(savedir, exist_ok=True)
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
-    fig, ax = plt.subplots(2, 1, figsize=(10, 5), dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(2, 1, figsize=(9, 7), dpi=150, facecolor='w', edgecolor='k') 
 
     sns.scatterplot(x=adversarial_robustness, y=lrp_robustness, ax=ax[0])
-    sns.scatterplot(x=bayesian_adversarial_robustness.mean(0), y=bayesian_lrp_robustness.mean(0), ax=ax[1])
 
+    for sample_idx in range(len(bayesian_adversarial_robustness)):
+        sns.scatterplot(x=bayesian_adversarial_robustness[:sample_idx+1].mean(0), 
+                        y=bayesian_lrp_robustness[:sample_idx+1].mean(0), ax=ax[1])
+
+    ax[0].set_xlabel('Deterministic adversarial robustness')
+    ax[0].set_ylabel('Deterministic lrp robustness')
+    ax[1].set_xlabel('Bayesian adversarial robustness')
+    ax[1].set_ylabel('Bayesian lrp robustness')
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)    
