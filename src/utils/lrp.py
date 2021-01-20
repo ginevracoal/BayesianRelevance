@@ -19,30 +19,44 @@ def select_informative_pixels(lrp_heatmaps, topk):
     Flattens image shape dimensions and selects the most relevant topk pixels. 
     Returns lrp heatmaps on the selected pixels and the chosen pixel indexes. 
     """
+    print(f"\nTop {topk} most informative pixels:", end="\t")
 
-    print(f"\nTop {topk} most informative pixels:")
+    if len(lrp_heatmaps.shape)==3:
+        if DEBUG:
+            print(f"\n(image shape) = {lrp_heatmaps.shape[0], lrp_heatmaps.shape[1:]}")
+        squeeze_dim=0
 
-    if len(lrp_heatmaps.shape)==4:
-        print(f"\n(n. images, image shape) = {lrp_heatmaps.shape[0], lrp_heatmaps.shape[1:]}")
+    elif len(lrp_heatmaps.shape)==4:
+        if DEBUG:
+            print(f"\n(n. images, image shape) = {lrp_heatmaps.shape[0], lrp_heatmaps.shape[1:]}")
         squeeze_dim=1
 
     elif len(lrp_heatmaps.shape)==5:
-        print(f"\n(samples_list_size, n. images, image shape) = {lrp_heatmaps.shape[0], lrp_heatmaps.shape[1], lrp_heatmaps.shape[2:]}")
+        if DEBUG:
+            print(f"\n(samples_list_size, n. images, image shape) = {lrp_heatmaps.shape[0], lrp_heatmaps.shape[1], lrp_heatmaps.shape[2:]}")
         squeeze_dim=2
 
     else:
         raise ValueError("Wrong array shape.")
 
     flat_lrp_heatmaps = lrp_heatmaps.reshape(*lrp_heatmaps.shape[:squeeze_dim], -1)
-    lrp_sum = flat_lrp_heatmaps.sum(0).sum(0) if len(flat_lrp_heatmaps.shape)>2 else flat_lrp_heatmaps.sum(0)
 
-    chosen_pxl_idxs = torch.argsort(lrp_sum)[-topk:]
-    chosen_images_lrp = flat_lrp_heatmaps[..., chosen_pxl_idxs] 
+    if len(flat_lrp_heatmaps.shape)==2:
+        flat_lrp_heatmap = flat_lrp_heatmaps.sum(0)
 
-    # print("out shape =", chosen_images_lrp.shape)
-    print("\nchosen pixels idxs =", chosen_pxl_idxs)
+    elif len(flat_lrp_heatmaps.shape)>2:
+        flat_lrp_heatmap = flat_lrp_heatmaps.sum(0).sum(0)
 
-    return chosen_images_lrp, chosen_pxl_idxs
+    else:
+        flat_lrp_heatmap = flat_lrp_heatmaps
+
+    chosen_pxl_idxs = torch.argsort(flat_lrp_heatmap)[-topk:]
+    chosen_pxls_lrp = flat_lrp_heatmaps[..., chosen_pxl_idxs] 
+
+    # print("out shape =", chosen_pxls_lrp.shape)
+    print("chosen pixels idxs =", chosen_pxl_idxs)
+
+    return chosen_pxls_lrp, chosen_pxl_idxs
 
 
 def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1):
@@ -201,10 +215,10 @@ def load_lrp(path, filename, layer_idx=-1):
     explanations = load_from_pickle(path=savedir, filename=filename)
     return explanations
 
-def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, pxl_idxs=None):
+def lrp_robustness_old(original_heatmaps, adversarial_heatmaps, topk, pxl_idxs=None):
     """
     Point-wise lrp robustness, defined as:
-    image lrp robustness = 1-l2_norm(original lrp heatmap, adversarial lrp heatmap).
+    image lrp robustness = -l2_norm(original lrp heatmap, adversarial lrp heatmap).
     """
 
     if pxl_idxs is None:
@@ -214,5 +228,21 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, pxl_idxs=None)
     adversarial_heatmaps = adversarial_heatmaps.reshape(*adversarial_heatmaps.shape[:1], -1)[:, pxl_idxs]
 
     distances = torch.norm(original_heatmaps-adversarial_heatmaps, dim=1)
-    robustness = torch.ones_like(distances)-distances
+    robustness = -distances
     return robustness, pxl_idxs
+
+def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk):
+    """
+    Point-wise robustness measure. Computes the fraction of common topk relevant pixels between each original
+    image and adversarial image.
+    """
+
+    robustness = []
+    for im_idx in range(len(original_heatmaps)):
+        orig_pxl_idxs = select_informative_pixels(original_heatmaps[im_idx], topk=topk)[1]
+        adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps[im_idx], topk=topk)[1]
+
+        common_idxs = np.intersect1d(orig_pxl_idxs.detach().cpu().numpy(), adv_pxl_idxs.detach().cpu().numpy())
+        robustness.append(len(common_idxs)/topk)
+
+    return np.array(robustness)

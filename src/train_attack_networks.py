@@ -100,7 +100,7 @@ else:
             bayesian_attack_samples=[1,10,50]
 
         elif m["inference"]=="hmc":
-            bayesian_attack_samples=[1,5,10]
+            bayesian_attack_samples=[1,10,50]
 
     if args.load:
 
@@ -112,7 +112,7 @@ else:
                               device=args.device, n_samples=n_samples)
 
     else:
-        batch_size = 1024 if m["inference"] == "hmc" else 128 
+        batch_size = 5000 if m["inference"] == "hmc" else 128 
         num_workers = 0 if args.device=="cuda" else 4
         train_loader = DataLoader(dataset=list(zip(x_train, y_train)), batch_size=batch_size, 
                                   num_workers=num_workers, shuffle=True)
