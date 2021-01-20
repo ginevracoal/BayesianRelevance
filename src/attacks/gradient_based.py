@@ -8,6 +8,7 @@ import copy
 import torch
 import numpy as np
 from tqdm import tqdm
+import torch.nn.functional as nnf
 from torch.utils.data import DataLoader
 
 from utils.data import *
@@ -140,7 +141,7 @@ def load_attack(method, filename, savedir, n_samples=None):
     name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
     return load_from_pickle(path=savedir, filename=name)
 
-def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None):
+def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None, sample_idxs=None):
 
     print(f"\nEvaluating against the attacks", end="")
     if n_samples:
@@ -150,8 +151,8 @@ def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None):
     
     x_test, x_attack, y_test = x_test.to(device), x_attack.to(device), y_test.to(device)
 
-    if hasattr(net, 'net'):
-        net.basenet.to(device) # fixed layers in BNN
+    # if hasattr(net, 'net'):
+    #     net.basenet.to(device) # fixed layers in BNN
 
     test_loader = DataLoader(dataset=list(zip(x_test, y_test)), batch_size=128, shuffle=False)
     attack_loader = DataLoader(dataset=list(zip(x_attack, y_test)), batch_size=128, shuffle=False)
@@ -161,14 +162,14 @@ def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None):
         original_outputs = []
         original_correct = 0.0
         for images, labels in test_loader:
-            out = net.forward(images, n_samples)
+            out = net.forward(images, n_samples=n_samples, sample_idxs=sample_idxs)
             original_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
             original_outputs.append(out)
 
         adversarial_outputs = []
         adversarial_correct = 0.0
         for attacks, labels in attack_loader:
-            out = net.forward(attacks, n_samples)
+            out = net.forward(attacks, n_samples=n_samples, sample_idxs=sample_idxs)
             adversarial_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
             adversarial_outputs.append(out)
 

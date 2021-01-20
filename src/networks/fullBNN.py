@@ -171,7 +171,7 @@ class BNN(PyroModule):
         # self.device=device
 
     def forward(self, inputs, n_samples=10, avg_posterior=False, sample_idxs=None, training=False,
-                expected_out=True, *args, **kwargs):
+                expected_out=True, layer_idx=-1, *args, **kwargs):
 
         if sample_idxs:
             if len(sample_idxs) != n_samples:
@@ -216,64 +216,64 @@ class BNN(PyroModule):
 
                         self.basenet.load_state_dict(weights)
                         # self.basenet.to(self.device)
-                        preds.append(self.basenet.forward(inputs, *args, **kwargs))
+                        preds.append(self.basenet.forward(inputs, layer_idx=layer_idx, *args, **kwargs))
 
-        elif self.inference == "hmc":
+        # elif self.inference == "hmc":
 
-            if n_samples>len(self.posterior_samples):
-                raise ValueError("Too many samples. Max available samples =", len(self.posterior_samples))
+        #     if n_samples>len(self.posterior_samples):
+        #         raise ValueError("Too many samples. Max available samples =", len(self.posterior_samples))
 
-            if explain:
-                preds = []
-                posterior_predictive = self.posterior_samples
-                for seed in sample_idxs:
-                    net = posterior_predictive[seed]
-                    preds.append(net.forward(inputs, explain=explain, rule=rule))
+        #     if explain:
+        #         preds = []
+        #         posterior_predictive = self.posterior_samples
+        #         for seed in sample_idxs:
+        #             net = posterior_predictive[seed]
+        #             preds.append(net.forward(inputs, explain=explain, rule=rule))
 
-            else:
-                preds = []
-                posterior_predictive = self.posterior_samples
-                for seed in sample_idxs:
-                    net = posterior_predictive[seed]
-                    preds.append(net.forward(inputs))
+        #     else:
+        #         preds = []
+        #         posterior_predictive = self.posterior_samples
+        #         for seed in sample_idxs:
+        #             net = posterior_predictive[seed]
+        #             preds.append(net.forward(inputs)) # todo:pass layer idx
         
         logits = torch.stack(preds)
         return logits.mean(0) if expected_out else logits
 
-    def _train_hmc(self, train_loader, n_samples, warmup, step_size, num_steps, savedir, device):
-        print("\n == fullBNN HMC training ==")
-        pyro.clear_param_store()
+    # def _train_hmc(self, train_loader, n_samples, warmup, step_size, num_steps, savedir, device):
+    #     print("\n == fullBNN HMC training ==")
+    #     pyro.clear_param_store()
 
-        batch_samples = 1
-        print("\nnum_batches =", len(train_loader), "\nbatch_samples =", batch_samples)
+    #     batch_samples = 1
+    #     print("\nnum_batches =", len(train_loader), "\nbatch_samples =", batch_samples)
 
-        kernel = HMC(self.model, step_size=step_size, num_steps=num_steps)
-        mcmc = MCMC(kernel=kernel, num_samples=batch_samples, warmup_steps=warmup, num_chains=1)
+    #     kernel = HMC(self.model, step_size=step_size, num_steps=num_steps)
+    #     mcmc = MCMC(kernel=kernel, num_samples=batch_samples, warmup_steps=warmup, num_chains=1)
 
-        self.posterior_samples=[]
-        state_dict_keys = list(self.basenet.state_dict().keys())
-        start = time.time()
+    #     self.posterior_samples=[]
+    #     state_dict_keys = list(self.basenet.state_dict().keys())
+    #     start = time.time()
 
-        for x_batch, y_batch in train_loader:
-            x_batch = x_batch.to(device)
-            labels = y_batch.to(device).argmax(-1)
-            mcmc.run(x_batch, labels)
+    #     for x_batch, y_batch in train_loader:
+    #         x_batch = x_batch.to(device)
+    #         labels = y_batch.to(device).argmax(-1)
+    #         mcmc.run(x_batch, labels)
 
-            posterior_sample = mcmc.get_samples(batch_samples)
-            net_copy = copy.deepcopy(self.basenet)
+    #         posterior_sample = mcmc.get_samples(batch_samples)
+    #         net_copy = copy.deepcopy(self.basenet)
 
-            model_dict=OrderedDict({})
-            for weight_idx, weights in enumerate(posterior_sample.values()):
-                model_dict.update({state_dict_keys[weight_idx]:weights[0]})
+    #         model_dict=OrderedDict({})
+    #         for weight_idx, weights in enumerate(posterior_sample.values()):
+    #             model_dict.update({state_dict_keys[weight_idx]:weights[0]})
 
-            net_copy.load_state_dict(model_dict)
-            self.posterior_samples.append(net_copy)
+    #         net_copy.load_state_dict(model_dict)
+    #         self.posterior_samples.append(net_copy)
 
-            if DEBUG:
-                print(net_copy.state_dict()['out.weight'][0,:5])
+    #         if DEBUG:
+    #             print(net_copy.state_dict()['out.weight'][0,:5])
 
-        execution_time(start=start, end=time.time())     
-        self.save(savedir)
+    #     execution_time(start=start, end=time.time())     
+    #     self.save(savedir)
 
     def _train_svi(self, train_loader, epochs, lr, savedir, device):
         print("\n == fullBNN SVI training ==")

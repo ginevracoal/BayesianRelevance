@@ -15,6 +15,10 @@ DEBUG=False
 
 
 def select_informative_pixels(lrp_heatmaps, topk):
+    """
+    Flattens image shape dimensions and selects the most relevant topk pixels. 
+    Returns lrp heatmaps on the selected pixels and the chosen pixel indexes. 
+    """
 
     print(f"\nTop {topk} most informative pixels:")
 
@@ -62,7 +66,7 @@ def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1):
             # Backward pass (compute explanation)
             y_hat.backward()
             # explanations.append(x.grad.detach().cpu().numpy())
-            explanations.append(x.grad)#.detach().cpu().numpy())
+            explanations.append(x.grad)
 
         # return np.array(explanations)
         return torch.stack(explanations)
@@ -198,6 +202,10 @@ def load_lrp(path, filename, layer_idx=-1):
     return explanations
 
 def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, pxl_idxs=None):
+    """
+    Point-wise lrp robustness, defined as:
+    image lrp robustness = 1-l2_norm(original lrp heatmap, adversarial lrp heatmap).
+    """
 
     if pxl_idxs is None:
         pxl_idxs = select_informative_pixels(original_heatmaps+adversarial_heatmaps, topk=topk)[1]
@@ -207,4 +215,4 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, pxl_idxs=None)
 
     distances = torch.norm(original_heatmaps-adversarial_heatmaps, dim=1)
     robustness = torch.ones_like(distances)-distances
-    return distances, pxl_idxs
+    return robustness, pxl_idxs

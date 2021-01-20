@@ -207,23 +207,39 @@ def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, saved
         plt.close(fig)
 
 
-def lrp_robustness_distributions(lrp_robustness, posterior_lrp_robustness, savedir, filename):
+def lrp_robustness_distributions(lrp_robustness, bayesian_lrp_robustness, savedir, filename):
 
     os.makedirs(savedir, exist_ok=True) 
+    print(f"\ndeterministic lrp rob mean={lrp_robustness.mean():.2f} var={lrp_robustness.var():.2f}")   
+    print(f"bayesian lrp rob mean={bayesian_lrp_robustness.mean():.2f} var={bayesian_lrp_robustness.var():.2f}")   
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
     fig, ax = plt.subplots(2, 1, figsize=(10, 5), dpi=150, facecolor='w', edgecolor='k') 
 
-    print(lrp_robustness.min(), lrp_robustness.max())   
-    print(posterior_lrp_robustness.min(), posterior_lrp_robustness.max())   
-
     sns.distplot(lrp_robustness, ax=ax[0], label="deterministic lrp rob.", kde=True)
-    sns.distplot(posterior_lrp_robustness.mean(0), ax=ax[0], label="avg bayesian lrp rob.", kde=True)
-    ax[0].legend()
-
-    for sample_lrp_robustness in posterior_lrp_robustness:
+    # sns.distplot(bayesian_lrp_robustness.mean(0), ax=ax[0], label="avg bayesian lrp rob.", kde=True)
+    for sample_lrp_robustness in bayesian_lrp_robustness:
         sns.distplot(sample_lrp_robustness, ax=ax[1], kde=True, hist=False)
     
+    ax[0].legend()
+    ax[0].set_xlim(lrp_robustness.min(), lrp_robustness.max()+0.5)    
+    ax[1].set_xlim(lrp_robustness.min(), lrp_robustness.max()+0.5)    
+
+    fig.savefig(os.path.join(savedir, filename+".png"))
+    plt.close(fig)    
+
+def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robustness,
+                               lrp_robustness, bayesian_lrp_robustness,
+                               savedir, filename):
+
+    os.makedirs(savedir, exist_ok=True) 
+    sns.set_style("darkgrid")
+    matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
+    fig, ax = plt.subplots(2, 1, figsize=(10, 5), dpi=150, facecolor='w', edgecolor='k') 
+
+    sns.scatterplot(x=adversarial_robustness, y=lrp_robustness, ax=ax[0])
+    sns.scatterplot(x=bayesian_adversarial_robustness.mean(0), y=bayesian_lrp_robustness.mean(0), ax=ax[1])
+
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)    
