@@ -215,34 +215,61 @@ def load_lrp(path, filename, layer_idx=-1):
     explanations = load_from_pickle(path=savedir, filename=filename)
     return explanations
 
-def lrp_robustness_old(original_heatmaps, adversarial_heatmaps, topk, pxl_idxs=None):
-    """
-    Point-wise lrp robustness, defined as:
-    image lrp robustness = -l2_norm(original lrp heatmap, adversarial lrp heatmap).
-    """
+def lrp_distances(original_heatmaps, adversarial_heatmaps, pxl_idxs=None):
 
-    if pxl_idxs is None:
-        pxl_idxs = select_informative_pixels(original_heatmaps+adversarial_heatmaps, topk=topk)[1]
+    original_heatmaps = original_heatmaps.reshape(*original_heatmaps.shape[:1], -1)
+    adversarial_heatmaps = adversarial_heatmaps.reshape(*adversarial_heatmaps.shape[:1], -1)
 
-    original_heatmaps = original_heatmaps.reshape(*original_heatmaps.shape[:1], -1)[:, pxl_idxs]
-    adversarial_heatmaps = adversarial_heatmaps.reshape(*adversarial_heatmaps.shape[:1], -1)[:, pxl_idxs]
+    if pxl_idxs is not None:
+        original_heatmaps = original_heatmaps[:, pxl_idxs]
+        adversarial_heatmaps = adversarial_heatmaps[:, pxl_idxs]
 
     distances = torch.norm(original_heatmaps-adversarial_heatmaps, dim=1)
-    robustness = -distances
-    return robustness, pxl_idxs
+    return distances
 
-def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk):
+def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="intersection"):
     """
     Point-wise robustness measure. Computes the fraction of common topk relevant pixels between each original
     image and adversarial image.
     """
 
-    robustness = []
-    for im_idx in range(len(original_heatmaps)):
-        orig_pxl_idxs = select_informative_pixels(original_heatmaps[im_idx], topk=topk)[1]
-        adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps[im_idx], topk=topk)[1]
+    if method=="intersection":
 
-        common_idxs = np.intersect1d(orig_pxl_idxs.detach().cpu().numpy(), adv_pxl_idxs.detach().cpu().numpy())
-        robustness.append(len(common_idxs)/topk)
+        robustness = []
+        for im_idx in range(len(original_heatmaps)):
+            orig_pxl_idxs = select_informative_pixels(original_heatmaps[im_idx], topk=topk)[1]
+            adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps[im_idx], topk=topk)[1]
 
-    return np.array(robustness)
+            common_idxs = np.intersect1d(orig_pxl_idxs.detach().cpu().numpy(), 
+                                         adv_pxl_idxs.detach().cpu().numpy())
+            robustness.append(len(common_idxs)/topk)
+
+        robustness = np.array(robustness)
+
+    elif method=="union":
+
+        distances = []
+        for im_idx in range(len(original_heatmaps)):
+            orig_pxl_idxs = select_informative_pixels(original_heatmaps[im_idx], topk=topk)[1]
+            adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps[im_idx], topk=topk)[1]
+            pxl_idxs = torch.unique(torch.cat([orig_pxl_idxs,adv_pxl_idxs]))
+
+            dist = lrp_distances(original_heatmaps, adversarial_heatmaps, pxl_idxs)
+            distances.append(dist.detach().cpu().numpy())
+
+        robustness = -np.array(distances)
+
+    elif method=="average":
+
+        stacked_heatmaps = torch.stack([original_heatmaps, adversarial_heatmaps])
+        avg_heatmaps = stacked_heatmaps.mean(0)
+
+        robustness = []
+        for im_idx in range(len(original_heatmaps)):
+
+            pxl_idxs = select_informative_pixels(avg_heatmaps[im_idx], topk=topk)[1]
+            robustness.append(len(pxl_idxs)/topk)
+
+        robustness = np.array(robustness)
+
+    return robustness

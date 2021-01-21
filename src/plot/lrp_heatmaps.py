@@ -53,7 +53,14 @@ def plot_explanations(images, explanations, rule, savedir, filename, layer_idx=-
 def plot_attacks_explanations(images, explanations, attacks, attacks_explanations, rule, savedir, 
                                 filename, layer_idx=-1):
 
-    savedir = os.path.join(savedir, lrp_savedir(layer_idx))
+    # savedir = os.path.join(savedir, lrp_savedir(layer_idx))
+
+    set_seed(0)
+    idxs = np.random.choice(len(images), 6)
+    images = images[idxs].detach().cpu().numpy()
+    explanations = explanations[idxs].detach().cpu().numpy()
+    attacks = attacks[idxs].detach().cpu().numpy()
+    attacks_explanations = attacks_explanations[idxs].detach().cpu().numpy()
 
     if images.shape != explanations.shape:
         print(images.shape, "!=", explanations.shape)
@@ -69,7 +76,7 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
 
     rows = 4
     cols = min(len(explanations), 6)
-    fig, axes = plt.subplots(rows, cols, figsize=(10, 4))
+    fig, axes = plt.subplots(rows, cols, figsize=(10, 5), dpi=150)
     fig.tight_layout()
 
     for idx in range(cols):
@@ -90,13 +97,18 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
         axes[2, idx].imshow(attack)
         atk_expl = axes[3, idx].imshow(attack_expl, cmap=cmap, norm=norm_atk_expl)
 
+        axes[0,0].set_ylabel("images")
+        axes[1,0].set_ylabel("lrp")
+        axes[2,0].set_ylabel("images attacks")
+        axes[3,0].set_ylabel("lrp attacks")
+
     fig.subplots_adjust(right=0.83)
-    cbar_ax = fig.add_axes([0.88, 0.54, 0.03, 0.2])
+    cbar_ax = fig.add_axes([0.88, 0.54, 0.02, 0.18])
     cbar = fig.colorbar(expl, ax=axes[0, :].ravel().tolist(), cax=cbar_ax)
-    cbar.set_label('Relevance', labelpad=10)
-    cbar_ax = fig.add_axes([0.88, 0.14, 0.03, 0.2])
+    cbar.set_label('Relevance', labelpad=-70)
+    cbar_ax = fig.add_axes([0.88, 0.14, 0.02, 0.18])
     cbar = fig.colorbar(atk_expl, ax=axes[2, :].ravel().tolist(), cax=cbar_ax)
-    cbar.set_label('Relevance', labelpad=10)
+    cbar.set_label('Relevance', labelpad=-60)
 
     os.makedirs(savedir, exist_ok=True)
     plt.savefig(os.path.join(savedir,filename+".png"))

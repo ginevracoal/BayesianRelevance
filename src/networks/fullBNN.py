@@ -191,7 +191,7 @@ class BNN(PyroModule):
                     avg_state_dict.update({str(key):avg_weights})
 
                 self.basenet.load_state_dict(avg_state_dict)
-                preds = [self.basenet.model(inputs, *args, **kwargs)]
+                preds = [self.basenet.forward(inputs, layer_idx=-1, *args, **kwargs)]
 
             else:
 
@@ -249,8 +249,8 @@ class BNN(PyroModule):
 
         for x_batch, y_batch in train_loader:
             x_batch = x_batch.to(device)
-            labels = y_batch.to(device).argmax(-1)
-            mcmc.run(x_batch, labels)
+            y_batch = y_batch.to(device).argmax(-1)
+            mcmc.run(x_batch, y_batch)
 
             posterior_samples = mcmc.get_samples(batch_samples)
 

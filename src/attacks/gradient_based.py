@@ -89,8 +89,8 @@ def pgd_attack(net, image, label, hyperparams=None, n_samples=None, sample_idxs=
     perturbed_image = image.detach()
     return perturbed_image
 
-def attack(net, x_test, y_test, device, method, filename, savedir,
-           hyperparams=None, n_samples=None, sample_idxs=None, avg_posterior=False, save=True):
+def attack(net, x_test, y_test, device, method,
+           hyperparams=None, n_samples=None, sample_idxs=None, avg_posterior=False):
 
     print(f"\n\nProducing {method} attacks", end="\t")
     if n_samples:
@@ -117,23 +117,23 @@ def attack(net, x_test, y_test, device, method, filename, savedir,
         adversarial_attack.append(perturbed_image)
 
     adversarial_attack = torch.cat(adversarial_attack)
+    return adversarial_attack
 
+def save_plot_attack(inputs, attacks, method, filename, savedir, n_samples=None):
+    
     name = filename+"_"+str(method)
     name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
 
-    if save:
-        savedir = os.path.join(savedir, ATK_DIR)
-        save_to_pickle(data=adversarial_attack, path=savedir, filename=name)
+    savedir = os.path.join(savedir, ATK_DIR)
+    save_to_pickle(data=attacks, path=savedir, filename=name)
 
     set_seed(0)
-    idxs = np.random.choice(len(x_test), 10, replace=False)
-    original_images_plot = torch.stack([x_test[i].squeeze() for i in idxs])
-    perturbed_images_plot = torch.stack([adversarial_attack[i].squeeze() for i in idxs])
+    idxs = np.random.choice(len(inputs), 10, replace=False)
+    original_images_plot = torch.stack([inputs[i].squeeze() for i in idxs])
+    perturbed_images_plot = torch.stack([attacks[i].squeeze() for i in idxs])
     plot_grid_attacks(original_images=original_images_plot.detach().cpu(), 
                       perturbed_images=perturbed_images_plot.detach().cpu(), 
                       filename=name, savedir=savedir)
-
-    return adversarial_attack
 
 def load_attack(method, filename, savedir, n_samples=None):
     savedir = os.path.join(savedir, ATK_DIR)
