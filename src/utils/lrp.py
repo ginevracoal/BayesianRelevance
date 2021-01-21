@@ -19,7 +19,8 @@ def select_informative_pixels(lrp_heatmaps, topk):
     Flattens image shape dimensions and selects the most relevant topk pixels. 
     Returns lrp heatmaps on the selected pixels and the chosen pixel indexes. 
     """
-    print(f"\nTop {topk} most informative pixels:", end="\t")
+    if DEBUG:
+        print(f"\nTop {topk} most informative pixels:", end="\t")
 
     if len(lrp_heatmaps.shape)==3:
         if DEBUG:
@@ -53,8 +54,9 @@ def select_informative_pixels(lrp_heatmaps, topk):
     chosen_pxl_idxs = torch.argsort(flat_lrp_heatmap)[-topk:]
     chosen_pxls_lrp = flat_lrp_heatmaps[..., chosen_pxl_idxs] 
 
-    # print("out shape =", chosen_pxls_lrp.shape)
-    print("chosen pixels idxs =", chosen_pxl_idxs)
+    if DEBUG:
+        print("out shape =", chosen_pxls_lrp.shape)
+        print("chosen pixels idxs =", chosen_pxl_idxs)
 
     return chosen_pxls_lrp, chosen_pxl_idxs
 
@@ -68,6 +70,7 @@ def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1):
         explanations = []
 
         for x in tqdm(x_test):
+            x = x.detach()
             x.requires_grad=True
             # Forward pass
             y_hat = network.forward(x.unsqueeze(0), explain=True, rule=rule, layer_idx=layer_idx)
@@ -79,10 +82,8 @@ def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1):
 
             # Backward pass (compute explanation)
             y_hat.backward()
-            # explanations.append(x.grad.detach().cpu().numpy())
             explanations.append(x.grad)
 
-        # return np.array(explanations)
         return torch.stack(explanations)
 
     else:
@@ -106,12 +107,11 @@ def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1):
 
                 # Backward pass (compute explanation)
                 y_hat.backward()
-                explanations.append(x_copy.grad)#.detach().cpu().numpy())
+                explanations.append(x_copy.grad)
 
-            # avg_explanations.append(np.array(explanations).mean(0).squeeze(0))
+            explanations = torch.stack(explanations)
             avg_explanations.append(explanations.mean(0).squeeze(0))
 
-        # return np.array(avg_explanations)
         return torch.stack(avg_explanations)
 
 def compute_posterior_explanations(x_test, network, rule, n_samples, layer_idx=-1):
@@ -135,11 +135,10 @@ def compute_posterior_explanations(x_test, network, rule, n_samples, layer_idx=-
 
             # Backward pass (compute explanation)
             y_hat.backward()
-            explanations.append(x_copy.grad.squeeze(1))#.detach().cpu().numpy())
+            explanations.append(x_copy.grad.squeeze(1))
 
-        posterior_explanations.append(torch.stack(explanations))#np.array(explanations))
+        posterior_explanations.append(torch.stack(explanations))
 
-    # return np.array(posterior_explanations)  
     return torch.stack(posterior_explanations)        
 
 def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
@@ -248,16 +247,13 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
 
     elif method=="union":
 
-        distances = []
         for im_idx in range(len(original_heatmaps)):
             orig_pxl_idxs = select_informative_pixels(original_heatmaps[im_idx], topk=topk)[1]
             adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps[im_idx], topk=topk)[1]
             pxl_idxs = torch.unique(torch.cat([orig_pxl_idxs,adv_pxl_idxs]))
 
-            dist = lrp_distances(original_heatmaps, adversarial_heatmaps, pxl_idxs)
-            distances.append(dist.detach().cpu().numpy())
-
-        robustness = -np.array(distances)
+        distances = lrp_distances(original_heatmaps, adversarial_heatmaps, pxl_idxs)
+        robustness = -np.array(distances.detach().cpu().numpy())
 
     elif method=="average":
 

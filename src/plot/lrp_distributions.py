@@ -214,15 +214,13 @@ def lrp_robustness_distributions(lrp_robustness, bayesian_lrp_robustness, savedi
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
-    fig, ax = plt.subplots(2, 1, figsize=(9, 7), dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(1, 1, figsize=(9, 5), dpi=150, facecolor='w', edgecolor='k') 
 
-    sns.distplot(lrp_robustness, ax=ax[0], label="deterministic", kde=True)
-    sns.distplot(bayesian_lrp_robustness, ax=ax[1], label="bayesian", kde=True)#, hist=False)
+    sns.distplot(lrp_robustness, ax=ax, label="deterministic", kde=True)
+    sns.distplot(bayesian_lrp_robustness, ax=ax, label="bayesian", kde=True)#, hist=False)
     
-    ax[0].legend()
-    ax[1].set_xlabel("LRP robustness")
-    # ax[0].set_xlim(lrp_robustness.min(), lrp_robustness.max())
-    # ax[1].set_xlim(lrp_robustness.min(), lrp_robustness.max())
+    ax.legend()
+    ax.set_xlabel("LRP robustness")
 
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)

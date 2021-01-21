@@ -105,7 +105,7 @@ lrp_filename = args.rule+"_lrp_robustness"
 if args.load:
     det_softmax_robustness = load_from_pickle(path=savedir, filename="det_"+atk_filename)
     det_lrp_robustness = load_from_pickle(path=savedir, filename="det_"+lrp_filename)
-    pxl_idxs = load_from_pickle(path=savedir, filename=lrp_filename+"_pxl_idxs")
+    # pxl_idxs = load_from_pickle(path=savedir, filename=lrp_filename+"_pxl_idxs")
 
 else:
     x_attack = attack(net=detnet, x_test=images, y_test=y_test,
@@ -114,12 +114,14 @@ else:
                                                y_test=y_test, device=args.device)[2]
 
     lrp = compute_explanations(images, detnet, rule=args.rule)
+    attack_lrp = compute_explanations(x_attack, detnet, rule=args.rule)
     lrp_attack = attack(net=detnet, x_test=lrp, y_test=y_test, device=args.device, method=args.attack_method)
 
     plot_attacks_explanations(images=images, explanations=lrp, attacks=x_attack, 
-                              attacks_explanations=lrp_attack, rule=args.rule, savedir=savedir, 
-                                filename="det_lrp_attacks", layer_idx=-1)
-    det_lrp_robustness = lrp_robustness(original_heatmaps=lrp, adversarial_heatmaps=lrp_attack, topk=topk,
+                              attacks_explanations=attack_lrp, explanations_attacks=lrp_attack,
+                              rule=args.rule, savedir=savedir, 
+                              filename="det_lrp_attacks", layer_idx=-1)
+    det_lrp_robustness = lrp_robustness(original_heatmaps=lrp, adversarial_heatmaps=attack_lrp, topk=topk,
                                         method=args.lrp_method)
 
     save_to_pickle(det_softmax_robustness, path=savedir, filename="det_"+atk_filename)
@@ -136,20 +138,21 @@ else:
     x_attack = attack(net=bayesnet, x_test=images, y_test=y_test, n_samples=n_samples,
                       device=args.device, method=args.attack_method)
 
-    avg_post_lrp = compute_posterior_explanations(images, bayesnet, rule=args.rule, n_samples=n_samples).mean(1)
+    avg_post_lrp = compute_explanations(images, bayesnet, rule=args.rule, n_samples=n_samples)
+    avg_attack_lrp = compute_explanations(x_attack, detnet, rule=args.rule, n_samples=n_samples)
     post_lrp_attack = attack(net=bayesnet, x_test=avg_post_lrp, y_test=y_test, 
                       device=args.device, method=args.attack_method, n_samples=n_samples)
 
     plot_attacks_explanations(images=images, explanations=lrp, attacks=x_attack, 
-                              attacks_explanations=lrp_attack, rule=args.rule, savedir=savedir, 
-                                filename="bay_lrp_attacks", layer_idx=-1)
+                              attacks_explanations=avg_attack_lrp, explanations_attacks=post_lrp_attack,
+                              rule=args.rule, savedir=savedir, 
+                              filename="bay_lrp_attacks", layer_idx=-1)
 
     bay_softmax_robustness = attack_evaluation(net=bayesnet, x_test=images, x_attack=x_attack,
-                                    y_test=y_test, device=args.device, n_samples=n_samples)[2] 
+                                               y_test=y_test, device=args.device, n_samples=n_samples)[2] 
 
-    bay_lrp_robustness = lrp_robustness(original_heatmaps=avg_post_lrp, #[:,sample_idx], #pxl_idxs=pxl_idxs,
-                                        adversarial_heatmaps=post_lrp_attack, topk=topk,
-                                        method=args.lrp_method)
+    bay_lrp_robustness = lrp_robustness(original_heatmaps=avg_post_lrp, adversarial_heatmaps=avg_attack_lrp, 
+                                        topk=topk, method=args.lrp_method)
     save_to_pickle(bay_softmax_robustness, path=savedir, filename="bay_"+atk_filename)
     save_to_pickle(bay_lrp_robustness, path=savedir, filename="bay_"+lrp_filename)
 
