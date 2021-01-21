@@ -240,8 +240,8 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
     sns.scatterplot(x=adversarial_robustness, y=lrp_robustness, ax=ax[0])
     ax[0].set_xlabel('Deterministic adversarial robustness')
     ax[0].set_ylabel('Deterministic lrp robustness')
-    ax[0].set_xlim(0.5, None)
-    ax[0].set_ylim(0.5, None)
+    # ax[0].set_xlim(0.5, None)
+    # ax[0].set_ylim(0.5, None)
 
     for idx, n_samples in enumerate(n_samples_list):
         sns.scatterplot(x=bayesian_adversarial_robustness[idx], y=bayesian_lrp_robustness[idx], 
@@ -249,8 +249,8 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
     
     ax[1].set_xlabel('Bayesian adversarial robustness')
     ax[1].set_ylabel('Bayesian lrp robustness')
-    ax[1].set_xlim(0.5, None)
-    ax[1].set_ylim(0.5, None)
+    # ax[1].set_xlim(0.5, None)
+    # ax[1].set_ylim(0.5, None)
 
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)    

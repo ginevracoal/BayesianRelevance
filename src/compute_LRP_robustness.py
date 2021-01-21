@@ -135,7 +135,7 @@ if args.load:
         bay_softmax_robustness[idx] = load_from_pickle(path=savedir, 
                                       filename="bay_softmax_robustness_samp="+str(n_samples))    
         bay_lrp_robustness[idx] = load_from_pickle(path=savedir, 
-                                      filename="bay_softmax_robustness_samp="+str(n_samples))
+                                      filename="bay_lrp_robustness_samp="+str(n_samples))
 
 else:
 
