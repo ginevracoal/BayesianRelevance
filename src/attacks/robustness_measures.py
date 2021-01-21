@@ -5,8 +5,8 @@ DEBUG=False
 
 def softmax_difference(original_predictions, adversarial_predictions):
     """
-    Compute the expected l-inf norm of the difference between predictions and adversarial 
-    predictions. This is also a point-wise robustness measure.
+    Compute the difference between predictions and adversarial 
+    predictions.
     """
 
     original_predictions = nnf.softmax(original_predictions, dim=-1)
@@ -18,21 +18,23 @@ def softmax_difference(original_predictions, adversarial_predictions):
     if DEBUG:
         print("\n\n", original_predictions[0], "\t", adversarial_predictions[0], end="\n\n")
 
-    softmax_diff = original_predictions-adversarial_predictions
-    softmax_diff_norms = softmax_diff.abs().max(dim=-1)[0]
+    return (original_predictions-adversarial_predictions).abs()
 
-    if softmax_diff_norms.min() < 0. or softmax_diff_norms.max() > 1.:
-        raise ValueError("Softmax difference should be in [0,1]")
-
-    return softmax_diff_norms
-
-def softmax_robustness(original_outputs, adversarial_outputs):
+def softmax_robustness(original_outputs, adversarial_outputs, norm="linf"):
     """ 
-    This robustness measure is global and it is strictly dependent on the epsilon chosen for the 
+    Robustness = 1 - norm(softmax difference between predictions).
+    This robustness measure is strictly dependent on the epsilon chosen for the 
     perturbations.
     """
 
     softmax_differences = softmax_difference(original_outputs, adversarial_outputs)
+
+    if norm=="l2":
+        softmax_differences = torch.norm(softmax_differences, dim=1)
+
+    elif norm=="linf":
+        softmax_differences = softmax_differences.max(dim=-1)[0]
+
     robustness = (torch.ones_like(softmax_differences)-softmax_differences)
     print(f"avg softmax robustness = {robustness.mean().item():.2f}")
     return robustness

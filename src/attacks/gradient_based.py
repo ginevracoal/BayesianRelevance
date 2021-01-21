@@ -146,8 +146,6 @@ def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None, sam
     print(f"\nEvaluating against the attacks", end="")
     if n_samples:
         print(f" with {n_samples} defence samples")
-
-    set_seed(0)
     
     x_test, x_attack, y_test = x_test.to(device), x_attack.to(device), y_test.to(device)
 

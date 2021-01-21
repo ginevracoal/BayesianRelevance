@@ -108,10 +108,10 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
         axes[4, idx].imshow(expl_attack, cmap=images_cmap)
 
         axes[0,0].set_ylabel("images")
-        axes[1,0].set_ylabel("lrp")
-        axes[2,0].set_ylabel("images attacks")
-        axes[3,0].set_ylabel("lrp of the attacks")
-        axes[4,0].set_ylabel("attacks to lrp")
+        axes[1,0].set_ylabel("lrp(images)")
+        axes[2,0].set_ylabel("im. attacks")
+        axes[3,0].set_ylabel("lrp(attacks)")
+        axes[4,0].set_ylabel("lrp attacks")
 
     fig.subplots_adjust(right=0.85)
 

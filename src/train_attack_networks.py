@@ -122,7 +122,7 @@ else:
         for n_samples in bayesian_attack_samples:
             x_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device,
                               method=args.attack_method, n_samples=n_samples)
-            save_plot_attack(x_test, x_attack, method=args.attack_method, filename=detnet.name, 
+            save_plot_attack(x_test, x_attack, method=args.attack_method, filename=net.name, 
                              savedir=savedir, n_samples=n_samples)
 
             attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 

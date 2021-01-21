@@ -60,7 +60,7 @@ class BNN(PyroModule):
         self.n_samples = 10 if DEBUG else n_samples
         self.warmup = 5 if DEBUG else warmup
         self.step_size = 0.001
-        self.num_steps = 10
+        self.num_steps = 30
         self.basenet = baseNN(dataset_name=dataset_name, input_shape=input_shape, 
                               output_size=output_size, hidden_size=hidden_size, 
                               activation=activation, architecture=architecture, 
