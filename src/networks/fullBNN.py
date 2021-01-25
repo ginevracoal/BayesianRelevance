@@ -190,8 +190,9 @@ class BNN(PyroModule):
                     avg_weights = guide_trace.nodes[str(key)+"_loc"]['value']
                     avg_state_dict.update({str(key):avg_weights})
 
-                self.basenet.load_state_dict(avg_state_dict)
-                preds = [self.basenet.forward(inputs, layer_idx=layer_idx, *args, **kwargs)]
+                basenet_copy = copy.deepcopy(self.basenet)
+                basenet_copy.load_state_dict(avg_state_dict)
+                preds = [basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)]
 
             else:
 

@@ -245,7 +245,7 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
     ax[0].set_ylabel('LRP robustness')
     # ax[0].set_xlim(0.5, None)
     # ax[0].set_ylim(0.5, None)
-
+    
     sns.scatterplot(x=mode_adversarial_robustness, y=mode_lrp_robustness, label='posterior mode', ax=ax[0])
 
     for idx, n_samples in enumerate(n_samples_list):

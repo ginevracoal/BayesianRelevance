@@ -18,7 +18,8 @@ def softmax_difference(original_predictions, adversarial_predictions):
     if DEBUG:
         print("\n\n", original_predictions[0], "\t", adversarial_predictions[0], end="\n\n")
 
-    return (original_predictions-adversarial_predictions).abs()
+    abs_diff = (original_predictions-adversarial_predictions).abs()
+    return abs_diff
 
 def softmax_robustness(original_outputs, adversarial_outputs, norm="linf"):
     """ 
