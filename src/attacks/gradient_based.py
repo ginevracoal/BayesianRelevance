@@ -21,12 +21,12 @@ from plot.attacks import plot_grid_attacks
 
 DEBUG=False
 
-def loss_gradient_sign(net, n_samples, image, label, sample_idxs=None):
+def loss_gradient_sign(net, n_samples, image, label, avg_posterior, sample_idxs=None):
 
-    if n_samples is None:
+    if n_samples is None or avg_posterior is True:
 
         image.requires_grad = True
-        output = net.forward(inputs=image, expected_out=False)
+        output = net.forward(inputs=image, avg_posterior=avg_posterior)
         
         loss = torch.nn.CrossEntropyLoss()(output, label)
         net.zero_grad()
@@ -95,6 +95,8 @@ def attack(net, x_test, y_test, device, method,
     print(f"\n\nProducing {method} attacks", end="\t")
     if n_samples:
         print(f"with {n_samples} attack samples")
+    if avg_posterior:
+        print(f"on the posterior mode")
 
     net.to(device)
     x_test, y_test = x_test.to(device), y_test.to(device)

@@ -60,7 +60,7 @@ class BNN(PyroModule):
         self.n_samples = 10 if DEBUG else n_samples
         self.warmup = 5 if DEBUG else warmup
         self.step_size = 0.001
-        self.num_steps = 30
+        self.num_steps = 10
         self.basenet = baseNN(dataset_name=dataset_name, input_shape=input_shape, 
                               output_size=output_size, hidden_size=hidden_size, 
                               activation=activation, architecture=architecture, 
@@ -191,7 +191,7 @@ class BNN(PyroModule):
                     avg_state_dict.update({str(key):avg_weights})
 
                 self.basenet.load_state_dict(avg_state_dict)
-                preds = [self.basenet.forward(inputs, layer_idx=-1, *args, **kwargs)]
+                preds = [self.basenet.forward(inputs, layer_idx=layer_idx, *args, **kwargs)]
 
             else:
 
@@ -220,14 +220,19 @@ class BNN(PyroModule):
 
         elif self.inference == "hmc":
 
-            if n_samples>len(self.posterior_samples):
-                raise ValueError("Too many samples. Max available samples =", len(self.posterior_samples))
+            if avg_posterior:
+                raise NotImplementedError
 
-            preds = []
-            posterior_predictive = self.posterior_samples
-            for seed in sample_idxs:
-                net = posterior_predictive[seed]
-                preds.append(net.forward(inputs, layer_idx=layer_idx, *args, **kwargs))
+            else:
+
+                if n_samples>len(self.posterior_samples):
+                    raise ValueError("Too many samples. Max available samples =", len(self.posterior_samples))
+
+                preds = []
+                posterior_predictive = self.posterior_samples
+                for seed in sample_idxs:
+                    net = posterior_predictive[seed]
+                    preds.append(net.forward(inputs, layer_idx=layer_idx, *args, **kwargs))
         
         logits = torch.stack(preds)
         return logits.mean(0) if expected_out else logits
@@ -238,7 +243,7 @@ class BNN(PyroModule):
 
         num_batches = len(train_loader)
         batch_samples = int(n_samples/num_batches)+1
-        print("\nn_batches=",num_batches,"\tbatch_samples =", batch_samples)
+        print("\nn_batches =",num_batches,"\tbatch_samples =", batch_samples)
 
         kernel = HMC(self.model, step_size=step_size, num_steps=num_steps)
         mcmc = MCMC(kernel=kernel, num_samples=batch_samples, warmup_steps=warmup, num_chains=1)
@@ -253,6 +258,8 @@ class BNN(PyroModule):
             mcmc.run(x_batch, y_batch)
 
             posterior_samples = mcmc.get_samples(batch_samples)
+
+            print('module$$$model.1.weight: ', posterior_samples['module$$$model.1.weight'][0,0,:5])
 
             for sample_idx in range(batch_samples):
                 net_copy = copy.deepcopy(self.basenet)

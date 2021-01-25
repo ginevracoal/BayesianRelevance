@@ -206,7 +206,8 @@ def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, saved
         fig.savefig(os.path.join(savedir, filename+"_im_idx="+str(im_idx)+".png"))
         plt.close(fig)
 
-def lrp_robustness_distributions(lrp_robustness, bayesian_lrp_robustness, n_samples_list, savedir, filename):
+def lrp_robustness_distributions(lrp_robustness, bayesian_lrp_robustness, mode_lrp_robustness,
+                                 n_samples_list, savedir, filename):
 
     os.makedirs(savedir, exist_ok=True) 
     print(f"\ndeterministic lrp rob mean={lrp_robustness.mean():.2f} var={lrp_robustness.var():.2f}")   
@@ -217,10 +218,12 @@ def lrp_robustness_distributions(lrp_robustness, bayesian_lrp_robustness, n_samp
     fig, ax = plt.subplots(2, 1, figsize=(9, 5), dpi=150, facecolor='w', edgecolor='k') 
 
     sns.distplot(lrp_robustness, ax=ax[0], label="deterministic", kde=True)
+    sns.distplot(mode_lrp_robustness, ax=ax[1], label="posterior mode", kde=True)
 
     for idx, n_samples in enumerate(n_samples_list):
         sns.distplot(bayesian_lrp_robustness[idx], ax=ax[1], label="bayesian samp="+str(n_samples), kde=True)
     
+
     ax[0].legend()
     ax[1].legend()
     ax[1].set_xlabel("LRP robustness")
@@ -229,7 +232,8 @@ def lrp_robustness_distributions(lrp_robustness, bayesian_lrp_robustness, n_samp
     plt.close(fig)
 
 def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robustness,
-                               lrp_robustness, bayesian_lrp_robustness, 
+                               mode_adversarial_robustness,
+                               lrp_robustness, bayesian_lrp_robustness, mode_lrp_robustness,
                                n_samples_list, savedir, filename):
 
     os.makedirs(savedir, exist_ok=True)
@@ -242,6 +246,8 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
     ax[0].set_ylabel('Deterministic lrp robustness')
     # ax[0].set_xlim(0.5, None)
     # ax[0].set_ylim(0.5, None)
+
+    sns.scatterplot(x=mode_adversarial_robustness, y=mode_lrp_robustness, label='posterior mode', ax=ax[1])
 
     for idx, n_samples in enumerate(n_samples_list):
         sns.scatterplot(x=bayesian_adversarial_robustness[idx], y=bayesian_lrp_robustness[idx], 

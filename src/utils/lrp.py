@@ -61,11 +61,11 @@ def select_informative_pixels(lrp_heatmaps, topk):
     return chosen_pxls_lrp, chosen_pxl_idxs
 
 
-def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1):
+def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1, avg_posterior=False):
 
     print("\nLRP layer idx =", layer_idx)
 
-    if n_samples is None:
+    if n_samples is None or avg_posterior is True:
 
         explanations = []
 
@@ -73,7 +73,8 @@ def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1):
             x = x.detach()
             x.requires_grad=True
             # Forward pass
-            y_hat = network.forward(x.unsqueeze(0), explain=True, rule=rule, layer_idx=layer_idx)
+            y_hat = network.forward(x.unsqueeze(0), explain=True, rule=rule, layer_idx=layer_idx,
+                                    avg_posterior=avg_posterior)
             y_hat = nnf.softmax(y_hat, dim=-1)
 
             # Choose argmax
@@ -97,8 +98,8 @@ def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1):
                 # Forward pass
                 x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
                 x_copy.requires_grad = True
-                y_hat = network.forward(inputs=x_copy, n_samples=1, sample_idxs=[j], 
-                                        explain=True, rule=rule, layer_idx=layer_idx)
+                y_hat = network.forward(inputs=x_copy, n_samples=1, sample_idxs=[j], explain=True, 
+                                        rule=rule, layer_idx=layer_idx)
                 y_hat = nnf.softmax(y_hat, dim=-1)
 
                 # Choose argmax

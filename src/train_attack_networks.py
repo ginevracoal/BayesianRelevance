@@ -15,7 +15,7 @@ from networks.redBNN import *
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings.")
-parser.add_argument("--inference", default="svi", type=str, help="svi, hmc")
+# parser.add_argument("--inference", default="svi", type=str, help="svi, hmc")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--atk_inputs", default=1000, type=int, help="Number of test points to be attacked.")
@@ -113,7 +113,7 @@ else:
                               device=args.device, n_samples=n_samples)
 
     else:
-        batch_size = 1000 if m["inference"] == "hmc" else 128 
+        batch_size = 2000 if m["inference"] == "hmc" else 128 
         num_workers = 0 if args.device=="cuda" else 4
         train_loader = DataLoader(dataset=list(zip(x_train, y_train)), batch_size=batch_size, 
                                   num_workers=num_workers, shuffle=True)
