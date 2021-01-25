@@ -5,6 +5,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 import torch.nn.functional as nnf
+from torchvision import transforms
 
 from utils.savedir import *
 from utils.seeding import set_seed
@@ -91,7 +92,9 @@ def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1, av
 
             # Backward pass (compute explanation)
             y_hat.backward()
-            explanations.append(x.grad)
+            lrp = x.grad
+            lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
+            explanations.append(lrp)
 
         return torch.stack(explanations)
 
@@ -116,14 +119,16 @@ def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1, av
 
                 # Backward pass (compute explanation)
                 y_hat.backward()
-                explanations.append(x_copy.grad)
+                lrp = x_copy.grad
+                lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
+                explanations.append(lrp)
 
             explanations = torch.stack(explanations)
             avg_explanations.append(explanations.mean(0).squeeze(0))
 
         return torch.stack(avg_explanations)
 
-def compute_posterior_explanations(x_test, network, rule, n_samples, layer_idx=-1):
+def compute_avg_explanations(x_test, network, rule, n_samples, layer_idx=-1):
 
     posterior_explanations = []
     for x in tqdm(x_test):
@@ -144,11 +149,13 @@ def compute_posterior_explanations(x_test, network, rule, n_samples, layer_idx=-
 
             # Backward pass (compute explanation)
             y_hat.backward()
-            explanations.append(x_copy.grad.squeeze(1))
+            lrp = x_copy.grad.squeeze(1)
+            lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
+            explanations.append(lrp)
 
         posterior_explanations.append(torch.stack(explanations))
 
-    return torch.stack(posterior_explanations)        
+    return torch.stack(posterior_explanations).mean(1)        
 
 def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
 

@@ -61,7 +61,7 @@ def relevant_subset(images, pxl_idxs):
     images_rel = images_rel.reshape(images.shape)
     return images_rel
 
-def plot_attacks_explanations(images, explanations, attacks, attacks_explanations, explanations_attacks,
+def plot_attacks_explanations(images, explanations, attacks, attacks_explanations, #explanations_attacks,
                               pxl_idxs, rule, savedir, filename, layer_idx=-1):
 
     images_cmap='Greys'
@@ -72,7 +72,7 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     explanations = explanations[idxs].detach().cpu().numpy()
     attacks = attacks[idxs].detach().cpu().numpy()
     attacks_explanations = attacks_explanations[idxs].detach().cpu().numpy()
-    explanations_attacks = explanations_attacks[idxs].detach().cpu().numpy()    
+    # explanations_attacks = explanations_attacks[idxs].detach().cpu().numpy()    
 
     if images.shape != explanations.shape:
         print(images.shape, "!=", explanations.shape)
@@ -95,9 +95,9 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     vmin_atk_expl = min([min(attacks_explanations.flatten()), -0.000001])
     norm_atk_expl = colors.TwoSlopeNorm(vcenter=0., vmax=vmax_atk_expl, vmin=vmin_atk_expl)
 
-    vmax_expl_atk = max([max(explanations_attacks.flatten()), 0.000001])
-    vmin_expl_atk = min([min(explanations_attacks.flatten()), -0.000001])
-    norm_expl_atk = colors.TwoSlopeNorm(vcenter=0., vmax=vmax_atk_expl, vmin=vmin_atk_expl)
+    # vmax_expl_atk = max([max(explanations_attacks.flatten()), 0.000001])
+    # vmin_expl_atk = min([min(explanations_attacks.flatten()), -0.000001])
+    # norm_expl_atk = colors.TwoSlopeNorm(vcenter=0., vmax=vmax_atk_expl, vmin=vmin_atk_expl)
 
     rows = 4
     cols = min(len(explanations), 6)
@@ -112,7 +112,7 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
         attack = np.squeeze(attacks[idx])
         attack_rel = np.squeeze(attacks_rel[idx])
         attack_expl = np.squeeze(attacks_explanations[idx])
-        expl_attack = np.squeeze(explanations_attacks[idx])
+        # expl_attack = np.squeeze(explanations_attacks[idx])
 
         if len(image.shape) == 1:
             image = np.expand_dims(image, axis=0)
@@ -121,7 +121,7 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
             attack = np.expand_dims(attack, axis=0)
             attack_rel = np.expand_dims(attack_rel, axis=0)
             attack_expl = np.expand_dims(attack_expl, axis=0)
-            expl_attack = np.expand_dims(expl_attack, axis=0)
+            # expl_attack = np.expand_dims(expl_attack, axis=0)
 
         axes[0, idx].imshow(image, cmap=images_cmap)
         axes[0, idx].imshow(image_rel)
@@ -139,11 +139,13 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
 
     fig.subplots_adjust(right=0.85)
 
-    cbar_ax = fig.add_axes([0.9, 0.63, 0.01, 0.13])
+    # cbar_ax = fig.add_axes([0.9, 0.63, 0.01, 0.13])
+    cbar_ax = fig.add_axes([0.9, 0.53, 0.01, 0.13])
     cbar = fig.colorbar(expl, ax=axes[0, :].ravel().tolist(), cax=cbar_ax)
     cbar.set_label('Relevance', labelpad=-70)
 
-    cbar_ax = fig.add_axes([0.9, 0.25, 0.01, 0.13])
+    # cbar_ax = fig.add_axes([0.9, 0.25, 0.01, 0.13])
+    cbar_ax = fig.add_axes([0.9, 0.15, 0.01, 0.13])
     cbar = fig.colorbar(atk_expl, ax=axes[2, :].ravel().tolist(), cax=cbar_ax)
     cbar.set_label('Relevance', labelpad=-60)
 
