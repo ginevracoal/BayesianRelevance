@@ -41,7 +41,7 @@ parser.add_argument("--device", default='cpu', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 n_samples_list=[1,5,10]
-n_inputs=10 if args.debug else args.n_inputs
+n_inputs=100 if args.debug else args.n_inputs
 topk=3 if args.debug else args.topk
 n_samples=2 if args.debug else args.n_samples
 
@@ -103,6 +103,7 @@ savedir = os.path.join(model_savedir, "lrp/robustness/")
 if args.load:
     det_softmax_robustness = load_from_pickle(path=savedir, filename="det_softmax_robustness")
     det_lrp_robustness = load_from_pickle(path=savedir, filename="det_lrp_robustness")
+    # det_pxl_idxs = load_from_pickle(path=savedir, filename="det_pxl_idxs")
 
 else:
 
@@ -112,23 +113,26 @@ else:
 
     lrp = compute_explanations(images, detnet, rule=args.rule)
     attack_lrp = compute_explanations(det_attack, detnet, rule=args.rule)
-    det_lrp_robustness = lrp_robustness(original_heatmaps=lrp, adversarial_heatmaps=attack_lrp, topk=topk,
-                                        method=args.lrp_method)
+    det_lrp_robustness, pxl_idxs = lrp_robustness(original_heatmaps=lrp, adversarial_heatmaps=attack_lrp, 
+                                                  topk=topk, method=args.lrp_method)
 
     lrp_attack = attack(net=detnet, x_test=lrp, y_test=y_test, device=args.device, method=args.attack_method)
 
     plot_attacks_explanations(images=images, explanations=lrp, attacks=det_attack, 
                               attacks_explanations=attack_lrp, explanations_attacks=lrp_attack,
-                              rule=args.rule, savedir=savedir, 
+                              rule=args.rule, savedir=savedir, pxl_idxs=pxl_idxs,
                               filename="det_lrp_attacks", layer_idx=-1)
+    exit()
 
     save_to_pickle(det_softmax_robustness, path=savedir, filename="det_softmax_robustness")
     save_to_pickle(det_lrp_robustness, path=savedir, filename="det_lrp_robustness")
+    # save_to_pickle(pxl_idxs, path=savedir, filename="det_pxl_idxs")
 
 ### Bayesian explanations
 
 bay_softmax_robustness=np.zeros((len(n_samples_list), n_inputs))
 bay_lrp_robustness=np.zeros((len(n_samples_list), n_inputs))
+# bay_pxl_idxs={}
 
 if args.load:
 
@@ -137,32 +141,13 @@ if args.load:
                                       filename="bay_softmax_robustness_samp="+str(n_samples))    
         bay_lrp_robustness[idx] = load_from_pickle(path=savedir, 
                                       filename="bay_lrp_robustness_samp="+str(n_samples))
+        # bay_pxl_idxs.update({str(idx):load_from_pickle(path=savedir, 
+        #                               filename="bay_pxl_idxs_samp="+str(n_samples))})
     
     mode_softmax_robustness = load_from_pickle(path=savedir, 
                                   filename="mode_softmax_robustness_samp="+str(n_samples))
-    mode_lrp_robustness = load_from_pickle(path=savedir, 
-                                  filename="mode_lrp_robustness_samp="+str(n_samples))
-
-    # mode_attack = attack(net=bayesnet, x_test=images, y_test=y_test, n_samples=n_samples,
-    #                   device=args.device, method=args.attack_method, avg_posterior=True)
-    # mode_softmax_robustness = attack_evaluation(net=bayesnet, x_test=images, x_attack=mode_attack,
-    #                        y_test=y_test, device=args.device, n_samples=n_samples)[2].detach().cpu().numpy()
-    # mode_lrp = compute_explanations(images, bayesnet, rule=args.rule, n_samples=n_samples, avg_posterior=True)
-    # mode_attack_lrp = compute_explanations(mode_attack, bayesnet, rule=args.rule, 
-    #                                         n_samples=n_samples, avg_posterior=True)
-    # mode_lrp_robustness = lrp_robustness(original_heatmaps=mode_lrp, adversarial_heatmaps=mode_attack_lrp, 
-    #                                      topk=topk, method=args.lrp_method)
-    # mode_lrp_attack = attack(net=bayesnet, x_test=mode_lrp, y_test=y_test, avg_posterior=True,
-    #                   device=args.device, method=args.attack_method, n_samples=n_samples)
-
-    # plot_attacks_explanations(images=images, explanations=mode_lrp, attacks=mode_attack, 
-    #                           attacks_explanations=mode_attack_lrp, explanations_attacks=mode_lrp_attack,
-    #                           rule=args.rule, savedir=savedir, 
-    #                           filename="mode_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
-
-    # save_to_pickle(mode_softmax_robustness, path=savedir, filename="mode_softmax_robustness_samp="+str(n_samples))
-    # save_to_pickle(mode_lrp_robustness, path=savedir, filename="mode_lrp_robustness_samp="+str(n_samples))
-
+    mode_lrp_robustness = load_from_pickle(path=savedir, filename="mode_lrp_robustness_samp="+str(n_samples))
+    # mode_pxl_idxs = load_from_pickle(path=savedir, filename="mode_pxl_idxs_samp="+str(n_samples))
 
 else:
 
@@ -175,21 +160,25 @@ else:
         
         avg_lrp = compute_explanations(images, bayesnet, rule=args.rule, n_samples=n_samples)
         avg_attack_lrp = compute_explanations(bay_attack, bayesnet, rule=args.rule, n_samples=n_samples)
-        bay_lrp_robustness[idx] = lrp_robustness(original_heatmaps=avg_lrp, adversarial_heatmaps=avg_attack_lrp, 
-                                            topk=topk, method=args.lrp_method)
+        bay_lrp_robustness[idx], bay_pxl_idx = lrp_robustness(original_heatmaps=avg_lrp, 
+                                                      adversarial_heatmaps=avg_attack_lrp, 
+                                                      topk=topk, method=args.lrp_method)
+        # bay_pxl_idxs.update({str(idx):bay_pxl_idx})
 
         avg_lrp_attack = attack(net=bayesnet, x_test=avg_lrp, y_test=y_test, 
                           device=args.device, method=args.attack_method, n_samples=n_samples)
 
         plot_attacks_explanations(images=images, explanations=avg_lrp, attacks=bay_attack, 
                                   attacks_explanations=avg_attack_lrp, explanations_attacks=avg_lrp_attack,
-                                  rule=args.rule, savedir=savedir, 
+                                  rule=args.rule, savedir=savedir, pxl_idxs=bay_pxl_idx, #bay_pxl_idxs[str(idx)],
                                   filename="bay_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
 
         save_to_pickle(bay_softmax_robustness[idx], path=savedir, 
                         filename="bay_softmax_robustness_samp="+str(n_samples))
         save_to_pickle(bay_lrp_robustness[idx], path=savedir, 
                         filename="bay_lrp_robustness_samp="+str(n_samples))
+        # save_to_pickle(bay_pxl_idxs, path=savedir, 
+        #                 filename="bay_pxl_idxs_samp="+str(n_samples))
 
     mode_attack = attack(net=bayesnet, x_test=images, y_test=y_test, n_samples=n_samples,
                       device=args.device, method=args.attack_method, avg_posterior=True)
@@ -198,18 +187,20 @@ else:
     mode_lrp = compute_explanations(images, bayesnet, rule=args.rule, n_samples=n_samples, avg_posterior=True)
     mode_attack_lrp = compute_explanations(mode_attack, bayesnet, rule=args.rule, 
                                             n_samples=n_samples, avg_posterior=True)
-    mode_lrp_robustness = lrp_robustness(original_heatmaps=mode_lrp, adversarial_heatmaps=mode_attack_lrp, 
-                                         topk=topk, method=args.lrp_method)
+    mode_lrp_robustness, mode_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
+                                                    adversarial_heatmaps=mode_attack_lrp, 
+                                                    topk=topk, method=args.lrp_method)
     mode_lrp_attack = attack(net=bayesnet, x_test=mode_lrp, y_test=y_test, avg_posterior=True,
                       device=args.device, method=args.attack_method, n_samples=n_samples)
 
     plot_attacks_explanations(images=images, explanations=mode_lrp, attacks=mode_attack, 
                               attacks_explanations=mode_attack_lrp, explanations_attacks=mode_lrp_attack,
-                              rule=args.rule, savedir=savedir, 
+                              rule=args.rule, savedir=savedir, pxl_idxs=mode_pxl_idxs,
                               filename="mode_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
 
     save_to_pickle(mode_softmax_robustness, path=savedir, filename="mode_softmax_robustness_samp="+str(n_samples))
     save_to_pickle(mode_lrp_robustness, path=savedir, filename="mode_lrp_robustness_samp="+str(n_samples))
+    # save_to_pickle(mode_pxl_idxs, path=savedir, filename="mode_pxl_idxs_samp="+str(n_samples))
 
     # bay_softmax_robustness = []
     # bay_lrp_robustness = []

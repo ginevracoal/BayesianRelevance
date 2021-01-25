@@ -50,8 +50,19 @@ def plot_explanations(images, explanations, rule, savedir, filename, layer_idx=-
     os.makedirs(savedir, exist_ok=True)
     plt.savefig(os.path.join(savedir,filename+".png"))
 
+def relevant_subset(images, pxl_idxs):
+
+    flat_images = images.reshape(*images.shape[:2], -1)
+    images_rel = np.zeros(flat_images.shape)
+
+    for pxl_idx in pxl_idxs:
+        images_rel[:,:,pxl_idx] = flat_images[:,:,pxl_idx]
+    
+    images_rel = images_rel.reshape(images.shape)
+    return images_rel
+
 def plot_attacks_explanations(images, explanations, attacks, attacks_explanations, explanations_attacks,
-                              rule, savedir, filename, layer_idx=-1):
+                              pxl_idxs, rule, savedir, filename, layer_idx=-1):
 
     images_cmap='Greys'
 
@@ -61,11 +72,18 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     explanations = explanations[idxs].detach().cpu().numpy()
     attacks = attacks[idxs].detach().cpu().numpy()
     attacks_explanations = attacks_explanations[idxs].detach().cpu().numpy()
-    explanations_attacks = explanations_attacks[idxs].detach().cpu().numpy()
+    explanations_attacks = explanations_attacks[idxs].detach().cpu().numpy()    
 
     if images.shape != explanations.shape:
         print(images.shape, "!=", explanations.shape)
         raise ValueError
+
+    images_rel = relevant_subset(images, pxl_idxs)
+    images_rel = np.ma.masked_where(images_rel == 0., images_rel)
+    attacks_rel = relevant_subset(attacks, pxl_idxs)
+    attacks_rel = np.ma.masked_where(attacks_rel == 0., attacks_rel)
+    explanations = relevant_subset(explanations, pxl_idxs)
+    attacks_explanations = relevant_subset(attacks_explanations, pxl_idxs)
 
     cmap = plt.cm.get_cmap(relevance_cmap)
 
@@ -81,7 +99,7 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     vmin_expl_atk = min([min(explanations_attacks.flatten()), -0.000001])
     norm_expl_atk = colors.TwoSlopeNorm(vcenter=0., vmax=vmax_atk_expl, vmin=vmin_atk_expl)
 
-    rows = 5
+    rows = 4
     cols = min(len(explanations), 6)
     fig, axes = plt.subplots(rows, cols, figsize=(10, 6), dpi=150)
     fig.tight_layout()
@@ -89,29 +107,35 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     for idx in range(cols):
 
         image = np.squeeze(images[idx])
+        image_rel = np.squeeze(images_rel[idx])
         expl = np.squeeze(explanations[idx])
         attack = np.squeeze(attacks[idx])
+        attack_rel = np.squeeze(attacks_rel[idx])
         attack_expl = np.squeeze(attacks_explanations[idx])
         expl_attack = np.squeeze(explanations_attacks[idx])
 
         if len(image.shape) == 1:
             image = np.expand_dims(image, axis=0)
+            image_rel = np.expand_dims(image_rel, axis=0)
             expl = np.expand_dims(expl, axis=0)
             attack = np.expand_dims(attack, axis=0)
+            attack_rel = np.expand_dims(attack_rel, axis=0)
             attack_expl = np.expand_dims(attack_expl, axis=0)
             expl_attack = np.expand_dims(expl_attack, axis=0)
 
         axes[0, idx].imshow(image, cmap=images_cmap)
+        axes[0, idx].imshow(image_rel)
         expl = axes[1, idx].imshow(expl, cmap=cmap, norm=norm_expl)
         axes[2, idx].imshow(attack, cmap=images_cmap)
+        axes[2, idx].imshow(attack_rel)
         atk_expl = axes[3, idx].imshow(attack_expl, cmap=cmap, norm=norm_atk_expl)
-        axes[4, idx].imshow(expl_attack, cmap=images_cmap)
+        # axes[4, idx].imshow(expl_attack, cmap=images_cmap)
 
         axes[0,0].set_ylabel("images")
         axes[1,0].set_ylabel("lrp(images)")
         axes[2,0].set_ylabel("im. attacks")
         axes[3,0].set_ylabel("lrp(attacks)")
-        axes[4,0].set_ylabel("lrp attacks")
+        # axes[4,0].set_ylabel("lrp attacks")
 
     fig.subplots_adjust(right=0.85)
 

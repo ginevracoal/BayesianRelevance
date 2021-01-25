@@ -40,10 +40,10 @@ fullBNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation
                              "lr":0.001, "n_samples":None, "warmup":None},
                     "model_2":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
-                             "lr":None, "n_samples":50, "warmup":50}, 
+                             "lr":None, "n_samples":50, "warmup":100}, 
                     "model_3":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
-                             "lr":None, "n_samples":50, "warmup":50},
+                             "lr":None, "n_samples":50, "warmup":100},
                     }  
 
 
@@ -59,7 +59,7 @@ class BNN(PyroModule):
         self.lr = lr
         self.n_samples = 10 if DEBUG else n_samples
         self.warmup = 5 if DEBUG else warmup
-        self.step_size = 0.001
+        self.step_size = 0.005
         self.num_steps = 10
         self.basenet = baseNN(dataset_name=dataset_name, input_shape=input_shape, 
                               output_size=output_size, hidden_size=hidden_size, 
@@ -259,8 +259,7 @@ class BNN(PyroModule):
             mcmc.run(x_batch, y_batch)
 
             posterior_samples = mcmc.get_samples(batch_samples)
-
-            print('module$$$model.1.weight: ', posterior_samples['module$$$model.1.weight'][0,0,:5])
+            # print('module$$$model.1.weight: ', posterior_samples['module$$$model.1.weight'][0,0,:5])
 
             for sample_idx in range(batch_samples):
                 net_copy = copy.deepcopy(self.basenet)

@@ -44,15 +44,23 @@ def select_informative_pixels(lrp_heatmaps, topk):
 
     if len(flat_lrp_heatmaps.shape)==2:
         flat_lrp_heatmap = flat_lrp_heatmaps.sum(0)
+        # lrp_heatmap = lrp_heatmaps.sum(0)
 
     elif len(flat_lrp_heatmaps.shape)>2:
         flat_lrp_heatmap = flat_lrp_heatmaps.sum(0).sum(0)
+        # lrp_heatmap = lrp_heatmaps.sum(0).sum(0)
 
     else:
         flat_lrp_heatmap = flat_lrp_heatmaps
+        # lrp_heatmap = lrp_heatmaps
 
     chosen_pxl_idxs = torch.argsort(flat_lrp_heatmap)[-topk:]
     chosen_pxls_lrp = flat_lrp_heatmaps[..., chosen_pxl_idxs] 
+
+    # chosen_pxl_idxs = torch.argsort(lrp_heatmap)[-topk:]
+    # chosen_pxls_lrp = lrp_heatmaps[..., chosen_pxl_idxs] 
+    # print(chosen_pxl_idxs.shape)
+    # exit()
 
     if DEBUG:
         print("out shape =", chosen_pxls_lrp.shape)
@@ -233,6 +241,8 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
     image and adversarial image.
     """
 
+    chosen_pxl_idxs=[]
+
     if method=="intersection":
 
         robustness = []
@@ -240,9 +250,10 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
             orig_pxl_idxs = select_informative_pixels(original_heatmaps[im_idx], topk=topk)[1]
             adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps[im_idx], topk=topk)[1]
 
-            common_idxs = np.intersect1d(orig_pxl_idxs.detach().cpu().numpy(), 
+            pxl_idxs = np.intersect1d(orig_pxl_idxs.detach().cpu().numpy(), 
                                          adv_pxl_idxs.detach().cpu().numpy())
-            robustness.append(len(common_idxs)/topk)
+            robustness.append(len(pxl_idxs)/topk)
+            chosen_pxl_idxs.append(pxl_idxs)
 
         robustness = np.array(robustness)
 
@@ -252,6 +263,7 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
             orig_pxl_idxs = select_informative_pixels(original_heatmaps[im_idx], topk=topk)[1]
             adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps[im_idx], topk=topk)[1]
             pxl_idxs = torch.unique(torch.cat([orig_pxl_idxs,adv_pxl_idxs]))
+            chosen_pxl_idxs.append(pxl_idxs)
 
         distances = lrp_distances(original_heatmaps, adversarial_heatmaps, pxl_idxs)
         robustness = -np.array(distances.detach().cpu().numpy())
@@ -266,7 +278,10 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
 
             pxl_idxs = select_informative_pixels(avg_heatmaps[im_idx], topk=topk)[1]
             robustness.append(len(pxl_idxs)/topk)
+            chosen_pxl_idxs.append(pxl_idxs)
 
         robustness = np.array(robustness)
 
-    return robustness
+    chosen_pxl_idxs = np.array(chosen_pxl_idxs)
+
+    return robustness, chosen_pxl_idxs
