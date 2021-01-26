@@ -112,10 +112,10 @@ else:
                               device=args.device, n_samples=n_samples)
 
     else:
-        batch_size = 2000 if m["inference"] == "hmc" else 128 
+        batch_size = 4000 if m["inference"] == "hmc" else 128 
         num_workers = 0 if args.device=="cuda" else 4
         train_loader = DataLoader(dataset=list(zip(x_train, y_train)), batch_size=batch_size, 
-                                  num_workers=num_workers, shuffle=False)
+                                  num_workers=num_workers, shuffle=True)
         net.train(train_loader=train_loader, savedir=savedir, device=args.device)
 
         for n_samples in bayesian_attack_samples:

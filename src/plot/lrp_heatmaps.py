@@ -140,12 +140,12 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     fig.subplots_adjust(right=0.85)
 
     # cbar_ax = fig.add_axes([0.9, 0.63, 0.01, 0.13])
-    cbar_ax = fig.add_axes([0.9, 0.53, 0.01, 0.13])
+    cbar_ax = fig.add_axes([0.9, 0.57, 0.01, 0.15])
     cbar = fig.colorbar(expl, ax=axes[0, :].ravel().tolist(), cax=cbar_ax)
     cbar.set_label('Relevance', labelpad=-70)
 
     # cbar_ax = fig.add_axes([0.9, 0.25, 0.01, 0.13])
-    cbar_ax = fig.add_axes([0.9, 0.15, 0.01, 0.13])
+    cbar_ax = fig.add_axes([0.9, 0.08, 0.01, 0.15])
     cbar = fig.colorbar(atk_expl, ax=axes[2, :].ravel().tolist(), cax=cbar_ax)
     cbar.set_label('Relevance', labelpad=-60)
 

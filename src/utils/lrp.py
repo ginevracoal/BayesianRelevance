@@ -11,7 +11,7 @@ from utils.savedir import *
 from utils.seeding import set_seed
 from utils.data import load_from_pickle, save_to_pickle
 
-cmap_name = "RdBu_r"
+cmap_name="RdBu_r"
 DEBUG=False
 
 
@@ -25,17 +25,17 @@ def select_informative_pixels(lrp_heatmaps, topk):
 
     if len(lrp_heatmaps.shape)==3:
         if DEBUG:
-            print(f"\n(image shape) = {lrp_heatmaps.shape[0], lrp_heatmaps.shape[1:]}")
+            print(f"(image shape) = {lrp_heatmaps.shape}")
         squeeze_dim=0
 
     elif len(lrp_heatmaps.shape)==4:
         if DEBUG:
-            print(f"\n(n. images, image shape) = {lrp_heatmaps.shape[0], lrp_heatmaps.shape[1:]}")
+            print(f"(n. images, image shape) = {lrp_heatmaps.shape[0], lrp_heatmaps.shape[1:]}")
         squeeze_dim=1
 
     elif len(lrp_heatmaps.shape)==5:
         if DEBUG:
-            print(f"\n(samples_list_size, n. images, image shape) = {lrp_heatmaps.shape[0], lrp_heatmaps.shape[1], lrp_heatmaps.shape[2:]}")
+            print(f"(samples_list_size, n. images, image shape) = {lrp_heatmaps.shape[0], lrp_heatmaps.shape[1], lrp_heatmaps.shape[2:]}")
         squeeze_dim=2
 
     else:
@@ -45,32 +45,24 @@ def select_informative_pixels(lrp_heatmaps, topk):
 
     if len(flat_lrp_heatmaps.shape)==2:
         flat_lrp_heatmap = flat_lrp_heatmaps.sum(0)
-        # lrp_heatmap = lrp_heatmaps.sum(0)
 
     elif len(flat_lrp_heatmaps.shape)>2:
         flat_lrp_heatmap = flat_lrp_heatmaps.sum(0).sum(0)
-        # lrp_heatmap = lrp_heatmaps.sum(0).sum(0)
 
     else:
         flat_lrp_heatmap = flat_lrp_heatmaps
-        # lrp_heatmap = lrp_heatmaps
 
     chosen_pxl_idxs = torch.argsort(flat_lrp_heatmap)[-topk:]
     chosen_pxls_lrp = flat_lrp_heatmaps[..., chosen_pxl_idxs] 
 
-    # chosen_pxl_idxs = torch.argsort(lrp_heatmap)[-topk:]
-    # chosen_pxls_lrp = lrp_heatmaps[..., chosen_pxl_idxs] 
-    # print(chosen_pxl_idxs.shape)
-    # exit()
-
     if DEBUG:
-        print("out shape =", chosen_pxls_lrp.shape)
+        print("out shape =", chosen_pxls_lrp.shape, end="\t")
         print("chosen pixels idxs =", chosen_pxl_idxs)
 
     return chosen_pxls_lrp, chosen_pxl_idxs
 
 
-def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1, avg_posterior=False):
+def compute_explanations(x_test, network, rule, normalize=True, n_samples=None, layer_idx=-1, avg_posterior=False):
 
     print("\nLRP layer idx =", layer_idx)
 
@@ -84,23 +76,23 @@ def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1, av
             # Forward pass
             y_hat = network.forward(x.unsqueeze(0), explain=True, rule=rule, layer_idx=layer_idx,
                                     avg_posterior=avg_posterior)
-            y_hat = nnf.softmax(y_hat, dim=-1)
+            # y_hat = nnf.softmax(y_hat, dim=-1)
 
             # Choose argmax
-            y_hat = y_hat[torch.arange(x.shape[0]), y_hat.max(1)[1]]
-            y_hat = y_hat.sum()
+            y_hat = y_hat[torch.arange(x.shape[0]), y_hat.max(1)[1]].sum()
 
             # Backward pass (compute explanation)
             y_hat.backward()
             lrp = x.grad
-            lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
+            if normalize:
+                lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
             explanations.append(lrp)
 
         return torch.stack(explanations)
 
     else:
 
-        avg_explanations = []
+        posterior_explanations = []
         for x in tqdm(x_test):
 
             explanations = []
@@ -109,9 +101,9 @@ def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1, av
                 # Forward pass
                 x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
                 x_copy.requires_grad = True
-                y_hat = network.forward(inputs=x_copy, n_samples=1, sample_idxs=[j], explain=True, 
-                                        rule=rule, layer_idx=layer_idx)
-                y_hat = nnf.softmax(y_hat, dim=-1)
+                y_hat = network.forward(inputs=x_copy, n_samples=1, sample_idxs=[j], 
+                                        explain=True, rule=rule, layer_idx=layer_idx)
+                # y_hat = nnf.softmax(y_hat, dim=-1)
 
                 # Choose argmax
                 y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
@@ -119,43 +111,44 @@ def compute_explanations(x_test, network, rule, n_samples=None, layer_idx=-1, av
 
                 # Backward pass (compute explanation)
                 y_hat.backward()
-                lrp = x_copy.grad
-                lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
+                lrp = x_copy.grad.squeeze(1)
+
+                if normalize:
+                    lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
                 explanations.append(lrp)
 
-            explanations = torch.stack(explanations)
-            avg_explanations.append(explanations.mean(0).squeeze(0))
+            posterior_explanations.append(torch.stack(explanations))
 
-        return torch.stack(avg_explanations)
+        return torch.stack(posterior_explanations).mean(1)    
 
-def compute_avg_explanations(x_test, network, rule, n_samples, layer_idx=-1):
+# def compute_avg_explanations(x_test, network, rule, n_samples, layer_idx=-1):
 
-    posterior_explanations = []
-    for x in tqdm(x_test):
+#     posterior_explanations = []
+#     for x in tqdm(x_test):
 
-        explanations = []
-        for j in range(n_samples):
+#         explanations = []
+#         for j in range(n_samples):
 
-            # Forward pass
-            x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
-            x_copy.requires_grad = True
-            y_hat = network.forward(inputs=x_copy, n_samples=1, sample_idxs=[j], 
-                                    explain=True, rule=rule, layer_idx=layer_idx)
-            y_hat = nnf.softmax(y_hat, dim=-1)
+#             # Forward pass
+#             x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
+#             x_copy.requires_grad = True
+#             y_hat = network.forward(inputs=x_copy, n_samples=1, sample_idxs=[j], 
+#                                     explain=True, rule=rule, layer_idx=layer_idx)
+#             # y_hat = nnf.softmax(y_hat, dim=-1)
 
-            # Choose argmax
-            y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
-            y_hat = y_hat.sum()
+#             # Choose argmax
+#             y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
+#             y_hat = y_hat.sum()
 
-            # Backward pass (compute explanation)
-            y_hat.backward()
-            lrp = x_copy.grad.squeeze(1)
-            lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
-            explanations.append(lrp)
+#             # Backward pass (compute explanation)
+#             y_hat.backward()
+#             lrp = x_copy.grad.squeeze(1)
+#             lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
+#             explanations.append(lrp)
 
-        posterior_explanations.append(torch.stack(explanations))
+#         posterior_explanations.append(torch.stack(explanations))
 
-    return torch.stack(posterior_explanations).mean(1)        
+#     return torch.stack(posterior_explanations).mean(1)        
 
 def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
 
@@ -261,6 +254,7 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
                                          adv_pxl_idxs.detach().cpu().numpy())
             robustness.append(len(pxl_idxs)/topk)
             chosen_pxl_idxs.append(pxl_idxs)
+            # print(len(pxl_idxs))
 
         robustness = np.array(robustness)
 
@@ -270,10 +264,11 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
             orig_pxl_idxs = select_informative_pixels(original_heatmaps[im_idx], topk=topk)[1]
             adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps[im_idx], topk=topk)[1]
             pxl_idxs = torch.unique(torch.cat([orig_pxl_idxs,adv_pxl_idxs]))
-            chosen_pxl_idxs.append(pxl_idxs)
+            chosen_pxl_idxs.append(pxl_idxs.detach().cpu().numpy())
 
         distances = lrp_distances(original_heatmaps, adversarial_heatmaps, pxl_idxs)
         robustness = -np.array(distances.detach().cpu().numpy())
+
 
     elif method=="average":
 
@@ -283,7 +278,7 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
         robustness = []
         for im_idx in range(len(original_heatmaps)):
 
-            pxl_idxs = select_informative_pixels(avg_heatmaps[im_idx], topk=topk)[1]
+            pxl_idxs = select_informative_pixels(avg_heatmaps[im_idx], topk=topk)[1].detach().cpu().numpy()
             robustness.append(len(pxl_idxs)/topk)
             chosen_pxl_idxs.append(pxl_idxs)
 
@@ -291,4 +286,5 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
 
     chosen_pxl_idxs = np.array(chosen_pxl_idxs)
 
+    # print(robustness)
     return robustness, chosen_pxl_idxs

@@ -40,10 +40,10 @@ fullBNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation
                              "lr":0.001, "n_samples":None, "warmup":None},
                     "model_2":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
-                             "lr":None, "n_samples":50, "warmup":100}, 
+                             "lr":None, "n_samples":50, "warmup":50}, 
                     "model_3":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
-                             "lr":None, "n_samples":50, "warmup":100},
+                             "lr":None, "n_samples":50, "warmup":50},
                     }  
 
 
@@ -57,9 +57,9 @@ class BNN(PyroModule):
         self.architecture = architecture
         self.epochs = epochs
         self.lr = lr
-        self.n_samples = 10 if DEBUG else n_samples
+        self.n_samples = 20 if DEBUG else n_samples
         self.warmup = 5 if DEBUG else warmup
-        self.step_size = 0.005
+        self.step_size = 0.5
         self.num_steps = 10
         self.basenet = baseNN(dataset_name=dataset_name, input_shape=input_shape, 
                               output_size=output_size, hidden_size=hidden_size, 
@@ -246,7 +246,8 @@ class BNN(PyroModule):
         batch_samples = int(n_samples/num_batches)+1
         print("\nn_batches =",num_batches,"\tbatch_samples =", batch_samples)
 
-        kernel = HMC(self.model, step_size=step_size, num_steps=num_steps)
+        # kernel = HMC(self.model, step_size=step_size, num_steps=num_steps)
+        kernel = NUTS(self.model, adapt_step_size=True)
         mcmc = MCMC(kernel=kernel, num_samples=batch_samples, warmup_steps=warmup, num_chains=1)
 
         self.posterior_samples=[]
@@ -256,10 +257,10 @@ class BNN(PyroModule):
         for x_batch, y_batch in train_loader:
             x_batch = x_batch.to(device)
             y_batch = y_batch.to(device).argmax(-1)
-            mcmc.run(x_batch, y_batch)
+            mcmc_run = mcmc.run(x_batch, y_batch)
 
             posterior_samples = mcmc.get_samples(batch_samples)
-            # print('module$$$model.1.weight: ', posterior_samples['module$$$model.1.weight'][0,0,:5])
+            print('module$$$model.1.weight:\n', posterior_samples['module$$$model.1.weight'][:,0,:5])
 
             for sample_idx in range(batch_samples):
                 net_copy = copy.deepcopy(self.basenet)

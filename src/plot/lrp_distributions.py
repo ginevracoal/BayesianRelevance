@@ -206,7 +206,7 @@ def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, saved
         fig.savefig(os.path.join(savedir, filename+"_im_idx="+str(im_idx)+".png"))
         plt.close(fig)
 
-def lrp_robustness_distributions(lrp_robustness, bayesian_lrp_robustness, mode_lrp_robustness, avg_lrp_robustness,
+def lrp_robustness_distributions(lrp_robustness, bayesian_lrp_robustness, mode_lrp_robustness, #avg_lrp_robustness,
                                  n_samples_list, savedir, filename):
 
     os.makedirs(savedir, exist_ok=True) 
@@ -215,49 +215,53 @@ def lrp_robustness_distributions(lrp_robustness, bayesian_lrp_robustness, mode_l
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
-    fig, ax = plt.subplots(3, 1, figsize=(9, 8), dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(2, 1, figsize=(9, 8), dpi=150, facecolor='w', edgecolor='k') 
 
     sns.distplot(lrp_robustness, ax=ax[0], label="deterministic", kde=True)
-    sns.distplot(mode_lrp_robustness, ax=ax[1], label="posterior mode", kde=True)
+    sns.distplot(mode_lrp_robustness, ax=ax[0], label="posterior mode", kde=True)
 
     for idx, n_samples in enumerate(n_samples_list):
-        sns.distplot(bayesian_lrp_robustness[idx], ax=ax[2], label="predictive samp="+str(n_samples), kde=True)
-        sns.distplot(avg_lrp_robustness[idx], ax=ax[2], label="lrp avg samp="+str(n_samples), kde=True)
+        sns.distplot(bayesian_lrp_robustness[idx], ax=ax[1], label="posterior samp="+str(n_samples), kde=True)
+        # sns.distplot(avg_lrp_robustness[idx], ax=ax[2], label="lrp avg samp="+str(n_samples), kde=True)
     
     ax[0].legend()
     ax[1].legend()
-    ax[1].set_xlabel("LRP robustness")
+    # ax[2].legend()
+    ax[1].set_xlabel("LRP robustness distribution")
 
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)
 
 def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robustness,
                                mode_adversarial_robustness, 
-                               lrp_robustness, bayesian_lrp_robustness, mode_lrp_robustness, avg_lrp_robustness,
+                               lrp_robustness, bayesian_lrp_robustness, mode_lrp_robustness,# avg_lrp_robustness,
                                n_samples_list, savedir, filename):
 
     os.makedirs(savedir, exist_ok=True)
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
     fig, ax = plt.subplots(2, 1, figsize=(8, 8), sharex=True, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
+    alpha=0.6
 
-    sns.scatterplot(x=adversarial_robustness, y=lrp_robustness, ax=ax[0], label='deterministic')
-    ax[0].set_xlabel('Adversarial robustness')
+    sns.scatterplot(x=adversarial_robustness, y=lrp_robustness, ax=ax[0], label='deterministic', alpha=alpha)
+    ax[1].set_xlabel('Adversarial robustness')
     ax[0].set_ylabel('LRP robustness')
-    # ax[0].set_xlim(0.5, None)
-    # ax[0].set_ylim(0.5, None)
+    ax[1].set_ylabel('LRP robustness')
+    # ax[0].set_xlim(0., None)
+    # ax[0].set_ylim(0., None)
     
-    sns.scatterplot(x=mode_adversarial_robustness, y=mode_lrp_robustness, label='posterior mode', ax=ax[0])
+    sns.scatterplot(x=mode_adversarial_robustness, y=mode_lrp_robustness, label='posterior mode', 
+                    ax=ax[0], alpha=alpha)
 
     for idx, n_samples in enumerate(n_samples_list):
         sns.scatterplot(x=bayesian_adversarial_robustness[idx], y=bayesian_lrp_robustness[idx], 
-                        label='predictive samp='+str(n_samples), ax=ax[1])
-        sns.scatterplot(x=bayesian_adversarial_robustness[idx], y=avg_lrp_robustness[idx], 
-                        label='avg lrp samp='+str(n_samples), ax=ax[1])
+                        label='posterior samp='+str(n_samples), ax=ax[1], alpha=alpha)
+        # sns.scatterplot(x=bayesian_adversarial_robustness[idx], y=avg_lrp_robustness[idx], 
+        #                 label='avg lrp samp='+str(n_samples), ax=ax[2])
 
-    ax[1].set_xlabel('Adversarial robustness')
-    ax[1].set_ylabel('LRP robustness')
-    # ax[1].set_xlim(0.5, None)
+    # ax[1].set_xlabel('Adversarial robustness')
+    # ax[1].set_ylabel('LRP robustness')
+    # # ax[1].set_xlim(0.5, None)
     # ax[1].set_ylim(0.5, None)
 
     fig.savefig(os.path.join(savedir, filename+".png"))
