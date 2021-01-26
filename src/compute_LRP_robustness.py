@@ -39,7 +39,7 @@ parser.add_argument("--debug", default=False, type=eval, help="Run script in deb
 parser.add_argument("--device", default='cpu', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-n_samples_list=[1,5,10]
+n_samples_list=[1,50,100]
 n_inputs=60 if args.debug else args.n_inputs
 topk=10 if args.debug else args.topk
 # n_samples=2 if args.debug else args.n_samples
