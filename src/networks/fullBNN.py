@@ -221,13 +221,29 @@ class BNN(PyroModule):
 
         elif self.inference == "hmc":
 
+            if n_samples>len(self.posterior_samples):
+                raise ValueError("Too many samples. Max available samples =", len(self.posterior_samples))
+
             if avg_posterior:
-                raise NotImplementedError
+
+                posterior_predictive = self.posterior_samples
+
+                avg_state_dict = {}
+                for key in self.basenet.state_dict().keys():
+
+                    weights = []
+                    for seed in sample_idxs:
+                        net = posterior_predictive[seed]
+                        weights.append(net.state_dict()[key])
+
+                    avg_weights = torch.stack(weights).mean(0)
+                    avg_state_dict.update({str(key):avg_weights})
+
+                basenet_copy = copy.deepcopy(self.basenet)
+                basenet_copy.load_state_dict(avg_state_dict)
+                preds = [basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)]
 
             else:
-
-                if n_samples>len(self.posterior_samples):
-                    raise ValueError("Too many samples. Max available samples =", len(self.posterior_samples))
 
                 preds = []
                 posterior_predictive = self.posterior_samples

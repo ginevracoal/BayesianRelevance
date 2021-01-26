@@ -55,8 +55,8 @@ def relevant_subset(images, pxl_idxs):
     flat_images = images.reshape(*images.shape[:2], -1)
     images_rel = np.zeros(flat_images.shape)
 
-    for pxl_idx in pxl_idxs:
-        images_rel[:,:,pxl_idx] = flat_images[:,:,pxl_idx]
+    for image_idx, pxl_idx in enumerate(pxl_idxs):
+        images_rel[image_idx,:,pxl_idx] = flat_images[image_idx,:,pxl_idx]
     
     images_rel = images_rel.reshape(images.shape)
     return images_rel
@@ -78,12 +78,12 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
         print(images.shape, "!=", explanations.shape)
         raise ValueError
 
-    images_rel = relevant_subset(images, pxl_idxs)
+    images_rel = relevant_subset(images, pxl_idxs[idxs])
     images_rel = np.ma.masked_where(images_rel == 0., images_rel)
-    attacks_rel = relevant_subset(attacks, pxl_idxs)
+    attacks_rel = relevant_subset(attacks, pxl_idxs[idxs])
     attacks_rel = np.ma.masked_where(attacks_rel == 0., attacks_rel)
-    explanations = relevant_subset(explanations, pxl_idxs)
-    attacks_explanations = relevant_subset(attacks_explanations, pxl_idxs)
+    explanations = relevant_subset(explanations, pxl_idxs[idxs])
+    attacks_explanations = relevant_subset(attacks_explanations, pxl_idxs[idxs])
 
     cmap = plt.cm.get_cmap(relevance_cmap)
 
