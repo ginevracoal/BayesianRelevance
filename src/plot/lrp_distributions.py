@@ -240,29 +240,51 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
     os.makedirs(savedir, exist_ok=True)
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
-    fig, ax = plt.subplots(2, 1, figsize=(8, 8), sharex=True, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
-    alpha=0.6
 
-    sns.scatterplot(x=adversarial_robustness, y=lrp_robustness, ax=ax[0], label='deterministic', alpha=alpha)
-    ax[1].set_xlabel('Adversarial robustness')
-    ax[0].set_ylabel('LRP robustness')
-    ax[1].set_ylabel('LRP robustness')
-    # ax[0].set_xlim(0., None)
-    # ax[0].set_ylim(0., None)
+    fig, ax = plt.subplots(2, 3, figsize=(10, 8), gridspec_kw={'width_ratios': [1, 2, 1]}, 
+                           sharex=False, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
+    alpha=0.5
+    jitter=1.
+
+    ax[1,1].set_xlabel('Softmax robustness')
+    ax[0,0].set_ylabel('LRP robustness')
+    ax[1,0].set_ylabel('LRP robustness')
     
+    sns.scatterplot(x=adversarial_robustness, y=lrp_robustness, ax=ax[0,1], label='deterministic', alpha=alpha)
     sns.scatterplot(x=mode_adversarial_robustness, y=mode_lrp_robustness, label='posterior mode', 
-                    ax=ax[0], alpha=alpha)
+                    ax=ax[0,1], alpha=alpha)
 
     for idx, n_samples in enumerate(n_samples_list):
         sns.scatterplot(x=bayesian_adversarial_robustness[idx], y=bayesian_lrp_robustness[idx], 
-                        label='posterior samp='+str(n_samples), ax=ax[1], alpha=alpha)
-        # sns.scatterplot(x=bayesian_adversarial_robustness[idx], y=avg_lrp_robustness[idx], 
-        #                 label='avg lrp samp='+str(n_samples), ax=ax[2])
+                        label='posterior samp='+str(n_samples), ax=ax[1,1], alpha=alpha)
 
-    # ax[1].set_xlabel('Adversarial robustness')
-    # ax[1].set_ylabel('LRP robustness')
-    # # ax[1].set_xlim(0.5, None)
-    # ax[1].set_ylim(0.5, None)
+    ax[1,0].set_xlabel('Softmax rob. = 0.')
+    im_idxs = np.where(adversarial_robustness==0.)[0]
+    sns.distplot(lrp_robustness[im_idxs], ax=ax[0,0], vertical=True)
+    im_idxs = np.where(mode_adversarial_robustness==0.)[0]
+    sns.distplot(mode_lrp_robustness[im_idxs], vertical=True, color="darkorange", ax=ax[0,0])
+
+    colors = ["blue","darkorange","green"]
+
+    for sample_idx, n_samples in enumerate(n_samples_list):
+        im_idxs = np.where(bayesian_adversarial_robustness[sample_idx]==0.)[0]
+        sns.distplot(bayesian_lrp_robustness[sample_idx,im_idxs], vertical=True, ax=ax[1,0])
+
+    ax[1,2].set_xlabel('Softmax rob. = 1.')
+    im_idxs = np.where(adversarial_robustness==0.)[0]
+    sns.distplot(lrp_robustness[im_idxs], ax=ax[0,2], vertical=True)
+    im_idxs = np.where(mode_adversarial_robustness==1.)[0]
+    sns.distplot(mode_lrp_robustness[im_idxs], vertical=True, color="darkorange",
+                    ax=ax[0,2])
+    for sample_idx, n_samples in enumerate(n_samples_list):
+        im_idxs = np.where(bayesian_adversarial_robustness[sample_idx]==1.)[0]
+        sns.distplot(bayesian_lrp_robustness[sample_idx,im_idxs], vertical=True, ax=ax[1,2])
+
+    # ax[0,0].set_ylim(0,1)
+    # ax[1,0].set_ylim(0,1)
+    # ax[0,2].set_ylim(0,1)
+    # ax[1,2].set_ylim(0,1)
 
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)    
+

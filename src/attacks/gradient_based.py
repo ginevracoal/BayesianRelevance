@@ -143,7 +143,8 @@ def load_attack(method, filename, savedir, n_samples=None):
     name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
     return load_from_pickle(path=savedir, filename=name)
 
-def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None, sample_idxs=None):
+def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None, sample_idxs=None, 
+                     return_successful_idxs=False):
 
     print(f"\nEvaluating against the attacks", end="")
     if n_samples:
@@ -165,10 +166,14 @@ def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None, sam
 
         adversarial_outputs = []
         adversarial_correct = 0.0
-        for attacks, labels in attack_loader:
+        successful_idxs = []
+        for batch_idx, (attacks, labels) in enumerate(attack_loader):
             out = net.forward(attacks, n_samples=n_samples, sample_idxs=sample_idxs)
             adversarial_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
             adversarial_outputs.append(out)
+
+            correct_class_idxs = np.where(out.argmax(-1).cpu() != labels.argmax(-1).cpu())[0]
+            successful_idxs.extend(correct_class_idxs+len(attacks)*batch_idx)
 
         original_accuracy = 100 * original_correct / len(x_test)
         adversarial_accuracy = 100 * adversarial_correct / len(x_test)
@@ -179,4 +184,7 @@ def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None, sam
         adversarial_outputs = torch.cat(adversarial_outputs)
         softmax_rob = softmax_robustness(original_outputs, adversarial_outputs)
 
-    return original_accuracy, adversarial_accuracy, softmax_rob
+    if return_successful_idxs:
+        return original_accuracy, adversarial_accuracy, softmax_rob, successful_idxs
+    else:
+        return original_accuracy, adversarial_accuracy, softmax_rob

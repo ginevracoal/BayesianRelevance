@@ -6,6 +6,7 @@ import numpy as np
 from tqdm import tqdm
 import torch.nn.functional as nnf
 from torchvision import transforms
+from scipy.stats import wasserstein_distance
 
 from utils.savedir import *
 from utils.seeding import set_seed
@@ -121,34 +122,6 @@ def compute_explanations(x_test, network, rule, normalize=True, n_samples=None, 
 
         return torch.stack(posterior_explanations).mean(1)    
 
-# def compute_avg_explanations(x_test, network, rule, n_samples, layer_idx=-1):
-
-#     posterior_explanations = []
-#     for x in tqdm(x_test):
-
-#         explanations = []
-#         for j in range(n_samples):
-
-#             # Forward pass
-#             x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
-#             x_copy.requires_grad = True
-#             y_hat = network.forward(inputs=x_copy, n_samples=1, sample_idxs=[j], 
-#                                     explain=True, rule=rule, layer_idx=layer_idx)
-#             # y_hat = nnf.softmax(y_hat, dim=-1)
-
-#             # Choose argmax
-#             y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
-#             y_hat = y_hat.sum()
-
-#             # Backward pass (compute explanation)
-#             y_hat.backward()
-#             lrp = x_copy.grad.squeeze(1)
-#             lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
-#             explanations.append(lrp)
-
-#         posterior_explanations.append(torch.stack(explanations))
-
-#     return torch.stack(posterior_explanations).mean(1)        
 
 def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
 
@@ -288,3 +261,15 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
 
     # print(robustness)
     return robustness, chosen_pxl_idxs
+
+
+def lrp_wesserstein_distance(lrp, attack_lrp, pxl_idxs):
+
+    flat_lrp = np.array(lrp.reshape(*lrp.shape[:1], -1).detach().cpu().numpy())
+    flat_attack_lrp = np.array(attack_lrp.reshape(*attack_lrp.shape[:1], -1).detach().cpu().numpy())
+    wess_dist = []
+    
+    for im_idx, pxl_idx in enumerate(pxl_idxs):
+        wess_dist.append(wasserstein_distance(flat_lrp[im_idx, pxl_idx], flat_attack_lrp[im_idx, pxl_idx]))
+
+    return wess_dist
