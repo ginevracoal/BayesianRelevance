@@ -38,7 +38,8 @@ parser.add_argument("--debug", default=False, type=eval, help="Run script in deb
 parser.add_argument("--device", default='cpu', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-n_samples_list=[1,10,50]#,100] if args.model_idx<=1 else [5,10,50]
+n_samples_list=[1,10,50]
+# n_samples_list=[1,50,100] if args.model_idx<=1 else [5,10,50]
 n_inputs=60 if args.debug else args.n_inputs
 topk=10 if args.debug else args.topk
 
@@ -114,10 +115,11 @@ else:
 
     # lrp_attack = attack(net=detnet, x_test=lrp, y_test=y_test, device=args.device, method=args.attack_method)
 
-    plot_attacks_explanations(images=images, explanations=lrp, attacks=det_attack, 
-                              attacks_explanations=attack_lrp, #explanations_attacks=lrp_attack,
-                              rule=args.rule, savedir=savedir, pxl_idxs=pxl_idxs,
-                              filename="det_lrp_attacks", layer_idx=-1)
+    if args.lrp_method=="intersection":
+      plot_attacks_explanations(images=images, explanations=lrp, attacks=det_attack, 
+                                attacks_explanations=attack_lrp, #explanations_attacks=lrp_attack,
+                                rule=args.rule, savedir=savedir, pxl_idxs=pxl_idxs,
+                                filename="det_lrp_attacks", layer_idx=-1)
 
     save_to_pickle(det_softmax_robustness, path=savedir, filename="det_softmax_robustness")
     save_to_pickle(det_lrp_robustness, path=savedir, filename="det_lrp_robustness")
@@ -125,7 +127,8 @@ else:
 ### Bayesian explanations
 
 bay_softmax_robustness=np.zeros((len(n_samples_list), n_inputs))
-post_lrp_robustness=np.zeros((len(n_samples_list), n_inputs))
+# post_lrp_robustness=np.zeros((len(n_samples_list), n_inputs))
+post_lrp_robustness=[]
 # avg_lrp_robustness=np.zeros((len(n_samples_list), n_inputs))
 
 if args.load:
@@ -152,14 +155,17 @@ else:
         
         post_lrp = compute_explanations(images, bayesnet, rule=args.rule, n_samples=n_samples)
         post_attack_lrp = compute_explanations(bay_attack, bayesnet, rule=args.rule, n_samples=n_samples)
-        post_lrp_robustness[idx], pxl_idxs = lrp_robustness(original_heatmaps=post_lrp, 
+        post_lrp_rob, pxl_idxs = lrp_robustness(original_heatmaps=post_lrp, 
                                                       adversarial_heatmaps=post_attack_lrp, 
                                                       topk=topk, method=args.lrp_method)
+        post_lrp_robustness.append(post_lrp_rob)
+        
+        if args.lrp_method=="intersection":
 
-        plot_attacks_explanations(images=images, explanations=post_lrp, attacks=bay_attack, 
-                                  attacks_explanations=post_attack_lrp, #sexplanations_attacks=avg_lrp_attack,
-                                  rule=args.rule, savedir=savedir, pxl_idxs=pxl_idxs,
-                                  filename="post_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
+            plot_attacks_explanations(images=images, explanations=post_lrp, attacks=bay_attack, 
+                                      attacks_explanations=post_attack_lrp, #sexplanations_attacks=avg_lrp_attack,
+                                      rule=args.rule, savedir=savedir, pxl_idxs=pxl_idxs,
+                                      filename="post_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
 
         # avg_lrp = compute_avg_explanations(images, bayesnet, rule=args.rule, n_samples=n_samples)
         # avg_attack_lrp = compute_avg_explanations(bay_attack, bayesnet, rule=args.rule, n_samples=n_samples)

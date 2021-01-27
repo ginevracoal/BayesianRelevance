@@ -339,7 +339,7 @@ def plot_wesserstein_dist(deterministic_wesserstein_distance, bayesian_wesserste
         sns.distplot(wess_dist[np.where(softmax_rob==0.)[0]], ax=ax[0,0], vertical=True)
         sns.distplot(wess_dist[np.where(softmax_rob==1.)[0]], ax=ax[0,2], vertical=True)
 
-    fig.text(0.5, 0.55, "Failed attacks", ha='center')
+    fig.text(0.5, 0.47, "Failed attacks", ha='center')
 
     deterministic_failed_idxs = np.setdiff1d(np.arange(len(deterministic_wesserstein_distance)), 
                                              deterministic_successful_idxs)
@@ -360,6 +360,11 @@ def plot_wesserstein_dist(deterministic_wesserstein_distance, bayesian_wesserste
 
     # fig.set_title("Wesserstein distance between original and attack LRP distributions")
     ax[0,1].legend()
+
+    ax[0,0].set_ylim(0,1)
+    ax[1,0].set_ylim(0,1)
+    ax[0,2].set_ylim(0,1)
+    ax[1,2].set_ylim(0,1)
 
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)

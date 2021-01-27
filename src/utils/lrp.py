@@ -205,7 +205,7 @@ def lrp_distances(original_heatmaps, adversarial_heatmaps, pxl_idxs=None):
         original_heatmaps = original_heatmaps[:, pxl_idxs]
         adversarial_heatmaps = adversarial_heatmaps[:, pxl_idxs]
 
-    distances = torch.norm(original_heatmaps-adversarial_heatmaps, dim=1)
+    distances = torch.norm(original_heatmaps-adversarial_heatmaps, dim=0)
     return distances
 
 def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="intersection"):
@@ -233,15 +233,22 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
 
     elif method=="union":
 
-        for im_idx in range(len(original_heatmaps)):
-            orig_pxl_idxs = select_informative_pixels(original_heatmaps[im_idx], topk=topk)[1]
-            adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps[im_idx], topk=topk)[1]
-            pxl_idxs = torch.unique(torch.cat([orig_pxl_idxs,adv_pxl_idxs]))
-            chosen_pxl_idxs.append(pxl_idxs.detach().cpu().numpy())
+        orig_pxl_idxs = select_informative_pixels(original_heatmaps.sum(0), topk=topk)[1]
+        adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps.sum(0), topk=topk)[1]
+        pxl_idxs = torch.unique(torch.cat([orig_pxl_idxs,adv_pxl_idxs]))
+        chosen_pxl_idxs.append(pxl_idxs.detach().cpu().numpy())
 
         distances = lrp_distances(original_heatmaps, adversarial_heatmaps, pxl_idxs)
         robustness = -np.array(distances.detach().cpu().numpy())
 
+        # for im_idx in range(len(original_heatmaps)):
+        #     orig_pxl_idxs = select_informative_pixels(original_heatmaps[im_idx], topk=topk)[1]
+        #     adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps[im_idx], topk=topk)[1]
+        #     pxl_idxs = torch.unique(torch.cat([orig_pxl_idxs,adv_pxl_idxs]))
+        #     chosen_pxl_idxs.append(pxl_idxs.detach().cpu().numpy())
+
+        # distances = lrp_distances(original_heatmaps, adversarial_heatmaps, pxl_idxs)
+        # robustness = -np.array(distances.detach().cpu().numpy())
 
     elif method=="average":
 
