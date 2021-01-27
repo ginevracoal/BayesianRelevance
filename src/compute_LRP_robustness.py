@@ -24,11 +24,10 @@ from networks.fullBNN import *
 from networks.redBNN import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_inputs", default=1000, type=int, help="Number of test points")
-parser.add_argument("--topk", default=100, type=int, help="Top k most relevant pixels.")
+parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
+parser.add_argument("--topk", default=200, type=int, help="Top k most relevant pixels.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
-parser.add_argument("--inference", default="svi", type=str, help="svi, hmc")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--lrp_method", default="intersection", type=str, help="intersection, union, average")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
@@ -39,10 +38,9 @@ parser.add_argument("--debug", default=False, type=eval, help="Run script in deb
 parser.add_argument("--device", default='cpu', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-n_samples_list=[1,50,100] if args.model_idx<=1 else [5,10,50]
+n_samples_list=[1,10,50]#,100] if args.model_idx<=1 else [5,10,50]
 n_inputs=60 if args.debug else args.n_inputs
 topk=10 if args.debug else args.topk
-# n_samples=2 if args.debug else args.n_samples
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)

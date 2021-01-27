@@ -61,7 +61,7 @@ def relevant_subset(images, pxl_idxs):
     images_rel = images_rel.reshape(images.shape)
     return images_rel
 
-def plot_attacks_explanations(images, explanations, attacks, attacks_explanations, #explanations_attacks,
+def plot_attacks_explanations(images, explanations, attacks, attacks_explanations, 
                               pxl_idxs, rule, savedir, filename, layer_idx=-1):
 
     images_cmap='Greys'
@@ -72,7 +72,6 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     explanations = explanations[idxs].detach().cpu().numpy()
     attacks = attacks[idxs].detach().cpu().numpy()
     attacks_explanations = attacks_explanations[idxs].detach().cpu().numpy()
-    # explanations_attacks = explanations_attacks[idxs].detach().cpu().numpy()    
 
     if images.shape != explanations.shape:
         print(images.shape, "!=", explanations.shape)
