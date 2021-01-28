@@ -70,7 +70,7 @@ else:
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
-savedir = os.path.join(model_savedir, "lrp/wesserstein/")
+savedir = os.path.join(model_savedir, "lrp/pkl/")
 
 ### Deterministic explanations
 
@@ -102,11 +102,11 @@ det_lrp_robustness, det_lrp_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp,
                                             adversarial_heatmaps=det_attack_lrp, 
                                               topk=topk, method=args.lrp_method)
 
-succ_wess_dist = lrp_wesserstein_distance(det_lrp[det_successful_idxs], 
+succ_wess_dist = lrp_wasserstein_distance(det_lrp[det_successful_idxs], 
                                           det_attack_lrp[det_successful_idxs], 
                                           det_lrp_pxl_idxs)
 det_failed_idxs = np.setdiff1d(np.arange(len(images)), det_successful_idxs)
-fail_wess_dist = lrp_wesserstein_distance(det_lrp[det_failed_idxs], 
+fail_wess_dist = lrp_wasserstein_distance(det_lrp[det_failed_idxs], 
                                           det_attack_lrp[det_failed_idxs], 
                                           det_lrp_pxl_idxs)
 
@@ -153,6 +153,8 @@ else:
     save_to_pickle(mode_lrp, path=savedir, filename="mode_lrp_samp="+str(n_samples))
     save_to_pickle(mode_attack_lrp, path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
 
+### Evaluations
+
 bay_softmax_robustness=[]
 bay_successful_idxs=[]
 bay_lrp_robustness=[]
@@ -172,23 +174,25 @@ for samp_idx, n_samples in enumerate(n_samples_list):
     bay_lrp_pxl_idxs.append(lrp_pxl_idxs)
 
 
-mode_softmax_robustness = attack_evaluation(net=bayesnet, x_test=images, x_attack=mode_attack,
-                       y_test=y_test, device=args.device, n_samples=n_samples)[2].detach().cpu().numpy()
+_,_,mode_softmax_robustness, mode_successful_idxs = attack_evaluation(net=bayesnet, x_test=images, x_attack=mode_attack,
+                       y_test=y_test, device=args.device, n_samples=n_samples, 
+                       return_successful_idxs=True)
 mode_lrp_robustness, mode_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
                                                 adversarial_heatmaps=mode_attack_lrp, 
                                                 topk=topk, method=args.lrp_method)
+mode_softmax_robustness = mode_softmax_robustness.detach().cpu().numpy()
 
 succ_bay_wess_dist=[]
 fail_bay_wess_dist=[]
 for samp_idx, n_samples in enumerate(n_samples_list):
 
     succ_im_idxs = bay_successful_idxs[samp_idx]
-    succ_bay_wess_dist.append(lrp_wesserstein_distance(bay_lrp[samp_idx][succ_im_idxs],
+    succ_bay_wess_dist.append(lrp_wasserstein_distance(bay_lrp[samp_idx][succ_im_idxs],
                                                        bay_attack_lrp[samp_idx][succ_im_idxs], 
                                                        bay_lrp_pxl_idxs[samp_idx]))
 
     failed_im_idxs = np.setdiff1d(np.arange(len(images)), succ_im_idxs)
-    fail_bay_wess_dist.append(lrp_wesserstein_distance(bay_lrp[samp_idx][failed_im_idxs], 
+    fail_bay_wess_dist.append(lrp_wasserstein_distance(bay_lrp[samp_idx][failed_im_idxs], 
                                               bay_attack_lrp[samp_idx][failed_im_idxs], 
                                               bay_lrp_pxl_idxs[samp_idx]))
 
@@ -197,13 +201,37 @@ fail_wess_dist=np.array(fail_wess_dist)
 succ_bay_wess_dist=np.array(succ_bay_wess_dist)
 fail_bay_wess_dist=np.array(fail_bay_wess_dist)
 
+### Plots
 
 savedir = os.path.join(model_savedir, "lrp/")
-filename=args.rule+"_lrp_wesserstein_"+m["dataset"]+"_images="+str(n_inputs)+\
+
+# plot_attacks_explanations(images=images[det_successful_idxs], explanations=det_lrp[det_successful_idxs], 
+#                           attacks=det_attack[det_successful_idxs], 
+#                           attacks_explanations=det_attack_lrp[det_successful_idxs], 
+#                           rule=args.rule, savedir=savedir, pxl_idxs=det_lrp_pxl_idxs,
+#                           filename="successful_det_lrp_attacks", layer_idx=-1)
+
+# for samp_idx, n_samples in enumerate(n_samples_list):
+#     succ_im_idxs = bay_successful_idxs[samp_idx]
+#     plot_attacks_explanations(images=images[succ_im_idxs], explanations=bay_lrp[samp_idx][succ_im_idxs], 
+#                               attacks=bay_attack[samp_idx][succ_im_idxs], 
+#                               attacks_explanations=bay_attack_lrp[samp_idx][succ_im_idxs],
+#                               rule=args.rule, savedir=savedir, pxl_idxs=bay_lrp_pxl_idxs[samp_idx],
+#                               filename="successful_bay_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
+
+# plot_attacks_explanations(images=images[mode_successful_idxs], 
+#                           explanations=mode_lrp[mode_successful_idxs], 
+#                           attacks=mode_attack[mode_successful_idxs], 
+#                           attacks_explanations=mode_attack_lrp[mode_successful_idxs], 
+#                           rule=args.rule, savedir=savedir, pxl_idxs=mode_pxl_idxs,
+#                           filename="successful_mode_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
+
+
+filename=args.rule+"_lrp_wasserstein_"+m["dataset"]+"_images="+str(n_inputs)+\
          "_pxls="+str(topk)+"_atk="+str(args.attack_method)
 
 
-plot_lrp.plot_wesserstein_dist(det_successful_atks_wess_dist=succ_wess_dist, 
+plot_lrp.plot_wasserstein_dist(det_successful_atks_wess_dist=succ_wess_dist, 
                                det_failed_atks_wess_dist=fail_wess_dist, 
                                bay_successful_atks_wess_dist=succ_bay_wess_dist, 
                                bay_failed_atks_wess_dist=fail_bay_wess_dist,

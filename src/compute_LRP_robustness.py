@@ -38,8 +38,8 @@ parser.add_argument("--debug", default=False, type=eval, help="Run script in deb
 parser.add_argument("--device", default='cpu', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-# n_samples_list=[1,5,10]
-n_samples_list=[1,50,100] if args.model_idx<=1 else [5,10,50]
+n_samples_list=[1,10,50]
+# n_samples_list=[1,50,100] if args.model_idx<=1 else [5,10,50]
 n_inputs=60 if args.debug else args.n_inputs
 topk=10 if args.debug else args.topk
 
@@ -75,7 +75,7 @@ else:
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
-savedir = os.path.join(model_savedir, "lrp/robustness/")
+savedir = os.path.join(model_savedir, "lrp/pkl/")
 
 ### Deterministic explanations
 
@@ -101,16 +101,11 @@ else:
     save_to_pickle(det_attack_lrp, path=savedir, filename="det_attack_lrp")
 
 
-det_softmax_robustness = attack_evaluation(net=detnet, x_test=images, x_attack=det_attack, 
-                                           y_test=y_test, device=args.device)[2].detach().cpu().numpy()
+_,_, det_softmax_robustness, det_successful_idxs = attack_evaluation(net=detnet, x_test=images, 
+                x_attack=det_attack, y_test=y_test, device=args.device, return_successful_idxs=True)
 det_lrp_robustness, det_lrp_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp, 
                                             adversarial_heatmaps=det_attack_lrp, 
                                               topk=topk, method=args.lrp_method)
-if args.lrp_method=="intersection":
-    plot_attacks_explanations(images=images, explanations=det_lrp, 
-                              attacks=det_attack, attacks_explanations=det_attack_lrp, 
-                              rule=args.rule, savedir=savedir, pxl_idxs=det_lrp_pxl_idxs,
-                              filename="det_lrp_attacks", layer_idx=-1)
 
 ### Bayesian explanations
 
@@ -154,14 +149,16 @@ else:
     save_to_pickle(mode_attack_lrp, path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
 
 bay_softmax_robustness=[]
+bay_successful_idxs=[]
 bay_lrp_robustness=[]
 bay_lrp_pxl_idxs=[]
 
 for samp_idx, n_samples in enumerate(n_samples_list):
 
-    bay_softmax_robustness.append(attack_evaluation(net=bayesnet, x_test=images, 
-        x_attack=bay_attack[samp_idx], y_test=y_test, device=args.device, 
-        n_samples=n_samples)[2].detach().cpu().numpy())
+    _,_, softmax_rob, successf_idxs = attack_evaluation(net=bayesnet, x_test=images, x_attack=bay_attack[samp_idx],
+                           y_test=y_test, device=args.device, n_samples=n_samples, return_successful_idxs=True)
+    bay_softmax_robustness.append(softmax_rob.detach().cpu().numpy())
+    bay_successful_idxs.append(successf_idxs)
 
     bay_lrp_rob, lrp_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx], 
                                                   adversarial_heatmaps=bay_attack_lrp[samp_idx], 
@@ -169,28 +166,59 @@ for samp_idx, n_samples in enumerate(n_samples_list):
     bay_lrp_robustness.append(bay_lrp_rob)
     bay_lrp_pxl_idxs.append(lrp_pxl_idxs)
 
-mode_softmax_robustness = attack_evaluation(net=bayesnet, x_test=images, x_attack=mode_attack,
-                       y_test=y_test, device=args.device, n_samples=n_samples)[2].detach().cpu().numpy()
+_,_,mode_softmax_robustness, mode_successful_idxs = attack_evaluation(net=bayesnet, x_test=images, x_attack=mode_attack,
+                       y_test=y_test, device=args.device, n_samples=n_samples, 
+                       return_successful_idxs=True)
 mode_lrp_robustness, mode_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
                                                 adversarial_heatmaps=mode_attack_lrp, 
                                                 topk=topk, method=args.lrp_method)
     
-if args.lrp_method=="intersection":
-
-    for samp_idx, n_samples in enumerate(n_samples_list):
-        plot_attacks_explanations(images=images, explanations=bay_lrp[samp_idx], attacks=bay_attack[samp_idx], 
-                                      attacks_explanations=bay_attack_lrp[samp_idx],
-                                      rule=args.rule, savedir=savedir, pxl_idxs=bay_lrp_pxl_idxs[samp_idx],
-                                      filename="bay_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
-
-    plot_attacks_explanations(images=images, explanations=mode_lrp, attacks=mode_attack, 
-                            attacks_explanations=mode_attack_lrp, 
-                            rule=args.rule, savedir=savedir, pxl_idxs=mode_pxl_idxs,
-                            filename="mode_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
 
 ### Plot
 
 savedir = os.path.join(model_savedir, "lrp/")
+
+if args.lrp_method=="intersection":
+
+    # plot_attacks_explanations(images=images, explanations=det_lrp, 
+    #                           attacks=det_attack, attacks_explanations=det_attack_lrp, 
+    #                           rule=args.rule, savedir=savedir, pxl_idxs=det_lrp_pxl_idxs,
+    #                           filename="det_lrp_attacks", layer_idx=-1)
+
+
+    # for samp_idx, n_samples in enumerate(n_samples_list):
+    #     plot_attacks_explanations(images=images, explanations=bay_lrp[samp_idx], attacks=bay_attack[samp_idx], 
+    #                                   attacks_explanations=bay_attack_lrp[samp_idx],
+    #                                   rule=args.rule, savedir=savedir, pxl_idxs=bay_lrp_pxl_idxs[samp_idx],
+    #                                   filename="bay_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
+
+    # plot_attacks_explanations(images=images, explanations=mode_lrp, attacks=mode_attack, 
+    #                         attacks_explanations=mode_attack_lrp, 
+    #                         rule=args.rule, savedir=savedir, pxl_idxs=mode_pxl_idxs,
+    #                         filename="mode_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
+
+    plot_attacks_explanations(images=images[det_successful_idxs], explanations=det_lrp[det_successful_idxs], 
+                              attacks=det_attack[det_successful_idxs], 
+                              attacks_explanations=det_attack_lrp[det_successful_idxs], 
+                              rule=args.rule, savedir=savedir, pxl_idxs=det_lrp_pxl_idxs,
+                              filename="successful_det_lrp_attacks", layer_idx=-1)
+
+    for samp_idx, n_samples in enumerate(n_samples_list):
+        succ_im_idxs = bay_successful_idxs[samp_idx]
+        plot_attacks_explanations(images=images[succ_im_idxs], explanations=bay_lrp[samp_idx][succ_im_idxs], 
+                                  attacks=bay_attack[samp_idx][succ_im_idxs], 
+                                  attacks_explanations=bay_attack_lrp[samp_idx][succ_im_idxs],
+                                  rule=args.rule, savedir=savedir, pxl_idxs=bay_lrp_pxl_idxs[samp_idx],
+                                  filename="successful_bay_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
+
+    plot_attacks_explanations(images=images[mode_successful_idxs], 
+                              explanations=mode_lrp[mode_successful_idxs], 
+                              attacks=mode_attack[mode_successful_idxs], 
+                              attacks_explanations=mode_attack_lrp[mode_successful_idxs], 
+                              rule=args.rule, savedir=savedir, pxl_idxs=mode_pxl_idxs,
+                              filename="successful_mode_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
+
+
 filename=args.rule+"_lrp_robustness"+m["dataset"]+"_images="+str(n_inputs)+\
          "_samples="+str(n_samples)+"_pxls="+str(topk)+"_atk="+str(args.attack_method)
 

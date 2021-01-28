@@ -288,7 +288,7 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)    
 
-def plot_wesserstein_dist(det_successful_atks_wess_dist, det_failed_atks_wess_dist, 
+def plot_wasserstein_dist(det_successful_atks_wess_dist, det_failed_atks_wess_dist, 
                           bay_successful_atks_wess_dist, bay_failed_atks_wess_dist,
                           increasing_n_samples, filename, savedir):
     """
@@ -298,7 +298,7 @@ def plot_wesserstein_dist(det_successful_atks_wess_dist, det_failed_atks_wess_di
     :param bayesian_wesserstein_distance: 
         pixel-wise Wesserstein distances between original LRP heatmaps and LRP heatmaps on the attacks. 
         Each index corresponds to the selected number of samples in n_samples_list.
-        :shape: ( len(n_samples_list), n. selected pixels)
+        :shape: (len(n_samples_list), n. selected pixels)
     :param deterministic_successful_idxs: image idxs for successful attacks in the deterministic case
         :shape: (n. images)
     :param bayesian_successful_idxs: image idxs for successful attacks in the bayesian case
@@ -313,30 +313,23 @@ def plot_wesserstein_dist(det_successful_atks_wess_dist, det_failed_atks_wess_di
     fig, ax = plt.subplots(2, 1, figsize=(10, 6), sharex=True, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
     alpha=0.5
 
-    ax[0].set_xlabel('Wesserstein distance distribution')
+    ax[1].set_xlabel('Wasserstein distance')
 
-    ax[0].set_ylabel('Successful attacks')
+    fig.text(0.5, 0.91, "Successful attacks", ha='center')
     sns.distplot(det_successful_atks_wess_dist, ax=ax[0], label="deterministic")
     
     for sample_idx, n_samples in enumerate(increasing_n_samples):
         sns.distplot(bay_successful_atks_wess_dist[sample_idx], ax=ax[0], label="bayesian samp="+str(n_samples))
 
-    ax[1].set_ylabel('Failed attacks')
+    fig.text(0.5, 0.48, "Failed attacks", ha='center')
     sns.distplot(det_failed_atks_wess_dist, ax=ax[1], label="deterministic")
 
     for sample_idx, n_samples in enumerate(increasing_n_samples):
         sns.distplot(bay_failed_atks_wess_dist[sample_idx], ax=ax[1], label="bayesian samp="+str(n_samples))
 
-    ax[1].legend()
-
-    # ax[0,0].set_ylim(0,1)
-    # ax[1,0].set_ylim(0,1)
-    # ax[0,2].set_ylim(0,1)
-    # ax[1,2].set_ylim(0,1)
-
+    ax[0].legend()
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)
-
 
 # def plot_wesserstein_dist(deterministic_wesserstein_distance, bayesian_wesserstein_distance, 
     #                       deterministic_successful_idxs, bayesian_successful_idxs,

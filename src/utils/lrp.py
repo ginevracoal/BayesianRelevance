@@ -270,7 +270,7 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
     return robustness, chosen_pxl_idxs
 
 
-def lrp_wesserstein_distance(lrp, attack_lrp, pxl_idxs):
+def lrp_wasserstein_distance(lrp, attack_lrp, pxl_idxs):
 
     flat_lrp = np.array(lrp.reshape(*lrp.shape[:1], -1).detach().cpu().numpy())
     flat_attack_lrp = np.array(attack_lrp.reshape(*attack_lrp.shape[:1], -1).detach().cpu().numpy())
