@@ -31,7 +31,7 @@ def softmax_robustness(original_outputs, adversarial_outputs, norm="linf"):
     softmax_differences = softmax_difference(original_outputs, adversarial_outputs)
 
     if norm=="l2":
-        softmax_differences = torch.norm(softmax_differences, dim=1)
+        softmax_differences = torch.norm(softmax_differences, dim=-1)
 
     elif norm=="linf":
         softmax_differences = softmax_differences.max(dim=-1)[0]

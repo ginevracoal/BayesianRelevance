@@ -210,8 +210,8 @@ def lrp_robustness_distributions(lrp_robustness, bayesian_lrp_robustness, mode_l
                                  n_samples_list, savedir, filename):
 
     os.makedirs(savedir, exist_ok=True) 
-    print(f"\ndeterministic lrp rob mean={lrp_robustness.mean():.2f} var={lrp_robustness.var():.2f}")   
-    print(f"bayesian lrp rob mean={bayesian_lrp_robustness.mean():.2f} var={bayesian_lrp_robustness.var():.2f}")   
+    # print(f"\ndeterministic lrp rob mean={lrp_robustness.mean():.2f} var={lrp_robustness.var():.2f}")   
+    # print(f"bayesian lrp rob mean={bayesian_lrp_robustness.mean():.2f} var={bayesian_lrp_robustness.var():.2f}")   
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
@@ -247,6 +247,9 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
     ax[1,1].set_xlabel('Softmax robustness')
     ax[0,0].set_ylabel('LRP robustness')
     ax[1,0].set_ylabel('LRP robustness')
+
+    print(adversarial_robustness.shape, lrp_robustness.shape)
+    exit()
     
     sns.scatterplot(x=adversarial_robustness, y=lrp_robustness, ax=ax[0,1], label='deterministic', alpha=alpha)
     sns.scatterplot(x=mode_adversarial_robustness, y=mode_lrp_robustness, label='posterior mode', 
@@ -285,86 +288,131 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)    
 
-def plot_wesserstein_dist(deterministic_wesserstein_distance, bayesian_wesserstein_distance, 
-                          deterministic_successful_idxs, bayesian_successful_idxs,
-                          deterministic_softmax_robustness, bayesian_softmax_robustness,
+def plot_wesserstein_dist(det_successful_atks_wess_dist, det_failed_atks_wess_dist, 
+                          bay_successful_atks_wess_dist, bay_failed_atks_wess_dist,
                           increasing_n_samples, filename, savedir):
     """
     :param deterministic_wesserstein_distance: 
-        Wesserstein distances between original LRP heatmaps and LRP heatmaps on the attacks.
-        :type: list(np.array())
-        :shape: (n. images, n. selected pixels)
+        pixel-wise Wesserstein distances between original LRP heatmaps and LRP heatmaps on the attacks.
+        :shape: (n. selected pixels)
     :param bayesian_wesserstein_distance: 
-        Wesserstein distances between original LRP heatmaps and LRP heatmaps on the attacks. 
+        pixel-wise Wesserstein distances between original LRP heatmaps and LRP heatmaps on the attacks. 
         Each index corresponds to the selected number of samples in n_samples_list.
-        :type: list(list(np.array()))
-        :shape: ( len(n_samples_list), n. images, n. selected pixels)
+        :shape: ( len(n_samples_list), n. selected pixels)
     :param deterministic_successful_idxs: image idxs for successful attacks in the deterministic case
-        :type: list(bool)
         :shape: (n. images)
     :param bayesian_successful_idxs: image idxs for successful attacks in the bayesian case
-        :type: list(bool)
         :shape: (n. images)
     :param increasing_n_samples: increasing number of samples from the posterior.
-        :type: list
     """
 
     os.makedirs(savedir, exist_ok=True)
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
 
-    # fig, ax = plt.subplots(2, 1, figsize=(10, 6), sharex=True, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
-    fig, ax = plt.subplots(2, 3, figsize=(10, 8), gridspec_kw={'width_ratios': [1, 2, 1]}, 
-                           sharex=False, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(2, 1, figsize=(10, 6), sharex=True, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
     alpha=0.5
 
-    ax[1,1].set_xlabel('Softmax robustness')
-    ax[0,0].set_ylabel('Wesserstein distance')
-    ax[1,0].set_ylabel('Wesserstein distance')
-    ax[1,0].set_xlabel('Softmax rob. = 0.')
-    ax[1,2].set_xlabel('Softmax rob. = 1.')
+    ax[0].set_xlabel('Wesserstein distance distribution')
 
-    fig.text(0.5, 0.91, "Successful attacks", ha='center')
-
-    wess_dist = deterministic_wesserstein_distance[deterministic_successful_idxs]
-    softmax_rob = deterministic_softmax_robustness[deterministic_successful_idxs]
-    sns.scatterplot(softmax_rob, wess_dist, ax=ax[0,1], label="deterministic", alpha=alpha)
-    sns.distplot(wess_dist[np.where(softmax_rob==0.)[0]], ax=ax[0,0], vertical=True)
-    sns.distplot(wess_dist[np.where(softmax_rob==1.)[0]], ax=ax[0,2], vertical=True)
+    ax[0].set_ylabel('Successful attacks')
+    sns.distplot(det_successful_atks_wess_dist, ax=ax[0], label="deterministic")
     
     for sample_idx, n_samples in enumerate(increasing_n_samples):
-        wess_dist = bayesian_wesserstein_distance[sample_idx][bayesian_successful_idxs[sample_idx]]
-        softmax_rob = bayesian_softmax_robustness[sample_idx][bayesian_successful_idxs[sample_idx]]
-        sns.scatterplot(softmax_rob, wess_dist, ax=ax[0,1], label="bayesian samp="+str(n_samples), alpha=alpha)
-        sns.distplot(wess_dist[np.where(softmax_rob==0.)[0]], ax=ax[0,0], vertical=True)
-        sns.distplot(wess_dist[np.where(softmax_rob==1.)[0]], ax=ax[0,2], vertical=True)
+        sns.distplot(bay_successful_atks_wess_dist[sample_idx], ax=ax[0], label="bayesian samp="+str(n_samples))
 
-    fig.text(0.5, 0.47, "Failed attacks", ha='center')
-
-    deterministic_failed_idxs = np.setdiff1d(np.arange(len(deterministic_wesserstein_distance)), 
-                                             deterministic_successful_idxs)
-    wess_dist = deterministic_wesserstein_distance[deterministic_failed_idxs]
-    softmax_rob = deterministic_wesserstein_distance[deterministic_failed_idxs]
-    sns.scatterplot(softmax_rob, wess_dist, ax=ax[1,1], label="deterministic", alpha=alpha)
-    sns.distplot(wess_dist[np.where(softmax_rob==0.)[0]], ax=ax[1,0], vertical=True)
-    sns.distplot(wess_dist[np.where(softmax_rob==1.)[0]], ax=ax[1,2], vertical=True)
+    ax[1].set_ylabel('Failed attacks')
+    sns.distplot(det_failed_atks_wess_dist, ax=ax[1], label="deterministic")
 
     for sample_idx, n_samples in enumerate(increasing_n_samples):
-        bayesian_failed_idxs = np.setdiff1d(np.arange(len(deterministic_wesserstein_distance)), 
-                                                 bayesian_successful_idxs[sample_idx])
-        wess_dist = bayesian_wesserstein_distance[sample_idx][bayesian_failed_idxs]
-        softmax_rob = bayesian_softmax_robustness[sample_idx][bayesian_failed_idxs]
-        sns.scatterplot(softmax_rob, wess_dist, ax=ax[1,1], label="bayesian samp="+str(n_samples), alpha=alpha)
-        sns.distplot(wess_dist[np.where(softmax_rob==0.)[0]], ax=ax[1,0], vertical=True)
-        sns.distplot(wess_dist[np.where(softmax_rob==1.)[0]], ax=ax[1,2], vertical=True)
+        sns.distplot(bay_failed_atks_wess_dist[sample_idx], ax=ax[1], label="bayesian samp="+str(n_samples))
 
-    # fig.set_title("Wesserstein distance between original and attack LRP distributions")
-    ax[0,1].legend()
+    ax[1].legend()
 
-    ax[0,0].set_ylim(0,1)
-    ax[1,0].set_ylim(0,1)
-    ax[0,2].set_ylim(0,1)
-    ax[1,2].set_ylim(0,1)
+    # ax[0,0].set_ylim(0,1)
+    # ax[1,0].set_ylim(0,1)
+    # ax[0,2].set_ylim(0,1)
+    # ax[1,2].set_ylim(0,1)
 
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)
+
+
+# def plot_wesserstein_dist(deterministic_wesserstein_distance, bayesian_wesserstein_distance, 
+    #                       deterministic_successful_idxs, bayesian_successful_idxs,
+    #                       # deterministic_softmax_robustness, bayesian_softmax_robustness,
+    #                       increasing_n_samples, filename, savedir):
+    # """
+    # :param deterministic_wesserstein_distance: 
+    #     pixel-wise Wesserstein distances between original LRP heatmaps and LRP heatmaps on the attacks.
+    #     :shape: (n. selected pixels)
+    # :param bayesian_wesserstein_distance: 
+    #     pixel-wise Wesserstein distances between original LRP heatmaps and LRP heatmaps on the attacks. 
+    #     Each index corresponds to the selected number of samples in n_samples_list.
+    #     :shape: ( len(n_samples_list), n. selected pixels)
+    # :param deterministic_successful_idxs: image idxs for successful attacks in the deterministic case
+    #     :shape: (n. images)
+    # :param bayesian_successful_idxs: image idxs for successful attacks in the bayesian case
+    #     :shape: (n. images)
+    # :param increasing_n_samples: increasing number of samples from the posterior.
+    # """
+
+    # os.makedirs(savedir, exist_ok=True)
+    # sns.set_style("darkgrid")
+    # matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
+
+    # # fig, ax = plt.subplots(2, 1, figsize=(10, 6), sharex=True, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
+    # fig, ax = plt.subplots(2, 3, figsize=(10, 8), gridspec_kw={'width_ratios': [1, 2, 1]}, 
+    #                        sharex=False, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
+    # alpha=0.5
+
+    # # ax[1,1].set_xlabel('Softmax robustness')
+    # ax[0,0].set_ylabel('Wesserstein distance')
+    # ax[1,0].set_ylabel('Wesserstein distance')
+    # ax[1,0].set_xlabel('Softmax rob. = 0.')
+    # ax[1,2].set_xlabel('Softmax rob. = 1.')
+
+    # fig.text(0.5, 0.91, "Successful attacks", ha='center')
+
+    # wess_dist = deterministic_wesserstein_distance[deterministic_successful_idxs]
+    # softmax_rob = deterministic_softmax_robustness[deterministic_successful_idxs]
+    # sns.scatterplot(softmax_rob, wess_dist, ax=ax[0,1], label="deterministic", alpha=alpha)
+    # sns.distplot(wess_dist[np.where(softmax_rob==0.)[0]], ax=ax[0,0], vertical=True)
+    # sns.distplot(wess_dist[np.where(softmax_rob==1.)[0]], ax=ax[0,2], vertical=True)
+    
+    # for sample_idx, n_samples in enumerate(increasing_n_samples):
+    #     wess_dist = bayesian_wesserstein_distance[sample_idx][bayesian_successful_idxs[sample_idx]]
+    #     softmax_rob = bayesian_softmax_robustness[sample_idx][bayesian_successful_idxs[sample_idx]]
+    #     sns.scatterplot(softmax_rob, wess_dist, ax=ax[0,1], label="bayesian samp="+str(n_samples), alpha=alpha)
+    #     sns.distplot(wess_dist[np.where(softmax_rob==0.)[0]], ax=ax[0,0], vertical=True)
+    #     sns.distplot(wess_dist[np.where(softmax_rob==1.)[0]], ax=ax[0,2], vertical=True)
+
+    # fig.text(0.5, 0.47, "Failed attacks", ha='center')
+
+    # deterministic_failed_idxs = np.setdiff1d(np.arange(len(deterministic_wesserstein_distance)), 
+    #                                          deterministic_successful_idxs)
+    # wess_dist = deterministic_wesserstein_distance[deterministic_failed_idxs]
+    # softmax_rob = deterministic_wesserstein_distance[deterministic_failed_idxs]
+    # sns.scatterplot(softmax_rob, wess_dist, ax=ax[1,1], label="deterministic", alpha=alpha)
+    # sns.distplot(wess_dist[np.where(softmax_rob==0.)[0]], ax=ax[1,0], vertical=True)
+    # sns.distplot(wess_dist[np.where(softmax_rob==1.)[0]], ax=ax[1,2], vertical=True)
+
+    # for sample_idx, n_samples in enumerate(increasing_n_samples):
+    #     bayesian_failed_idxs = np.setdiff1d(np.arange(len(deterministic_wesserstein_distance)), 
+    #                                              bayesian_successful_idxs[sample_idx])
+    #     wess_dist = bayesian_wesserstein_distance[sample_idx][bayesian_failed_idxs]
+    #     softmax_rob = bayesian_softmax_robustness[sample_idx][bayesian_failed_idxs]
+    #     sns.scatterplot(softmax_rob, wess_dist, ax=ax[1,1], label="bayesian samp="+str(n_samples), alpha=alpha)
+    #     sns.distplot(wess_dist[np.where(softmax_rob==0.)[0]], ax=ax[1,0], vertical=True)
+    #     sns.distplot(wess_dist[np.where(softmax_rob==1.)[0]], ax=ax[1,2], vertical=True)
+
+    # # fig.set_title("Wesserstein distance between original and attack LRP distributions")
+    # ax[0,1].legend()
+
+    # ax[0,0].set_ylim(0,1)
+    # ax[1,0].set_ylim(0,1)
+    # ax[0,2].set_ylim(0,1)
+    # ax[1,2].set_ylim(0,1)
+
+    # fig.savefig(os.path.join(savedir, filename+".png"))
+    # plt.close(fig)
