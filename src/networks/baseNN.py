@@ -161,7 +161,9 @@ class baseNN(nn.Module):
             if layer_idx<0:
                 layer_idx+=1
 
-        return nn.Sequential(*list(self.model.children())[:layer_idx])(inputs)
+        preds = nn.Sequential(*list(self.model.children())[:layer_idx])(inputs)
+        return preds
+        # return nnf.softmax(preds, dim=-1)
 
     def save(self, savedir):
 
