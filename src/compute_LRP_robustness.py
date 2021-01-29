@@ -38,9 +38,9 @@ parser.add_argument("--debug", default=False, type=eval, help="Run script in deb
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-n_samples_list=[1,10,50] #if args.model_idx<=1 else [1,10,50]
+n_samples_list=[1,5] if args.debug else [5,30]#,50]
 n_inputs=10 if args.debug else args.n_inputs
-topk=10 if args.debug else args.topk
+topk=30 if args.debug else args.topk
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
@@ -53,7 +53,7 @@ if args.device=="cuda":
 model = baseNN_settings["model_"+str(args.model_idx)]
 
 _, _, x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], 
-															shuffle=True, n_inputs=n_inputs)
+															shuffle=False, n_inputs=n_inputs)
 model_savedir = get_savedir(model="baseNN", dataset=model["dataset"], architecture=model["architecture"], 
 					  debug=args.debug, model_idx=args.model_idx)
 detnet = baseNN(inp_shape, num_classes, *list(model.values()))
@@ -84,7 +84,6 @@ if args.load:
 	det_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
 
 else:
-
 	det_attack = attack(net=detnet, x_test=images, y_test=y_test, device=args.device, method=args.attack_method)
 	det_lrp = compute_explanations(images, detnet, rule=args.rule)
 	det_attack_lrp = compute_explanations(det_attack, detnet, rule=args.rule)
@@ -93,14 +92,13 @@ else:
 	save_to_pickle(det_lrp, path=savedir, filename="det_lrp")
 	save_to_pickle(det_attack_lrp, path=savedir, filename="det_attack_lrp")
 
-
 det_preds, det_atk_preds, det_softmax_robustness, det_successful_idxs = attack_evaluation(net=detnet, x_test=images, 
 				x_attack=det_attack, y_test=y_test, device=args.device, return_successful_idxs=True)
 det_softmax_robustness = det_softmax_robustness.detach().cpu().numpy()
 
 det_lrp_robustness, det_lrp_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp, 
-											adversarial_heatmaps=det_attack_lrp, 
-											  topk=topk, method=args.lrp_method)
+													  adversarial_heatmaps=det_attack_lrp, 
+											          topk=topk, method=args.lrp_method)
 
 
 ### Bayesian explanations
@@ -125,7 +123,7 @@ else:
 	for samp_idx, n_samples in enumerate(n_samples_list):
 
 		bay_attack.append(attack(net=bayesnet, x_test=images, y_test=y_test, n_samples=n_samples,
-						  device=args.device, method=args.attack_method))
+						         device=args.device, method=args.attack_method))
 		bay_lrp.append(compute_explanations(images, bayesnet, rule=args.rule, n_samples=n_samples))
 		bay_attack_lrp.append(compute_explanations(bay_attack[samp_idx], bayesnet, 
 												   rule=args.rule, n_samples=n_samples))
@@ -135,7 +133,7 @@ else:
 		save_to_pickle(bay_attack_lrp[samp_idx], path=savedir, filename="bay_attack_lrp_samp="+str(n_samples))
 
 	mode_attack = attack(net=bayesnet, x_test=images, y_test=y_test, n_samples=n_samples,
-					  device=args.device, method=args.attack_method, avg_posterior=True)
+					     device=args.device, method=args.attack_method, avg_posterior=True)
 	mode_lrp = compute_explanations(images, bayesnet, rule=args.rule, n_samples=n_samples, avg_posterior=True)
 	mode_attack_lrp = compute_explanations(mode_attack, bayesnet, rule=args.rule, 
 											n_samples=n_samples, avg_posterior=True)
@@ -143,6 +141,8 @@ else:
 	save_to_pickle(mode_attack, path=savedir, filename="mode_attack_samp="+str(n_samples))
 	save_to_pickle(mode_lrp, path=savedir, filename="mode_lrp_samp="+str(n_samples))
 	save_to_pickle(mode_attack_lrp, path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
+
+### LRP and softmax robustness
 
 bay_softmax_robustness=[]
 bay_successful_idxs=[]
@@ -153,16 +153,17 @@ bay_atk_preds=[]
 
 for samp_idx, n_samples in enumerate(n_samples_list):
 
-	preds, atk_preds, softmax_rob, successf_idxs = attack_evaluation(net=bayesnet, x_test=images, x_attack=bay_attack[samp_idx],
-						   y_test=y_test, device=args.device, n_samples=n_samples, return_successful_idxs=True)
+	preds, atk_preds, softmax_rob, successf_idxs = attack_evaluation(net=bayesnet, x_test=images, 
+												   x_attack=bay_attack[samp_idx], y_test=y_test, device=args.device, 
+												   n_samples=n_samples, return_successful_idxs=True)
 	bay_softmax_robustness.append(softmax_rob.detach().cpu().numpy())
 	bay_successful_idxs.append(successf_idxs)
 	bay_preds.append(preds)
 	bay_atk_preds.append(atk_preds)
 
 	bay_lrp_rob, lrp_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx], 
-												  adversarial_heatmaps=bay_attack_lrp[samp_idx], 
-												  topk=topk, method=args.lrp_method)
+											   adversarial_heatmaps=bay_attack_lrp[samp_idx], 
+											   topk=topk, method=args.lrp_method)
 	bay_lrp_robustness.append(bay_lrp_rob)
 	bay_lrp_pxl_idxs.append(lrp_pxl_idxs)
 
@@ -174,8 +175,28 @@ mode_lrp_robustness, mode_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp,
 													adversarial_heatmaps=mode_attack_lrp, 
 													topk=topk, method=args.lrp_method)
 	
+### Wasserstein distances
 
-### Plot
+succ_bay_wess_dist=[]
+fail_bay_wess_dist=[]
+for samp_idx, n_samples in enumerate(n_samples_list):
+
+	succ_im_idxs = bay_successful_idxs[samp_idx]
+	succ_bay_wess_dist.append(lrp_wasserstein_distance(bay_lrp[samp_idx][succ_im_idxs],
+													   bay_attack_lrp[samp_idx][succ_im_idxs], 
+													   bay_lrp_pxl_idxs[samp_idx]))
+
+	failed_im_idxs = np.setdiff1d(np.arange(len(images)), succ_im_idxs)
+	fail_bay_wess_dist.append(lrp_wasserstein_distance(bay_lrp[samp_idx][failed_im_idxs], 
+											  bay_attack_lrp[samp_idx][failed_im_idxs], 
+											  bay_lrp_pxl_idxs[samp_idx]))
+
+succ_wess_dist=np.array(succ_wess_dist)
+fail_wess_dist=np.array(fail_wess_dist)
+succ_bay_wess_dist=np.array(succ_bay_wess_dist)
+fail_bay_wess_dist=np.array(fail_bay_wess_dist)
+
+### Plots
 
 savedir = os.path.join(model_savedir, "lrp/")
 
@@ -196,9 +217,10 @@ if args.lrp_method=="intersection":
 	# plot_attacks_explanations(images=images, explanations=mode_lrp, attacks=mode_attack, 
 	#                         attacks_explanations=mode_attack_lrp, 
 	#                         rule=args.rule, savedir=savedir, pxl_idxs=mode_pxl_idxs,
-	#                         filename="mode_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
+	#                         filename="mode_lrp_attacks_samp="+str(n_samples), layer_idx=-1)à
 
-	plot_attacks_explanations(images=images[det_successful_idxs], explanations=det_lrp[det_successful_idxs], 
+	plot_attacks_explanations(images=images[det_successful_idxs], 
+		                      explanations=det_lrp[det_successful_idxs], 
 							  attacks=det_attack[det_successful_idxs], 
 							  attacks_explanations=det_attack_lrp[det_successful_idxs], 
 							  predictions=det_preds.argmax(-1)[det_successful_idxs],
@@ -209,7 +231,8 @@ if args.lrp_method=="intersection":
 
 	for samp_idx, n_samples in enumerate(n_samples_list):
 		succ_im_idxs = bay_successful_idxs[samp_idx]
-		plot_attacks_explanations(images=images[succ_im_idxs], explanations=bay_lrp[samp_idx][succ_im_idxs], 
+		plot_attacks_explanations(images=images[succ_im_idxs], 
+								  explanations=bay_lrp[samp_idx][succ_im_idxs], 
 								  attacks=bay_attack[samp_idx][succ_im_idxs], 
 								  attacks_explanations=bay_attack_lrp[samp_idx][succ_im_idxs],
 								  predictions=bay_preds[samp_idx].argmax(-1)[succ_im_idxs],
@@ -245,3 +268,13 @@ plot_lrp.lrp_robustness_scatterplot(adversarial_robustness=det_softmax_robustnes
 									mode_lrp_robustness=mode_lrp_robustness,
 									n_samples_list=n_samples_list,
 									savedir=savedir, filename="scatterplot_"+filename)
+
+
+filename=args.rule+"_lrp_wasserstein_"+m["dataset"]+"_images="+str(n_inputs)+\
+		 "_pxls="+str(topk)+"_atk="+str(args.attack_method)
+
+plot_lrp.plot_wasserstein_dist(det_successful_atks_wess_dist=succ_wess_dist, 
+							   det_failed_atks_wess_dist=fail_wess_dist, 
+							   bay_successful_atks_wess_dist=succ_bay_wess_dist, 
+							   bay_failed_atks_wess_dist=fail_bay_wess_dist,
+							   increasing_n_samples=n_samples_list, filename=filename, savedir=savedir)

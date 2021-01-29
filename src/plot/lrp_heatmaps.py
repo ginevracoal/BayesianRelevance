@@ -100,7 +100,7 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
 
     rows = 4
     cols = min(len(explanations), 6)
-    fig, axes = plt.subplots(rows, cols, figsize=(8, 6), dpi=150)
+    fig, axes = plt.subplots(rows, cols, figsize=(10, 7), dpi=150)
     fig.tight_layout()
 
     for idx in range(cols):

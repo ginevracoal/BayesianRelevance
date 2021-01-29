@@ -230,9 +230,10 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
 	elif method=="union":
 
 		orig_pxl_idxs = select_informative_pixels(original_heatmaps.sum(0), topk=topk)[1]
-		adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps.sum(0), topk=topk)[1]
-		chosen_pxl_idxs = torch.unique(torch.cat([orig_pxl_idxs,adv_pxl_idxs])).detach().cpu().numpy()
-		# chosen_pxl_idxs = orig_pxl_idxs.detach().cpu().numpy()
+		
+		# adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps.sum(0), topk=topk)[1]
+		# chosen_pxl_idxs = torch.unique(torch.cat([orig_pxl_idxs,adv_pxl_idxs])).detach().cpu().numpy()
+		chosen_pxl_idxs = orig_pxl_idxs.detach().cpu().numpy()
 
 		distances = lrp_distances(original_heatmaps, adversarial_heatmaps, chosen_pxl_idxs)
 		robustness = -np.array(distances.detach().cpu().numpy())

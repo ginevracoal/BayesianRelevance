@@ -159,26 +159,44 @@ def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None, sam
 
 		original_outputs = []
 		original_correct = 0.0
-		for images, labels in test_loader:
+		correct_class_idxs = []
+		batch_size=0
+
+		for batch_idx, (images, labels) in enumerate(test_loader):
+
 			out = net.forward(images, n_samples=n_samples, sample_idxs=sample_idxs)
 			original_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
-			correct_class_idxs = np.where(out.argmax(-1).cpu() == labels.argmax(-1).cpu())[0]
 			original_outputs.append(out)
+
+			correct_idxs = np.where(out.argmax(-1).cpu() == labels.argmax(-1).cpu())[0]
+			correct_class_idxs.extend(correct_idxs+batch_size*batch_idx)
+			batch_size = len(images)
+
+		if DEBUG:
+			print("\nlabels", labels.argmax(-1))
+			print("det out", out.argmax(-1))
+			print("correct_class_idxs", correct_class_idxs)
 
 		adversarial_outputs = []
 		adversarial_correct = 0.0
-		successful_idxs = []
+		wrong_atk_class_idxs = []
 		batch_size=0
+
 		for batch_idx, (attacks, labels) in enumerate(attack_loader):
 			out = net.forward(attacks, n_samples=n_samples, sample_idxs=sample_idxs)
 			adversarial_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
 			adversarial_outputs.append(out)
 
-			wrong_atk_class_idxs = np.where(out.argmax(-1).cpu() != labels.argmax(-1).cpu())[0]
-
-			successful_atk_idxs = np.intersect1d(correct_class_idxs, wrong_atk_class_idxs)
-			successful_idxs.extend(successful_atk_idxs+batch_size*batch_idx)
+			wrong_idxs = np.where(out.argmax(-1).cpu() != labels.argmax(-1).cpu())[0]
+			wrong_atk_class_idxs.extend(wrong_idxs+batch_size*batch_idx)
 			batch_size = len(attacks)
+
+		successful_atk_idxs = np.intersect1d(correct_class_idxs, wrong_atk_class_idxs)
+
+		if DEBUG:
+			print("bay out", out.argmax(-1))
+			print("wrong_atk_class_idxs", wrong_atk_class_idxs)
+			print("successful_atk_idxs", successful_atk_idxs)
 
 		original_accuracy = 100 * original_correct / len(x_test)
 		adversarial_accuracy = 100 * adversarial_correct / len(x_test)
@@ -190,9 +208,10 @@ def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None, sam
 		softmax_rob = softmax_robustness(original_outputs, adversarial_outputs)
 
 	if return_successful_idxs:
-		return original_outputs, adversarial_outputs, softmax_rob, successful_idxs
+		return original_outputs, adversarial_outputs, softmax_rob, successful_atk_idxs
 	else:
 		return original_outputs, adversarial_outputs, softmax_rob
+
 	# if return_successful_idxs:
 	# 	return original_accuracy, adversarial_accuracy, softmax_rob, successful_idxs
 	# else:
