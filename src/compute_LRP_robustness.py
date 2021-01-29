@@ -24,7 +24,7 @@ from networks.fullBNN import *
 from networks.redBNN import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
+parser.add_argument("--n_inputs", default=1000, type=int, help="Number of test points")
 parser.add_argument("--topk", default=200, type=int, help="Top k most relevant pixels.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
@@ -38,9 +38,9 @@ parser.add_argument("--debug", default=False, type=eval, help="Run script in deb
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-n_samples_list=[1,5] if args.debug else [5,30]#,50]
-n_inputs=10 if args.debug else args.n_inputs
-topk=30 if args.debug else args.topk
+n_samples_list=[1,20] if args.debug else [1,10,50]
+n_inputs=500 if args.debug else args.n_inputs
+topk=50 if args.debug else args.topk
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
@@ -74,7 +74,7 @@ else:
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
-savedir = os.path.join(model_savedir, "lrp/pkl/")
+savedir = os.path.join(model_savedir, "lrp/robustness/pkl/")
 
 ### Deterministic explanations
 
@@ -99,7 +99,6 @@ det_softmax_robustness = det_softmax_robustness.detach().cpu().numpy()
 det_lrp_robustness, det_lrp_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp, 
 													  adversarial_heatmaps=det_attack_lrp, 
 											          topk=topk, method=args.lrp_method)
-
 
 ### Bayesian explanations
 
@@ -174,82 +173,47 @@ mode_softmax_robustness = mode_softmax_robustness.detach().cpu().numpy()
 mode_lrp_robustness, mode_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
 													adversarial_heatmaps=mode_attack_lrp, 
 													topk=topk, method=args.lrp_method)
-	
-### Wasserstein distances
-
-succ_bay_wess_dist=[]
-fail_bay_wess_dist=[]
-for samp_idx, n_samples in enumerate(n_samples_list):
-
-	succ_im_idxs = bay_successful_idxs[samp_idx]
-	succ_bay_wess_dist.append(lrp_wasserstein_distance(bay_lrp[samp_idx][succ_im_idxs],
-													   bay_attack_lrp[samp_idx][succ_im_idxs], 
-													   bay_lrp_pxl_idxs[samp_idx]))
-
-	failed_im_idxs = np.setdiff1d(np.arange(len(images)), succ_im_idxs)
-	fail_bay_wess_dist.append(lrp_wasserstein_distance(bay_lrp[samp_idx][failed_im_idxs], 
-											  bay_attack_lrp[samp_idx][failed_im_idxs], 
-											  bay_lrp_pxl_idxs[samp_idx]))
-
-succ_wess_dist=np.array(succ_wess_dist)
-fail_wess_dist=np.array(fail_wess_dist)
-succ_bay_wess_dist=np.array(succ_bay_wess_dist)
-fail_bay_wess_dist=np.array(fail_bay_wess_dist)
 
 ### Plots
 
-savedir = os.path.join(model_savedir, "lrp/")
+savedir = os.path.join(model_savedir, "lrp/robustness/")
 
 if args.lrp_method=="intersection":
 
-	# plot_attacks_explanations(images=images, explanations=det_lrp, 
-	#                           attacks=det_attack, attacks_explanations=det_attack_lrp, 
-	#                           rule=args.rule, savedir=savedir, pxl_idxs=det_lrp_pxl_idxs,
-	#                           filename="det_lrp_attacks", layer_idx=-1)
-
-
-	# for samp_idx, n_samples in enumerate(n_samples_list):
-	#     plot_attacks_explanations(images=images, explanations=bay_lrp[samp_idx], attacks=bay_attack[samp_idx], 
-	#                                   attacks_explanations=bay_attack_lrp[samp_idx],
-	#                                   rule=args.rule, savedir=savedir, pxl_idxs=bay_lrp_pxl_idxs[samp_idx],
-	#                                   filename="bay_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
-
-	# plot_attacks_explanations(images=images, explanations=mode_lrp, attacks=mode_attack, 
-	#                         attacks_explanations=mode_attack_lrp, 
-	#                         rule=args.rule, savedir=savedir, pxl_idxs=mode_pxl_idxs,
-	#                         filename="mode_lrp_attacks_samp="+str(n_samples), layer_idx=-1)à
-
-	plot_attacks_explanations(images=images[det_successful_idxs], 
-		                      explanations=det_lrp[det_successful_idxs], 
-							  attacks=det_attack[det_successful_idxs], 
-							  attacks_explanations=det_attack_lrp[det_successful_idxs], 
-							  predictions=det_preds.argmax(-1)[det_successful_idxs],
-							  attacks_predictions=det_atk_preds.argmax(-1)[det_successful_idxs],
-							  labels=labels[det_successful_idxs],
+	plot_attacks_explanations(images=images, 
+		                      explanations=det_lrp, 
+							  attacks=det_attack, 
+							  attacks_explanations=det_attack_lrp, 
+							  predictions=det_preds.argmax(-1),
+							  attacks_predictions=det_atk_preds.argmax(-1),
+							  successful_attacks_idxs=det_successful_idxs,
+							  labels=labels, lrp_method=args.lrp_method,
 							  rule=args.rule, savedir=savedir, pxl_idxs=det_lrp_pxl_idxs,
-							  filename="successful_det_lrp_attacks", layer_idx=-1)
+							  filename=args.lrp_method+"_det_lrp_attacks", layer_idx=-1)
 
 	for samp_idx, n_samples in enumerate(n_samples_list):
-		succ_im_idxs = bay_successful_idxs[samp_idx]
-		plot_attacks_explanations(images=images[succ_im_idxs], 
-								  explanations=bay_lrp[samp_idx][succ_im_idxs], 
-								  attacks=bay_attack[samp_idx][succ_im_idxs], 
-								  attacks_explanations=bay_attack_lrp[samp_idx][succ_im_idxs],
-								  predictions=bay_preds[samp_idx].argmax(-1)[succ_im_idxs],
-								  attacks_predictions=bay_atk_preds[samp_idx].argmax(-1)[succ_im_idxs],
-								  labels=labels[succ_im_idxs],
-								  rule=args.rule, savedir=savedir, pxl_idxs=bay_lrp_pxl_idxs[samp_idx],
-								  filename="successful_bay_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
 
-	plot_attacks_explanations(images=images[mode_successful_idxs], 
-							  explanations=mode_lrp[mode_successful_idxs], 
-							  attacks=mode_attack[mode_successful_idxs], 
-							  attacks_explanations=mode_attack_lrp[mode_successful_idxs], 
-							  predictions=mode_preds.argmax(-1)[mode_successful_idxs],
-							  attacks_predictions=mode_atk_preds.argmax(-1)[mode_successful_idxs],
-							  labels=labels[mode_successful_idxs],
+		plot_attacks_explanations(images=images, 
+								  explanations=bay_lrp[samp_idx], 
+								  attacks=bay_attack[samp_idx], 
+								  attacks_explanations=bay_attack_lrp[samp_idx],
+								  predictions=bay_preds[samp_idx].argmax(-1),
+								  attacks_predictions=bay_atk_preds[samp_idx].argmax(-1),
+								  successful_attacks_idxs=bay_successful_idxs[samp_idx],
+								  labels=labels, lrp_method=args.lrp_method,
+								  rule=args.rule, savedir=savedir, pxl_idxs=bay_lrp_pxl_idxs[samp_idx],
+								  filename=args.lrp_method+"_bay_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
+
+	plot_attacks_explanations(images=images, 
+							  explanations=mode_lrp, 
+							  attacks=mode_attack, 
+							  attacks_explanations=mode_attack_lrp, 
+							  predictions=mode_preds.argmax(-1),
+							  attacks_predictions=mode_atk_preds.argmax(-1),
+							  successful_attacks_idxs=mode_successful_idxs,
+							  labels=labels, lrp_method=args.lrp_method,
 							  rule=args.rule, savedir=savedir, pxl_idxs=mode_pxl_idxs,
-							  filename="successful_mode_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
+							  filename=args.lrp_method+"_mode_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
 
 filename=args.rule+"_lrp_robustness"+m["dataset"]+"_images="+str(n_inputs)+\
 		 "_samples="+str(n_samples)+"_pxls="+str(topk)+"_atk="+str(args.attack_method)
@@ -268,13 +232,3 @@ plot_lrp.lrp_robustness_scatterplot(adversarial_robustness=det_softmax_robustnes
 									mode_lrp_robustness=mode_lrp_robustness,
 									n_samples_list=n_samples_list,
 									savedir=savedir, filename="scatterplot_"+filename)
-
-
-filename=args.rule+"_lrp_wasserstein_"+m["dataset"]+"_images="+str(n_inputs)+\
-		 "_pxls="+str(topk)+"_atk="+str(args.attack_method)
-
-plot_lrp.plot_wasserstein_dist(det_successful_atks_wess_dist=succ_wess_dist, 
-							   det_failed_atks_wess_dist=fail_wess_dist, 
-							   bay_successful_atks_wess_dist=succ_bay_wess_dist, 
-							   bay_failed_atks_wess_dist=fail_bay_wess_dist,
-							   increasing_n_samples=n_samples_list, filename=filename, savedir=savedir)

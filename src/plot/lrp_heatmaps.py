@@ -50,25 +50,47 @@ def plot_explanations(images, explanations, rule, savedir, filename, layer_idx=-
     os.makedirs(savedir, exist_ok=True)
     plt.savefig(os.path.join(savedir,filename+".png"))
 
-def relevant_subset(images, pxl_idxs):
+def relevant_subset(images, pxl_idxs, lrp_method):
 
     flat_images = images.reshape(*images.shape[:2], -1)
     images_rel = np.zeros(flat_images.shape)
 
-    for image_idx, pxl_idx in enumerate(pxl_idxs):
-        images_rel[image_idx,:,pxl_idx] = flat_images[image_idx,:,pxl_idx]
+    if lrp_method=="intersection":
+        # different selection of pixels for each image
+
+        for image_idx, im_pxl_idxs in enumerate(pxl_idxs):
+            images_rel[image_idx,:,im_pxl_idxs] = flat_images[image_idx,:,im_pxl_idxs]
+
+    elif lrp_method=="union":
+        # same pxls for all the images
+        
+        images_rel[:,:,pxl_idxs] = flat_images[:,:,pxl_idxs]
+
+    else:
+        raise NotImplementedError
     
     images_rel = images_rel.reshape(images.shape)
     return images_rel
 
 def plot_attacks_explanations(images, explanations, attacks, attacks_explanations, 
-                              predictions, attacks_predictions, labels,
-                              pxl_idxs, rule, savedir, filename, layer_idx=-1):
+                              predictions, attacks_predictions, successful_attacks_idxs, labels,
+                              pxl_idxs, lrp_method, rule, savedir, filename, layer_idx=-1):
 
     images_cmap='Greys'
 
     set_seed(0)
-    idxs = np.random.choice(len(images), 6)
+    failed_attacks_idxs = np.setdiff1d(np.arange(len(images)), successful_attacks_idxs)
+    chosen_successful_idxs = np.random.choice(successful_attacks_idxs, 3)
+    chosen_failed_idxs =  np.random.choice(failed_attacks_idxs, 3)
+    idxs = np.concatenate([chosen_successful_idxs, chosen_failed_idxs])
+
+    if DEBUG:
+        print("successful_attacks_idxs", successful_attacks_idxs)
+        print("failed_attacks_idxs", failed_attacks_idxs)
+        print("chosen_successful_idxs", chosen_successful_idxs)
+        print("chosen_failed_idxs", chosen_failed_idxs)
+        print("idxs", idxs)
+
     images = images[idxs].detach().cpu().numpy()
     explanations = explanations[idxs].detach().cpu().numpy()
     attacks = attacks[idxs].detach().cpu().numpy()
@@ -81,12 +103,14 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
         print(images.shape, "!=", explanations.shape)
         raise ValueError
 
-    images_rel = relevant_subset(images, pxl_idxs[idxs])
+    selected_pxl_idxs = pxl_idxs if lrp_method=="union" else pxl_idxs[idxs]
+
+    images_rel = relevant_subset(images, selected_pxl_idxs, lrp_method)
     images_rel = np.ma.masked_where(images_rel == 0., images_rel)
-    attacks_rel = relevant_subset(attacks, pxl_idxs[idxs])
+    attacks_rel = relevant_subset(attacks, selected_pxl_idxs, lrp_method)
     attacks_rel = np.ma.masked_where(attacks_rel == 0., attacks_rel)
-    explanations = relevant_subset(explanations, pxl_idxs[idxs])
-    attacks_explanations = relevant_subset(attacks_explanations, pxl_idxs[idxs])
+    explanations = relevant_subset(explanations, selected_pxl_idxs, lrp_method)
+    attacks_explanations = relevant_subset(attacks_explanations, selected_pxl_idxs, lrp_method)
 
     cmap = plt.cm.get_cmap(relevance_cmap)
 
@@ -102,6 +126,9 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     cols = min(len(explanations), 6)
     fig, axes = plt.subplots(rows, cols, figsize=(10, 7), dpi=150)
     fig.tight_layout()
+
+    fig.text(0.18, 0.95, "Successful attacks")
+    fig.text(0.62, 0.95, "Failed attacks")
 
     for idx in range(cols):
 

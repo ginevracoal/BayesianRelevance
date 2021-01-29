@@ -230,25 +230,25 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
 	elif method=="union":
 
 		orig_pxl_idxs = select_informative_pixels(original_heatmaps.sum(0), topk=topk)[1]
-		
-		# adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps.sum(0), topk=topk)[1]
-		# chosen_pxl_idxs = torch.unique(torch.cat([orig_pxl_idxs,adv_pxl_idxs])).detach().cpu().numpy()
-		chosen_pxl_idxs = orig_pxl_idxs.detach().cpu().numpy()
+
+		adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps.sum(0), topk=topk)[1]
+		chosen_pxl_idxs = torch.unique(torch.cat([orig_pxl_idxs,adv_pxl_idxs])).detach().cpu().numpy()
+		# chosen_pxl_idxs = orig_pxl_idxs.detach().cpu().numpy()
 
 		distances = lrp_distances(original_heatmaps, adversarial_heatmaps, chosen_pxl_idxs)
 		robustness = -np.array(distances.detach().cpu().numpy())
 
-	elif method=="average":
+	# elif method=="average":
 
-		stacked_heatmaps = torch.stack([original_heatmaps, adversarial_heatmaps])
-		avg_heatmaps = stacked_heatmaps.mean(0)
+	# 	stacked_heatmaps = torch.stack([original_heatmaps, adversarial_heatmaps])
+	# 	avg_heatmaps = stacked_heatmaps.mean(0)
 
-		robustness = []
-		for im_idx in range(len(original_heatmaps)):
+	# 	robustness = []
+	# 	for im_idx in range(len(original_heatmaps)):
 
-			pxl_idxs = select_informative_pixels(avg_heatmaps[im_idx], topk=topk)[1].detach().cpu().numpy()
-			robustness.append(len(pxl_idxs)/topk)
-			chosen_pxl_idxs.append(pxl_idxs)
+	# 		pxl_idxs = select_informative_pixels(avg_heatmaps[im_idx], topk=topk)[1].detach().cpu().numpy()
+	# 		robustness.append(len(pxl_idxs)/topk)
+	# 		chosen_pxl_idxs.append(pxl_idxs)
 
 	return np.array(robustness), np.array(chosen_pxl_idxs)
 
