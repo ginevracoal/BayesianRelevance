@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 from utils.savedir import *
 from utils.data import save_to_pickle, load_from_pickle
-from utils.torchvision import plot_grid_attacks
+from plot.attacks import plot_grid_attacks
 from attacks.robustness_measures import softmax_robustness
 import attacks.torchvision_gradient_based as torchvision_atks
 
@@ -116,6 +116,8 @@ def _plot_attack(savedir, original_images_list, adversarial_data, method, n_samp
     torchvision_atks._plot_attack(savedir, original_images_list, adversarial_data, method, n_samples)
 
 def save_attack(savedir, adversarial_data, method, n_samples=None):
+
+    ## todo: add plot
     filename = _get_attacks_filename(savedir, method, n_samples)
     save_to_pickle(data=adversarial_data, path=TESTS+savedir+"/", filename=filename+"_deeprobust.pkl")
 

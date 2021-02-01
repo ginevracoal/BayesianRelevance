@@ -6,7 +6,9 @@ import numpy as np
 from utils.data import *
 from utils import savedir
 from utils.seeding import *
-from attacks.gradient_based import *
+# from attacks.gradient_based import *
+import attacks.gradient_based as grad_based
+import attacks.deeprobust as deeprobust
 
 from networks.baseNN import *
 from networks.fullBNN import *
@@ -16,17 +18,24 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings.")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
+parser.add_argument("--attack_library", type=str, default="grad_based", help="grad_based, deeprobust")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--atk_inputs", default=1000, type=int, help="Number of test points to be attacked.")
 parser.add_argument("--bayesian_layer_idx", default=-1, type=int, help="Index for the Bayesian layer in redBNN.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
-parser.add_argument("--device", default='cpu', type=str, help="cpu, cuda")  
+parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
 n_inputs=100 if args.debug else None
 atk_inputs=100 if args.debug else args.atk_inputs
 
 print("PyTorch Version: ", torch.__version__)
+
+atk_lib = eval(args.attack_library)
+attack = atk_lib.attack
+load_attack = atk_lib.load_attack
+save_attack = atk_lib.save_attack
+evaluate_attack = atk_lib.evaluate_attack
 
 if args.device=="cuda":
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -52,9 +61,9 @@ if args.model=="baseNN":
         net.train(train_loader=train_loader, savedir=savedir, device=args.device)
         x_attack = attack(net=net, x_test=x_test, y_test=y_test,
                       device=args.device, method=args.attack_method)
-        save_plot_attack(x_test, x_attack, method=args.attack_method, filename=net.name, savedir=savedir)
+        save_attack(x_test, x_attack, method=args.attack_method, filename=net.name, savedir=savedir)
 
-    attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, device=args.device)
+    evaluate_attack(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, device=args.device)
 
 else:
 
@@ -94,13 +103,13 @@ else:
         raise NotImplementedError
 
     if args.debug:
-        bayesian_attack_samples=[2]
+        bayesian_attack_samples=[1,5]
     else:
         if m["inference"]=="svi":
-            bayesian_attack_samples=[1,10,50]
+            bayesian_attack_samples=[5,10,50]
 
         elif m["inference"]=="hmc":
-            bayesian_attack_samples=[1,10,50]
+            bayesian_attack_samples=[5,10,50]
 
     if args.load:
 
@@ -108,7 +117,7 @@ else:
         for n_samples in bayesian_attack_samples:
 
             x_attack = load_attack(method=args.attack_method, filename=net.name, savedir=savedir, n_samples=n_samples)
-            attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
+            evaluate_attack(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
                               device=args.device, n_samples=n_samples)
 
     else:
@@ -121,9 +130,9 @@ else:
         for n_samples in bayesian_attack_samples:
             x_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device,
                               method=args.attack_method, n_samples=n_samples)
-            save_plot_attack(x_test, x_attack, method=args.attack_method, filename=net.name, 
+            save_attack(x_test, x_attack, method=args.attack_method, filename=net.name, 
                              savedir=savedir, n_samples=n_samples)
 
-            attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
+            evaluate_attack(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
                               device=args.device, n_samples=n_samples)
 

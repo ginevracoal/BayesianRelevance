@@ -121,7 +121,7 @@ def attack(net, x_test, y_test, device, method,
 	adversarial_attack = torch.cat(adversarial_attack)
 	return adversarial_attack
 
-def save_plot_attack(inputs, attacks, method, filename, savedir, n_samples=None):
+def save_attack(inputs, attacks, method, filename, savedir, n_samples=None):
 	
 	name = filename+"_"+str(method)
 	name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
@@ -143,7 +143,7 @@ def load_attack(method, filename, savedir, n_samples=None):
 	name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
 	return load_from_pickle(path=savedir, filename=name)
 
-def attack_evaluation(net, x_test, x_attack, y_test, device, n_samples=None, sample_idxs=None, 
+def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sample_idxs=None, 
 					  return_successful_idxs=False):
 
 	print(f"\nEvaluating against the attacks", end="")
