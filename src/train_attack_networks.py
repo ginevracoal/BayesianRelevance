@@ -35,7 +35,7 @@ atk_lib = eval(args.attack_library)
 attack = atk_lib.attack
 load_attack = atk_lib.load_attack
 save_attack = atk_lib.save_attack
-evaluate_attack = atk_lib.evaluate_attack
+evaluate_attack = grad_based.evaluate_attack
 
 if args.device=="cuda":
     torch.set_default_tensor_type('torch.cuda.FloatTensor')

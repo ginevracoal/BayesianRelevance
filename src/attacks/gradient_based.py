@@ -47,7 +47,7 @@ def loss_gradient_sign(net, n_samples, image, label, avg_posterior, sample_idxs=
 
 			x_copy = copy.deepcopy(image)
 			x_copy.requires_grad = True
-			output = net.forward(inputs=x_copy, n_samples=1, sample_idxs=[idx])
+			output = net.forward(inputs=x_copy, n_samples=1, sample_idxs=[idx], avg_posterior=False)
 
 			loss = torch.nn.CrossEntropyLoss()(output.to(dtype=torch.double), label)
 			net.zero_grad()
@@ -145,7 +145,9 @@ def load_attack(method, filename, savedir, n_samples=None):
 
 def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sample_idxs=None, 
 					  return_successful_idxs=False):
-
+	""" Evaluates the network on the original data and its adversarially perturbed version. 
+	When using a Bayesian network `n_samples` should be specified for the evaluation.     
+	"""
 	print(f"\nEvaluating against the attacks", end="")
 	if n_samples:
 		print(f" with {n_samples} defence samples")
@@ -164,7 +166,7 @@ def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sampl
 
 		for batch_idx, (images, labels) in enumerate(test_loader):
 
-			out = net.forward(images, n_samples=n_samples, sample_idxs=sample_idxs)
+			out = net.forward(images, n_samples=n_samples, sample_idxs=sample_idxs, avg_posterior=False)
 			original_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
 			original_outputs.append(out)
 
@@ -173,7 +175,7 @@ def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sampl
 			batch_size = len(images)
 
 		if DEBUG:
-			print("\nlabels", labels.argmax(-1))
+			print("\nlabels", labels.argmax(-1))	
 			print("det out", out.argmax(-1))
 			print("correct_class_idxs", correct_class_idxs)
 
@@ -183,7 +185,7 @@ def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sampl
 		batch_size=0
 
 		for batch_idx, (attacks, labels) in enumerate(attack_loader):
-			out = net.forward(attacks, n_samples=n_samples, sample_idxs=sample_idxs)
+			out = net.forward(attacks, n_samples=n_samples, sample_idxs=sample_idxs, avg_posterior=False)
 			adversarial_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
 			adversarial_outputs.append(out)
 
@@ -211,8 +213,3 @@ def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sampl
 		return original_outputs, adversarial_outputs, softmax_rob, successful_atk_idxs
 	else:
 		return original_outputs, adversarial_outputs, softmax_rob
-
-	# if return_successful_idxs:
-	# 	return original_accuracy, adversarial_accuracy, softmax_rob, successful_idxs
-	# else:
-	# 	return original_accuracy, adversarial_accuracy, softmax_rob
