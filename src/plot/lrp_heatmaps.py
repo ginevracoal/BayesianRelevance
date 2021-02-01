@@ -128,8 +128,8 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     fig, axes = plt.subplots(rows, cols, figsize=(10, 6), dpi=150)
     fig.tight_layout()
 
-    fig.text(0.15, 0.95, "Successful attacks")
-    fig.text(0.7, 0.95, "Failed attacks")
+    fig.text(0.17, 0.97, "Successful attacks")
+    fig.text(0.74, 0.97, "Failed attacks")
 
     for im_idx, axis_idx in enumerate([0,1,2,4,5,6]):
 
