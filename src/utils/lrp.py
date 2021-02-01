@@ -214,41 +214,34 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
 	image and adversarial image.
 	"""
 
+	robustness = []
 	chosen_pxl_idxs=[]
 
-	if method=="intersection":
+	if method=="imagewise":
 
-		robustness = []
 		for im_idx in range(len(original_heatmaps)):
 			orig_pxl_idxs = select_informative_pixels(original_heatmaps[im_idx], topk=topk)[1]
 			adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps[im_idx], topk=topk)[1]
-
 			pxl_idxs = np.intersect1d(orig_pxl_idxs.detach().cpu().numpy(), adv_pxl_idxs.detach().cpu().numpy())
+
 			robustness.append(len(pxl_idxs)/topk)
 			chosen_pxl_idxs.append(pxl_idxs)
 
-	elif method=="union":
+	elif method=="pixelwise":
+
+		# stacked_heatmaps = torch.stack([original_heatmaps, adversarial_heatmaps])
+		# sum_heatmaps = stacked_heatmaps.sum(0)
+		# chosen_pxl_idxs = select_informative_pixels(sum_heatmaps, topk=topk)[1].detach().cpu().numpy()
 
 		orig_pxl_idxs = select_informative_pixels(original_heatmaps.sum(0), topk=topk)[1]
-
 		adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps.sum(0), topk=topk)[1]
-		chosen_pxl_idxs = torch.unique(torch.cat([orig_pxl_idxs,adv_pxl_idxs])).detach().cpu().numpy()
-		# chosen_pxl_idxs = orig_pxl_idxs.detach().cpu().numpy()
+		chosen_pxl_idxs = np.intersect1d(orig_pxl_idxs.detach().cpu().numpy(), adv_pxl_idxs.detach().cpu().numpy())
 
 		distances = lrp_distances(original_heatmaps, adversarial_heatmaps, chosen_pxl_idxs)
 		robustness = -np.array(distances.detach().cpu().numpy())
 
-	# elif method=="average":
-
-	# 	stacked_heatmaps = torch.stack([original_heatmaps, adversarial_heatmaps])
-	# 	avg_heatmaps = stacked_heatmaps.mean(0)
-
-	# 	robustness = []
-	# 	for im_idx in range(len(original_heatmaps)):
-
-	# 		pxl_idxs = select_informative_pixels(avg_heatmaps[im_idx], topk=topk)[1].detach().cpu().numpy()
-	# 		robustness.append(len(pxl_idxs)/topk)
-	# 		chosen_pxl_idxs.append(pxl_idxs)
+	else:
+		raise NotImplementedError
 
 	return np.array(robustness), np.array(chosen_pxl_idxs)
 
@@ -257,9 +250,10 @@ def lrp_wasserstein_distance(lrp, attack_lrp, pxl_idxs):
 
 	flat_lrp = np.array(lrp.reshape(*lrp.shape[:1], -1).detach().cpu().numpy())
 	flat_attack_lrp = np.array(attack_lrp.reshape(*attack_lrp.shape[:1], -1).detach().cpu().numpy())
+
 	wess_dist = []
-	
+
 	for pxl_idx in pxl_idxs:
 		wess_dist.append(wasserstein_distance(flat_lrp[:, pxl_idx], flat_attack_lrp[:, pxl_idx]))
-
+	
 	return np.array(wess_dist)

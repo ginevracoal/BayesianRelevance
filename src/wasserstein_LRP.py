@@ -20,12 +20,12 @@ from networks.redBNN import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=1000, type=int, help="Number of test points")
-parser.add_argument("--topk", default=100, type=int, help="Top k most relevant pixels.")
+parser.add_argument("--topk", default=300, type=int, help="Top k most relevant pixels.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--inference", default="svi", type=str, help="svi, hmc")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-parser.add_argument("--lrp_method", default="union", type=str, help="intersection, union, average")
+parser.add_argument("--lrp_method", default="pixelwise", type=str, help="intersection, union, average")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--layer_idx", default=-1, type=int, help="Layer idx for LRP computation.")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
@@ -34,9 +34,9 @@ parser.add_argument("--debug", default=False, type=eval, help="Run script in deb
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-n_samples_list=[1,20] if args.debug else [1,10,50]
+n_samples_list=[2,5] if args.debug else [5,10,50]
 n_inputs=500 if args.debug else args.n_inputs
-topk=50 if args.debug else args.topk
+topk=100 if args.debug else args.topk
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
@@ -169,7 +169,8 @@ for samp_idx, n_samples in enumerate(n_samples_list):
 	bay_lrp_pxl_idxs.append(lrp_pxl_idxs)
 
 
-mode_preds, mode_atk_preds, mode_softmax_robustness, mode_successful_idxs = attack_evaluation(net=bayesnet, x_test=images, x_attack=mode_attack,
+mode_preds, mode_atk_preds, mode_softmax_robustness, mode_successful_idxs = attack_evaluation(net=bayesnet, 
+					   x_test=images, x_attack=mode_attack,
 					   y_test=y_test, device=args.device, n_samples=n_samples, 
 					   return_successful_idxs=True)
 mode_lrp_robustness, mode_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
