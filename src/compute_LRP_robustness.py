@@ -74,7 +74,7 @@ else:
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
-savedir = os.path.join(model_savedir, "lrp/robustness/pkl/")
+savedir = os.path.join(model_savedir, "lrp/pkl/")
 
 ### Deterministic explanations
 

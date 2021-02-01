@@ -229,16 +229,11 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="inters
 
 	elif method=="pixelwise":
 
-		# stacked_heatmaps = torch.stack([original_heatmaps, adversarial_heatmaps])
-		# sum_heatmaps = stacked_heatmaps.sum(0)
-		# chosen_pxl_idxs = select_informative_pixels(sum_heatmaps, topk=topk)[1].detach().cpu().numpy()
-
-		orig_pxl_idxs = select_informative_pixels(original_heatmaps.sum(0), topk=topk)[1]
-		adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps.sum(0), topk=topk)[1]
-		chosen_pxl_idxs = np.intersect1d(orig_pxl_idxs.detach().cpu().numpy(), adv_pxl_idxs.detach().cpu().numpy())
-
-		distances = lrp_distances(original_heatmaps, adversarial_heatmaps, chosen_pxl_idxs)
-		robustness = -np.array(distances.detach().cpu().numpy())
+		for im_idx in range(len(original_heatmaps)):
+			orig_pxl_idxs = select_informative_pixels(original_heatmaps[im_idx], topk=topk)[1]
+			adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps[im_idx], topk=topk)[1]
+			pxl_idxs = np.intersect1d(orig_pxl_idxs.detach().cpu().numpy(), adv_pxl_idxs.detach().cpu().numpy())
+			chosen_pxl_idxs.extend(pxl_idxs)
 
 	else:
 		raise NotImplementedError

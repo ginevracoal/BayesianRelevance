@@ -124,21 +124,21 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     norm_atk_expl = colors.TwoSlopeNorm(vcenter=0., vmax=vmax_atk_expl, vmin=vmin_atk_expl)
 
     rows = 4
-    cols = min(len(explanations), 6)
-    fig, axes = plt.subplots(rows, cols, figsize=(10, 7), dpi=150)
+    cols = min(len(explanations)+1, 7)
+    fig, axes = plt.subplots(rows, cols, figsize=(10, 6), dpi=150)
     fig.tight_layout()
 
-    fig.text(0.18, 0.95, "Successful attacks")
-    fig.text(0.62, 0.95, "Failed attacks")
+    fig.text(0.15, 0.95, "Successful attacks")
+    fig.text(0.7, 0.95, "Failed attacks")
 
-    for idx in range(cols):
+    for im_idx, axis_idx in enumerate([0,1,2,4,5,6]):
 
-        image = np.squeeze(images[idx])
-        image_rel = np.squeeze(images_rel[idx])
-        expl = np.squeeze(explanations[idx])
-        attack = np.squeeze(attacks[idx])
-        attack_rel = np.squeeze(attacks_rel[idx])
-        attack_expl = np.squeeze(attacks_explanations[idx])
+        image = np.squeeze(images[im_idx])
+        image_rel = np.squeeze(images_rel[im_idx])
+        expl = np.squeeze(explanations[im_idx])
+        attack = np.squeeze(attacks[im_idx])
+        attack_rel = np.squeeze(attacks_rel[im_idx])
+        attack_expl = np.squeeze(attacks_explanations[im_idx])
 
         if len(image.shape) == 1:
             image = np.expand_dims(image, axis=0)
@@ -148,27 +148,30 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
             attack_rel = np.expand_dims(attack_rel, axis=0)
             attack_expl = np.expand_dims(attack_expl, axis=0)
 
-        axes[0, idx].imshow(image, cmap=images_cmap)
-        axes[0, idx].imshow(image_rel)
-        axes[0, idx].set_xlabel(f"label={labels[idx]}\nprediction={predictions[idx]}")
-        expl = axes[1, idx].imshow(expl, cmap=cmap, norm=norm_expl)
-        axes[2, idx].imshow(attack, cmap=images_cmap)
-        axes[2, idx].imshow(attack_rel)
-        axes[2, idx].set_xlabel(f"prediction={attacks_predictions[idx]}")
-        atk_expl = axes[3, idx].imshow(attack_expl, cmap=cmap, norm=norm_atk_expl)
+        axes[0, axis_idx].imshow(image, cmap=images_cmap)
+        axes[0, axis_idx].imshow(image_rel)
+        axes[0, axis_idx].set_xlabel(f"label={labels[im_idx]}\nprediction={predictions[im_idx]}")
+        expl = axes[1, axis_idx].imshow(expl, cmap=cmap, norm=norm_expl)
+        axes[2, axis_idx].imshow(attack, cmap=images_cmap)
+        axes[2, axis_idx].imshow(attack_rel)
+        axes[2, axis_idx].set_xlabel(f"prediction={attacks_predictions[im_idx]}")
+        atk_expl = axes[3, axis_idx].imshow(attack_expl, cmap=cmap, norm=norm_atk_expl)
 
         axes[0,0].set_ylabel("images")
         axes[1,0].set_ylabel("lrp(images)")
         axes[2,0].set_ylabel("im. attacks")
         axes[3,0].set_ylabel("lrp(attacks)")
 
-    fig.subplots_adjust(right=0.85)
+    for idx in range(4):
+        axes[idx,3].set_axis_off()
 
-    cbar_ax = fig.add_axes([0.9, 0.57, 0.01, 0.15])
+    # fig.subplots_adjust(right=0.9)
+
+    cbar_ax = fig.add_axes([0.5, 0.56, 0.01, 0.15])
     cbar = fig.colorbar(expl, ax=axes[0, :].ravel().tolist(), cax=cbar_ax)
-    cbar.set_label('Relevance', labelpad=-70)
+    cbar.set_label('Relevance', labelpad=-60)
 
-    cbar_ax = fig.add_axes([0.9, 0.08, 0.01, 0.15])
+    cbar_ax = fig.add_axes([0.5, 0.07, 0.01, 0.15])
     cbar = fig.colorbar(atk_expl, ax=axes[2, :].ravel().tolist(), cax=cbar_ax)
     cbar.set_label('Relevance', labelpad=-60)
 

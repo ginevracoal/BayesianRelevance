@@ -20,10 +20,9 @@ from networks.redBNN import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=1000, type=int, help="Number of test points")
-parser.add_argument("--topk", default=300, type=int, help="Top k most relevant pixels.")
+parser.add_argument("--topk", default=10, type=int, help="Top k most relevant pixels.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
-parser.add_argument("--inference", default="svi", type=str, help="svi, hmc")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--lrp_method", default="pixelwise", type=str, help="intersection, union, average")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
@@ -49,7 +48,7 @@ if args.device=="cuda":
 model = baseNN_settings["model_"+str(args.model_idx)]
 
 _, _, x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], 
-															shuffle=True, n_inputs=n_inputs)
+															shuffle=False, n_inputs=n_inputs)
 model_savedir = get_savedir(model="baseNN", dataset=model["dataset"], architecture=model["architecture"], 
 					  debug=args.debug, model_idx=args.model_idx)
 detnet = baseNN(inp_shape, num_classes, *list(model.values()))
@@ -70,7 +69,7 @@ else:
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
-savedir = os.path.join(model_savedir, "lrp/wasserstein/pkl/")
+savedir = os.path.join(model_savedir, "lrp/pkl/")
 
 ### Deterministic explanations
 
@@ -95,12 +94,11 @@ det_lrp_robustness, det_lrp_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp,
 											adversarial_heatmaps=det_attack_lrp, 
 											  topk=topk, method=args.lrp_method)
 
-succ_wess_dist = lrp_wasserstein_distance(det_lrp[det_successful_idxs], 
-										  det_attack_lrp[det_successful_idxs], 
+succ_wess_dist = lrp_wasserstein_distance(det_lrp[det_successful_idxs], det_attack_lrp[det_successful_idxs], 
 										  det_lrp_pxl_idxs)
+
 det_failed_idxs = np.setdiff1d(np.arange(len(images)), det_successful_idxs)
-fail_wess_dist = lrp_wasserstein_distance(det_lrp[det_failed_idxs], 
-										  det_attack_lrp[det_failed_idxs], 
+fail_wess_dist = lrp_wasserstein_distance(det_lrp[det_failed_idxs], det_attack_lrp[det_failed_idxs], 
 										  det_lrp_pxl_idxs)
 
 ### Bayesian explanations
@@ -189,8 +187,8 @@ for samp_idx, n_samples in enumerate(n_samples_list):
 
 	failed_im_idxs = np.setdiff1d(np.arange(len(images)), succ_im_idxs)
 	fail_bay_wess_dist.append(lrp_wasserstein_distance(bay_lrp[samp_idx][failed_im_idxs], 
-											  bay_attack_lrp[samp_idx][failed_im_idxs], 
-											  bay_lrp_pxl_idxs[samp_idx]))
+													   bay_attack_lrp[samp_idx][failed_im_idxs], 
+													   bay_lrp_pxl_idxs[samp_idx]))
 
 succ_wess_dist=np.array(succ_wess_dist)
 fail_wess_dist=np.array(fail_wess_dist)

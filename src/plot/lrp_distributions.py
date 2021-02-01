@@ -239,8 +239,8 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 8})
 
-    fig, ax = plt.subplots(4, 3, figsize=(10, 8), 
-                           gridspec_kw={'width_ratios': [1, 2, 1], 'height_ratios': [1, 2, 2, 1]}, 
+    fig, ax = plt.subplots(4, 3, figsize=(10, 6), 
+                           gridspec_kw={'width_ratios': [1, 2, 1], 'height_ratios': [1, 3, 3, 1]}, 
                            sharex=False, sharey=False, dpi=150, facecolor='w', edgecolor='k') 
     alpha=0.5
 
@@ -314,8 +314,8 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
     for idx in [0,1,2]:
         ax[0,idx].set_axis_off()
         ax[3,idx].set_axis_off()
-        ax[idx,0].set_axis_off()
-        ax[idx,2].set_axis_off()
+    ax[0,0].set_axis_off()
+    ax[0,2].set_axis_off()
 
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)    
