@@ -29,7 +29,7 @@ def execution_time(start, end):
 # data loaders #
 ################
 
-def data_loaders(dataset_name, batch_size, n_inputs, channels="first", shuffle=True):
+def data_loaders(dataset_name, batch_size, n_inputs=None, channels="first", shuffle=True):
     random.seed(0)
     x_train, y_train, x_test, y_test, input_shape, num_classes = \
         load_dataset(dataset_name=dataset_name, n_inputs=n_inputs, channels=channels)
@@ -41,7 +41,7 @@ def data_loaders(dataset_name, batch_size, n_inputs, channels="first", shuffle=T
 
     return train_loader, test_loader, input_shape, num_classes
 
-def classwise_data_loaders(dataset_name, batch_size, n_inputs, shuffle=False):
+def classwise_data_loaders(dataset_name, batch_size, n_inputs=None, shuffle=False):
     random.seed(0)
     x_train, y_train, x_test, y_test, input_shape, num_classes = \
         load_dataset(dataset_name=dataset_name)
@@ -51,12 +51,18 @@ def classwise_data_loaders(dataset_name, batch_size, n_inputs, shuffle=False):
 
     for label in range(num_classes):
         label_idxs = y_train.argmax(1)==label
-        x_train_label = x_train[label_idxs][:n_inputs]
-        y_train_label = y_train[label_idxs][:n_inputs]
+        x_train_label = x_train[label_idxs]
+        y_train_label = y_train[label_idxs]
 
         label_idxs = y_test.argmax(1)==label
-        x_test_label = x_test[label_idxs][:n_inputs]
-        y_test_label = y_test[label_idxs][:n_inputs]
+        x_test_label = x_test[label_idxs]
+        y_test_label = y_test[label_idxs]
+
+        if n_inputs:
+            x_train_label = x_train_label[:n_inputs]
+            y_train_label = y_train_label[:n_inputs]
+            x_test_label = x_test_label[:n_inputs]
+            y_test_label = y_test_label[:n_inputs]
 
         train_loader = DataLoader(dataset=list(zip(x_train_label, y_train_label)), 
                                   batch_size=batch_size, shuffle=shuffle)
