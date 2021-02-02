@@ -206,8 +206,10 @@ def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, saved
         fig.savefig(os.path.join(savedir, filename+"_im_idx="+str(im_idx)+".png"))
         plt.close(fig)
 
-def lrp_robustness_distributions(lrp_robustness, bayesian_lrp_robustness, mode_lrp_robustness,
-                                 n_samples_list, savedir, filename):
+def lrp_imagewise_robustness_distributions(det_successful_lrp_robustness, det_failed_lrp_robustness,
+                                           bay_successful_lrp_robustness, bay_failed_lrp_robustness,
+                                           mode_successful_lrp_robustness, mode_failed_lrp_robustness,
+                                           n_samples_list, savedir, filename):
 
     os.makedirs(savedir, exist_ok=True) 
     # print(f"\ndeterministic lrp rob mean={lrp_robustness.mean():.2f} var={lrp_robustness.var():.2f}")   
@@ -215,17 +217,25 @@ def lrp_robustness_distributions(lrp_robustness, bayesian_lrp_robustness, mode_l
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
-    fig, ax = plt.subplots(2, 1, figsize=(9, 8), dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(2, 2, figsize=(10, 7), dpi=150, facecolor='w', edgecolor='k') 
 
-    sns.distplot(lrp_robustness, ax=ax[0], label="deterministic", kde=True)
-    sns.distplot(mode_lrp_robustness, ax=ax[0], label="posterior mode", kde=True)
+    fig.text(0.3, 0.91, "Successful attacks", ha='center')
 
+    sns.distplot(det_successful_lrp_robustness, ax=ax[0,0], label="deterministic", kde=True)
+    sns.distplot(mode_successful_lrp_robustness, ax=ax[0,0], label="posterior mode", kde=True)
     for idx, n_samples in enumerate(n_samples_list):
-        sns.distplot(bayesian_lrp_robustness[idx], ax=ax[1], label="posterior samp="+str(n_samples), kde=True)
+        sns.distplot(bay_successful_lrp_robustness[idx], ax=ax[1,0], label="posterior samp="+str(n_samples), kde=True)
+
+    fig.text(0.7, 0.91, "Failed attacks", ha='center')
+    sns.distplot(det_failed_lrp_robustness, ax=ax[0,1], label="deterministic", kde=True)
+    sns.distplot(mode_failed_lrp_robustness, ax=ax[0,1], label="posterior mode", kde=True)
+    for idx, n_samples in enumerate(n_samples_list):
+        sns.distplot(bay_failed_lrp_robustness[idx], ax=ax[1,1], label="posterior samp="+str(n_samples), kde=True)
     
-    ax[0].legend()
-    ax[1].legend()
-    ax[1].set_xlabel("LRP robustness distribution")
+    ax[0,1].legend()
+    ax[1,1].legend()
+    ax[1,0].set_xlabel("LRP image-wise robustness")
+    ax[1,1].set_xlabel("LRP image-wise robustness")
 
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)
@@ -343,7 +353,7 @@ def plot_wasserstein_dist(det_successful_atks_wass_dist, det_failed_atks_wass_di
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
 
-    fig, ax = plt.subplots(2, 2, figsize=(10, 6), sharex=True, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(2, 2, figsize=(10, 6), dpi=150, facecolor='w', edgecolor='k') 
     alpha=0.5
 
     ax[1,0].set_xlabel('Wasserstein distance')

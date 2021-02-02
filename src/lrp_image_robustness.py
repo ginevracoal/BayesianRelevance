@@ -26,7 +26,7 @@ import attacks.deeprobust as deeprobust
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=1000, type=int, help="Number of test points")
-parser.add_argument("--topk", default=200, type=int, help="Top k most relevant pixels.")
+parser.add_argument("--topk", default=300, type=int, help="Top k most relevant pixels.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--attack_library", type=str, default="grad_based", help="grad_based, deeprobust")
@@ -117,12 +117,26 @@ det_lrp_robustness, det_lrp_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp,
 													  adversarial_heatmaps=det_attack_lrp, 
 													  topk=topk, method=lrp_robustness_method)
 
-bay_softmax_robustness=[]
-bay_successful_idxs=[]
-bay_lrp_robustness=[]
-bay_lrp_pxl_idxs=[]
+succ_det_lrp_robustness, succ_det_lrp_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp[det_successful_idxs], 
+													  adversarial_heatmaps=det_attack_lrp[det_successful_idxs], 
+													  topk=topk, method=lrp_robustness_method)
+det_failed_idxs = np.setdiff1d(np.arange(len(images)), det_successful_idxs)
+fail_det_lrp_robustness, fail_det_lrp_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp[det_failed_idxs], 
+													  adversarial_heatmaps=det_attack_lrp[det_failed_idxs], 
+													  topk=topk, method=lrp_robustness_method)
+
+
 bay_preds=[]
 bay_atk_preds=[]
+bay_softmax_robustness=[]
+bay_successful_idxs=[]
+
+bay_lrp_robustness=[]
+bay_lrp_pxl_idxs=[]
+succ_bay_lrp_robustness=[]
+succ_bay_lrp_pxl_idxs=[]
+fail_bay_lrp_robustness=[]
+fail_bay_lrp_pxl_idxs=[]
 
 for samp_idx, n_samples in enumerate(n_samples_list):
 
@@ -140,6 +154,19 @@ for samp_idx, n_samples in enumerate(n_samples_list):
 	bay_lrp_robustness.append(bay_lrp_rob)
 	bay_lrp_pxl_idxs.append(lrp_pxl_idxs)
 
+	bay_lrp_rob, succ_lrp_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx][successf_idxs], 
+											   adversarial_heatmaps=bay_attack_lrp[samp_idx][successf_idxs], 
+											   topk=topk, method=lrp_robustness_method)
+	succ_bay_lrp_robustness.append(bay_lrp_rob)
+	succ_bay_lrp_pxl_idxs.append(succ_lrp_pxl_idxs)
+
+	failed_idxs = np.setdiff1d(np.arange(len(images)), successf_idxs)
+	bay_lrp_rob, fail_lrp_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx][failed_idxs], 
+											   adversarial_heatmaps=bay_attack_lrp[samp_idx][failed_idxs], 
+											   topk=topk, method=lrp_robustness_method)
+	fail_bay_lrp_robustness.append(bay_lrp_rob)
+	fail_bay_lrp_pxl_idxs.append(fail_lrp_pxl_idxs)
+
 mode_preds, mode_atk_preds, mode_softmax_robustness, mode_successful_idxs = evaluate_attack(net=bayesnet, 
 													   x_test=images, x_attack=mode_attack, avg_posterior=True,
 													   y_test=y_test, device=args.device, n_samples=n_samples, 
@@ -149,6 +176,14 @@ mode_softmax_robustness = mode_softmax_robustness.detach().cpu().numpy()
 mode_lrp_robustness, mode_lrp_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
 													adversarial_heatmaps=mode_attack_lrp, 
 													topk=topk, method=lrp_robustness_method)
+succ_mode_lrp_robustness, succ_mode_lrp_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[mode_successful_idxs], 
+													  adversarial_heatmaps=mode_attack_lrp[mode_successful_idxs], 
+													  topk=topk, method=lrp_robustness_method)
+mode_failed_idxs = np.setdiff1d(np.arange(len(images)), mode_successful_idxs)
+fail_mode_lrp_robustness, fail_mode_lrp_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[mode_failed_idxs], 
+													  adversarial_heatmaps=mode_attack_lrp[mode_failed_idxs], 
+													  topk=topk, method=lrp_robustness_method)
+
 
 ### Plots
 
@@ -192,9 +227,13 @@ plot_attacks_explanations(images=images,
 filename=args.rule+"_lrp_robustness"+m["dataset"]+"_images="+str(n_inputs)+\
 		 "_samples="+str(n_samples)+"_pxls="+str(topk)+"_atk="+str(args.attack_method)
 
-plot_lrp.lrp_robustness_distributions(lrp_robustness=det_lrp_robustness, 
-									  bayesian_lrp_robustness=bay_lrp_robustness, 
-									  mode_lrp_robustness=mode_lrp_robustness,
+plot_lrp.lrp_imagewise_robustness_distributions(
+									  det_successful_lrp_robustness=succ_det_lrp_robustness,
+									  det_failed_lrp_robustness=fail_det_lrp_robustness,
+									  bay_successful_lrp_robustness=succ_bay_lrp_robustness,
+									  bay_failed_lrp_robustness=fail_bay_lrp_robustness,
+									  mode_successful_lrp_robustness=succ_mode_lrp_robustness,
+									  mode_failed_lrp_robustness=fail_mode_lrp_robustness,
 									  n_samples_list=n_samples_list,
 									  savedir=savedir, filename="dist_"+filename)
 

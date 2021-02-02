@@ -120,7 +120,8 @@ def compute_explanations(x_test, network, rule, normalize=True, n_samples=None, 
 
 			posterior_explanations.append(torch.stack(explanations))
 
-		return torch.stack(posterior_explanations).mean(1)    
+		avg_explanation = torch.stack(posterior_explanations).mean(1)   
+		return avg_explanation
 
 
 def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):

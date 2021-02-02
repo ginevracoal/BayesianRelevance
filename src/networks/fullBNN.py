@@ -170,7 +170,7 @@ class BNN(PyroModule):
         self.basenet.to(device)
         # self.device=device
 
-    def forward(self, inputs, n_samples=10, avg_posterior=True, sample_idxs=None, training=False,
+    def forward(self, inputs, n_samples=10, avg_posterior=False, sample_idxs=None, training=False,
                 expected_out=True, layer_idx=-1, *args, **kwargs):
 
         if sample_idxs:
