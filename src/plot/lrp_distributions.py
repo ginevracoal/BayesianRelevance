@@ -215,33 +215,38 @@ def lrp_imagewise_robustness_distributions(det_successful_lrp_robustness, det_fa
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
-    fig, ax = plt.subplots(3, 2, figsize=(10, 7), sharex=True, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(3, 2, figsize=(10, 7), sharex=True, #sharey=True, 
+                           dpi=150, facecolor='w', edgecolor='k') 
 
     fig.text(0.3, 0.91, "Successful attacks", ha='center')
 
-    sns.distplot(det_successful_lrp_robustness, ax=ax[0,0], label="deterministic", kde=True)
-    sns.distplot(mode_successful_lrp_robustness[-1], ax=ax[0,0], label="posterior mode", kde=True)
+    sns.distplot(det_successful_lrp_robustness, ax=ax[0,0], label="det atk", kde=True)
+    sns.distplot(mode_successful_lrp_robustness[-1], ax=ax[0,0], label="mode atk", kde=True)
     for idx, n_samples in enumerate(n_samples_list):
-        sns.distplot(mode_successful_lrp_robustness[idx], ax=ax[1,0], label="mode eval samp="+str(n_samples), kde=True)
-        sns.distplot(bay_successful_lrp_robustness[idx], ax=ax[2,0], label="posterior samp="+str(n_samples), kde=True)
+        sns.distplot(mode_successful_lrp_robustness[idx], ax=ax[1,0], label="samp="+str(n_samples)+" mode atk", kde=True)
+        sns.distplot(bay_successful_lrp_robustness[idx], ax=ax[2,0], label="samp="+str(n_samples)+" bay atk", kde=True)
 
     fig.text(0.7, 0.91, "Failed attacks", ha='center')
 
-    sns.distplot(det_failed_lrp_robustness, ax=ax[0,1], label="deterministic", kde=True)
-    sns.distplot(mode_failed_lrp_robustness[-1], ax=ax[0,1], label="posterior mode", kde=True)
+    sns.distplot(det_failed_lrp_robustness, ax=ax[0,1], label="det atk", kde=True)
+    sns.distplot(mode_failed_lrp_robustness[-1], ax=ax[0,1], label="mode atk", kde=True)
     for idx, n_samples in enumerate(n_samples_list):
-        sns.distplot(mode_failed_lrp_robustness[idx], ax=ax[1,1], label="mode eval samp="+str(n_samples), kde=True)
-        sns.distplot(bay_failed_lrp_robustness[idx], ax=ax[2,1], label="posterior samp="+str(n_samples), kde=True)
+        sns.distplot(mode_failed_lrp_robustness[idx], ax=ax[1,1], label="samp="+str(n_samples)+" mode atk", kde=True)
+        sns.distplot(bay_failed_lrp_robustness[idx], ax=ax[2,1], label="samp="+str(n_samples)+" bay atk", kde=True)
     
+    ax[2,0].set_xlabel("LRP robustness")
+    ax[2,1].set_xlabel("LRP robustness")
+
+    ax[0,1].set_ylabel("det. attack\ndet. interpretation", rotation=270, labelpad=40)
+    ax[0,1].yaxis.set_label_position("right")
+    ax[1,1].set_ylabel("det. attack\nbay. interpretation", rotation=270, labelpad=40)
+    ax[1,1].yaxis.set_label_position("right")
+    ax[2,1].set_ylabel("det. attack\nbay. interpretation", rotation=270, labelpad=40)
+    ax[2,1].yaxis.set_label_position("right")
+
     ax[0,1].legend()
     ax[1,1].legend()
-    ax[1,0].set_xlabel("LRP image-wise robustness")
-    ax[1,1].set_xlabel("LRP image-wise robustness")
-
-    fig.text(0.91, 0.3, "deterministic attack\ndeterministic defense", ha='center')
-    fig.text(0.91, 0.6, "deterministic attack\ndeterministic defense", ha='center')
-    fig.text(0.91, 0.9, "deterministic attack\ndeterministic defense", ha='center')
-
+    ax[2,1].legend()
 
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)

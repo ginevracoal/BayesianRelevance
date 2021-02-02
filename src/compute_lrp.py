@@ -118,7 +118,7 @@ if args.load:
     for samp_idx, n_samples in enumerate(n_samples_list):
         mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
     
-    mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples)))
+    mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples)))
 
 else:
 
