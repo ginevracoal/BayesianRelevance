@@ -105,6 +105,7 @@ else:
 
 bay_lrp=[]
 bay_attack_lrp=[]
+mode_attack_lrp=[]
 
 if args.load:
 
@@ -112,8 +113,12 @@ if args.load:
         bay_lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
         bay_attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
 
-    mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_samp="+str(n_samples))
-    mode_attack_lrp = load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
+    mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
+
+    for samp_idx, n_samples in enumerate(n_samples_list):
+        mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
+    
+    mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples)))
 
 else:
 
@@ -127,11 +132,15 @@ else:
         save_to_pickle(bay_attack_lrp[samp_idx], path=savedir, filename="bay_attack_lrp_samp="+str(n_samples))
     
     mode_lrp = compute_explanations(images, bayesnet, rule=args.rule, n_samples=n_samples, avg_posterior=True)
-    mode_attack_lrp = compute_explanations(mode_attack, bayesnet, rule=args.rule, 
-                                            n_samples=n_samples, avg_posterior=True)
-    
-    save_to_pickle(mode_lrp, path=savedir, filename="mode_lrp_samp="+str(n_samples))
-    save_to_pickle(mode_attack_lrp, path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
+    save_to_pickle(mode_lrp, path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
+
+    for samp_idx, n_samples in enumerate(n_samples_list):
+        mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, n_samples=n_samples))
+        save_to_pickle(mode_attack_lrp[samp_idx], path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
+
+    mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, 
+                                                n_samples=n_samples, avg_posterior=True))
+    save_to_pickle(mode_attack_lrp[samp_idx+1], path=savedir, filename="mode_lrp_avg_post_samp"+str(n_samples))
 
 ### plots
 

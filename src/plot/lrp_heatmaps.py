@@ -73,13 +73,13 @@ def relevant_subset(images, pxl_idxs, lrp_method):
     return images_rel
 
 def plot_attacks_explanations(images, explanations, attacks, attacks_explanations, 
-                              predictions, attacks_predictions, successful_attacks_idxs, labels,
-                              pxl_idxs, lrp_method, rule, savedir, filename, layer_idx=-1):
+                              predictions, attacks_predictions, successful_attacks_idxs, failed_attacks_idxs,
+                              labels, pxl_idxs, lrp_method, rule, savedir, filename, layer_idx=-1):
 
     images_cmap='Greys'
 
     set_seed(0)
-    failed_attacks_idxs = np.setdiff1d(np.arange(len(images)), successful_attacks_idxs)
+    # failed_attacks_idxs = np.setdiff1d(np.arange(len(images)), successful_attacks_idxs)
     chosen_successful_idxs = np.random.choice(successful_attacks_idxs, 3)
     chosen_failed_idxs =  np.random.choice(failed_attacks_idxs, 3)
     im_idxs = np.concatenate([chosen_successful_idxs, chosen_failed_idxs])

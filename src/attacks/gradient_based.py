@@ -144,7 +144,7 @@ def load_attack(method, filename, savedir, n_samples=None):
 	return load_from_pickle(path=savedir, filename=name)
 
 def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sample_idxs=None, 
-					 avg_posterior=False, return_successful_idxs=False):
+					 avg_posterior=False, return_classification_idxs=False):
 	""" Evaluates the network on the original data and its adversarially perturbed version. 
 	When using a Bayesian network `n_samples` should be specified for the evaluation.     
 	"""
@@ -182,6 +182,7 @@ def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sampl
 		adversarial_outputs = []
 		adversarial_correct = 0.0
 		wrong_atk_class_idxs = []
+		correct_atk_class_idxs = []
 		batch_size=0
 
 		for batch_idx, (attacks, labels) in enumerate(attack_loader):
@@ -191,9 +192,12 @@ def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sampl
 
 			wrong_idxs = np.where(out.argmax(-1).cpu() != labels.argmax(-1).cpu())[0]
 			wrong_atk_class_idxs.extend(wrong_idxs+batch_size*batch_idx)
+			correct_idxs = np.where(out.argmax(-1).cpu() == labels.argmax(-1).cpu())[0]
+			correct_atk_class_idxs.extend(correct_idxs+batch_size*batch_idx)
 			batch_size = len(attacks)
 
 		successful_atk_idxs = np.intersect1d(correct_class_idxs, wrong_atk_class_idxs)
+		failed_atk_idxs = np.intersect1d(correct_class_idxs, correct_atk_class_idxs)
 
 		if DEBUG:
 			print("bay out", out.argmax(-1))
@@ -209,7 +213,7 @@ def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sampl
 		adversarial_outputs = torch.cat(adversarial_outputs)
 		softmax_rob = softmax_robustness(original_outputs, adversarial_outputs)
 
-	if return_successful_idxs:
-		return original_outputs, adversarial_outputs, softmax_rob, successful_atk_idxs
+	if return_classification_idxs:
+		return original_outputs, adversarial_outputs, softmax_rob, successful_atk_idxs, failed_atk_idxs
 	else:
 		return original_outputs, adversarial_outputs, softmax_rob
