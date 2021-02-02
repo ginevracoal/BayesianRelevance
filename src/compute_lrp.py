@@ -74,7 +74,10 @@ if args.model=="fullBNN":
     for n_samples in n_samples_list:
 
         bay_attack.append(load_attack(method=args.attack_method, filename=bayesnet.name, savedir=model_savedir, 
-                          n_samples=n_samples))
+                                      n_samples=n_samples))
+
+    mode_attack = load_attack(method=args.attack_method, filename=bayesnet.name+"_mode", savedir=model_savedir, 
+                              n_samples=n_samples)
 
 else:
     raise NotImplementedError
@@ -86,35 +89,29 @@ savedir = os.path.join(model_savedir, "lrp/pkl/")
 ### Deterministic explanations
 
 if args.load:
-    # det_attack = load_from_pickle(path=savedir, filename="det_attack")
     det_lrp = load_from_pickle(path=savedir, filename="det_lrp")
     det_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
 
 else:
 
-    # det_attack = attack(net=detnet, x_test=images, y_test=y_test, device=args.device, method=args.attack_method)
     det_lrp = compute_explanations(images, detnet, rule=args.rule)
     det_attack_lrp = compute_explanations(det_attack, detnet, rule=args.rule)
 
-    save_to_pickle(det_attack, path=savedir, filename="det_attack")
     save_to_pickle(det_lrp, path=savedir, filename="det_lrp")
     save_to_pickle(det_attack_lrp, path=savedir, filename="det_attack_lrp")
 
 
 ### Bayesian explanations
 
-# bay_attack=[]
 bay_lrp=[]
 bay_attack_lrp=[]
 
 if args.load:
 
     for n_samples in n_samples_list:
-        # bay_attack.append(load_from_pickle(path=savedir, filename="bay_attack_samp="+str(n_samples)))
         bay_lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
         bay_attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
 
-    mode_attack = load_from_pickle(path=savedir, filename="mode_attack_samp="+str(n_samples))
     mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_samp="+str(n_samples))
     mode_attack_lrp = load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
 
@@ -122,23 +119,17 @@ else:
 
     for samp_idx, n_samples in enumerate(n_samples_list):
 
-        # bay_attack.append(attack(net=bayesnet, x_test=images, y_test=y_test, n_samples=n_samples,
-        #                     device=args.device, method=args.attack_method))
         bay_lrp.append(compute_explanations(images, bayesnet, rule=args.rule, n_samples=n_samples))
         bay_attack_lrp.append(compute_explanations(bay_attack[samp_idx], bayesnet, 
                                                    rule=args.rule, n_samples=n_samples))
 
-        save_to_pickle(bay_attack[samp_idx], path=savedir, filename="bay_attack_samp="+str(n_samples))
         save_to_pickle(bay_lrp[samp_idx], path=savedir, filename="bay_lrp_samp="+str(n_samples))
         save_to_pickle(bay_attack_lrp[samp_idx], path=savedir, filename="bay_attack_lrp_samp="+str(n_samples))
     
-    mode_attack = attack(net=bayesnet, x_test=images, y_test=y_test, n_samples=n_samples,
-                      device=args.device, method=args.attack_method, avg_posterior=True)
     mode_lrp = compute_explanations(images, bayesnet, rule=args.rule, n_samples=n_samples, avg_posterior=True)
     mode_attack_lrp = compute_explanations(mode_attack, bayesnet, rule=args.rule, 
                                             n_samples=n_samples, avg_posterior=True)
     
-    save_to_pickle(mode_attack, path=savedir, filename="mode_attack_samp="+str(n_samples))
     save_to_pickle(mode_lrp, path=savedir, filename="mode_lrp_samp="+str(n_samples))
     save_to_pickle(mode_attack_lrp, path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
 

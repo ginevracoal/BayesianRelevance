@@ -82,6 +82,8 @@ if args.model=="fullBNN":
 		bay_attack.append(load_attack(method=args.attack_method, filename=bayesnet.name, savedir=model_savedir, 
 						  n_samples=n_samples))
 
+	mode_attack = load_attack(method=args.attack_method, filename=bayesnet.name+"_mode", savedir=model_savedir, 
+							  n_samples=n_samples)
 
 else:
 	raise NotImplementedError
@@ -95,15 +97,12 @@ savedir = os.path.join(model_savedir, "lrp/pkl/")
 det_lrp = load_from_pickle(path=savedir, filename="det_lrp")
 det_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
 
-bay_attack=[]
 bay_lrp=[]
 bay_attack_lrp=[]
 for n_samples in n_samples_list:
-	bay_attack.append(load_from_pickle(path=savedir, filename="bay_attack_samp="+str(n_samples)))
 	bay_lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
 	bay_attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
 
-mode_attack = load_from_pickle(path=savedir, filename="mode_attack_samp="+str(n_samples))
 mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_samp="+str(n_samples))
 mode_attack_lrp = load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
 
@@ -141,11 +140,13 @@ for samp_idx, n_samples in enumerate(n_samples_list):
 	bay_lrp_robustness.append(bay_lrp_rob)
 	bay_lrp_pxl_idxs.append(lrp_pxl_idxs)
 
-mode_preds, mode_atk_preds, mode_softmax_robustness, mode_successful_idxs = evaluate_attack(net=bayesnet, x_test=images, 
-				x_attack=mode_attack, y_test=y_test, device=args.device, n_samples=n_samples, return_successful_idxs=True)
+mode_preds, mode_atk_preds, mode_softmax_robustness, mode_successful_idxs = evaluate_attack(net=bayesnet, 
+													   x_test=images, x_attack=mode_attack, avg_posterior=True,
+													   y_test=y_test, device=args.device, n_samples=n_samples, 
+													   return_successful_idxs=True)
 mode_softmax_robustness = mode_softmax_robustness.detach().cpu().numpy()
 
-mode_lrp_robustness, mode_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
+mode_lrp_robustness, mode_lrp_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
 													adversarial_heatmaps=mode_attack_lrp, 
 													topk=topk, method=lrp_robustness_method)
 
@@ -185,7 +186,7 @@ plot_attacks_explanations(images=images,
 						  attacks_predictions=mode_atk_preds.argmax(-1),
 						  successful_attacks_idxs=mode_successful_idxs,
 						  labels=labels, lrp_method=lrp_robustness_method,
-						  rule=args.rule, savedir=savedir, pxl_idxs=mode_pxl_idxs,
+						  rule=args.rule, savedir=savedir, pxl_idxs=mode_lrp_pxl_idxs,
 						  filename=lrp_robustness_method+"_mode_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
 
 filename=args.rule+"_lrp_robustness"+m["dataset"]+"_images="+str(n_inputs)+\

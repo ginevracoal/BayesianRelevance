@@ -49,9 +49,6 @@ evaluate_attack = atk_lib.evaluate_attack
 if args.device=="cuda":
 	torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
-if args.device=="cuda":
-	torch.set_default_tensor_type('torch.cuda.FloatTensor')
-
 ### Load models and attacks
 
 model = baseNN_settings["model_"+str(args.model_idx)]
@@ -163,9 +160,9 @@ succ_bay_wass_dist=np.array(succ_bay_wass_dist)
 fail_bay_wass_dist=np.array(fail_bay_wass_dist)
 
 mode_preds, mode_atk_preds, mode_softmax_robustness, mode_successful_idxs = evaluate_attack(net=bayesnet, 
-					   x_test=images, x_attack=mode_attack, avg_posterior=True,
-					   y_test=y_test, device=args.device, n_samples=n_samples, 
-					   return_successful_idxs=True)
+														   x_test=images, x_attack=mode_attack, avg_posterior=True,
+														   y_test=y_test, device=args.device, n_samples=n_samples, 
+														   return_successful_idxs=True)
 mode_lrp_robustness, mode_lrp_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
 												adversarial_heatmaps=mode_attack_lrp, 
 												topk=topk, method=lrp_robustness_method)

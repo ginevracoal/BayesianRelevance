@@ -208,7 +208,7 @@ def lrp_distances(original_heatmaps, adversarial_heatmaps, pxl_idxs=None):
 	distances = torch.norm(original_heatmaps-adversarial_heatmaps, dim=0)
 	return distances
 
-def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method="intersection"):
+def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method):
 	"""
 	Point-wise robustness measure. Computes the fraction of common topk relevant pixels between each original
 	image and adversarial image.
