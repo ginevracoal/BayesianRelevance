@@ -320,15 +320,16 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)    
 
-def plot_wasserstein_dist(det_successful_atks_wess_dist, det_failed_atks_wess_dist, 
-                          bay_successful_atks_wess_dist, bay_failed_atks_wess_dist,
+def plot_wasserstein_dist(det_successful_atks_wass_dist, det_failed_atks_wass_dist, 
+                          bay_successful_atks_wass_dist, bay_failed_atks_wass_dist,
+                          mode_successful_atks_wass_dist, mode_failed_atks_wass_dist,
                           increasing_n_samples, filename, savedir):
     """
-    :param deterministic_wesserstein_distance: 
-        pixel-wise Wesserstein distances between original LRP heatmaps and LRP heatmaps on the attacks.
+    :param deterministic_wasserstein_distance: 
+        pixel-wise wasserstein distances between original LRP heatmaps and LRP heatmaps on the attacks.
         :shape: (n. selected pixels)
-    :param bayesian_wesserstein_distance: 
-        pixel-wise Wesserstein distances between original LRP heatmaps and LRP heatmaps on the attacks. 
+    :param bayesian_wasserstein_distance: 
+        pixel-wise wasserstein distances between original LRP heatmaps and LRP heatmaps on the attacks. 
         Each index corresponds to the selected number of samples in n_samples_list.
         :shape: (len(n_samples_list), n. selected pixels)
     :param deterministic_successful_idxs: image idxs for successful attacks in the deterministic case
@@ -342,24 +343,28 @@ def plot_wasserstein_dist(det_successful_atks_wess_dist, det_failed_atks_wess_di
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
 
-    fig, ax = plt.subplots(2, 1, figsize=(10, 6), sharex=True, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(2, 2, figsize=(10, 6), sharex=True, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
     alpha=0.5
 
-    ax[1].set_xlabel('Wasserstein distance')
+    ax[1,0].set_xlabel('Wasserstein distance')
+    ax[1,1].set_xlabel('Wasserstein distance')
 
-    fig.text(0.5, 0.91, "Successful attacks", ha='center')
-    sns.distplot(det_successful_atks_wess_dist, ax=ax[0], label="deterministic")
+    fig.text(0.3, 0.91, "Successful attacks", ha='center')
+    sns.distplot(det_successful_atks_wass_dist, ax=ax[0,0], label="deterministic")
+    sns.distplot(mode_successful_atks_wass_dist, ax=ax[0,0], label="posterior mode")
     
     for sample_idx, n_samples in enumerate(increasing_n_samples):
-        sns.distplot(bay_successful_atks_wess_dist[sample_idx], ax=ax[0], label="bayesian samp="+str(n_samples))
+        sns.distplot(bay_successful_atks_wass_dist[sample_idx], ax=ax[1,0], label="bayesian samp="+str(n_samples))
 
-    fig.text(0.5, 0.48, "Failed attacks", ha='center')
-    sns.distplot(det_failed_atks_wess_dist, ax=ax[1], label="deterministic")
+    fig.text(0.7, 0.91, "Failed attacks", ha='center')
+    sns.distplot(det_failed_atks_wass_dist, ax=ax[0,1], label="deterministic")
+    sns.distplot(mode_failed_atks_wass_dist, ax=ax[0,1], label="posterior mode")
 
     for sample_idx, n_samples in enumerate(increasing_n_samples):
-        sns.distplot(bay_failed_atks_wess_dist[sample_idx], ax=ax[1], label="fail bayesian samp="+str(n_samples))
+        sns.distplot(bay_failed_atks_wass_dist[sample_idx], ax=ax[1,1], label="bayesian samp="+str(n_samples))
 
-    ax[0].legend()
+    ax[0,1].legend()
+    ax[1,1].legend()
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)
 

@@ -144,13 +144,13 @@ def load_attack(method, filename, savedir, n_samples=None):
 	return load_from_pickle(path=savedir, filename=name)
 
 def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sample_idxs=None, 
-					  return_successful_idxs=False):
+					 avg_posterior=False, return_successful_idxs=False):
 	""" Evaluates the network on the original data and its adversarially perturbed version. 
 	When using a Bayesian network `n_samples` should be specified for the evaluation.     
 	"""
 	print(f"\nEvaluating against the attacks", end="")
 	if n_samples:
-		print(f" with {n_samples} defence samples")
+		print(f" with {n_samples} defense samples")
 	
 	x_test, x_attack, y_test = x_test.to(device), x_attack.to(device), y_test.to(device)
 
@@ -166,7 +166,7 @@ def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sampl
 
 		for batch_idx, (images, labels) in enumerate(test_loader):
 
-			out = net.forward(images, n_samples=n_samples, sample_idxs=sample_idxs, avg_posterior=False)
+			out = net.forward(images, n_samples=n_samples, sample_idxs=sample_idxs, avg_posterior=avg_posterior)
 			original_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
 			original_outputs.append(out)
 
@@ -185,7 +185,7 @@ def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sampl
 		batch_size=0
 
 		for batch_idx, (attacks, labels) in enumerate(attack_loader):
-			out = net.forward(attacks, n_samples=n_samples, sample_idxs=sample_idxs, avg_posterior=False)
+			out = net.forward(attacks, n_samples=n_samples, sample_idxs=sample_idxs, avg_posterior=avg_posterior)
 			adversarial_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
 			adversarial_outputs.append(out)
 

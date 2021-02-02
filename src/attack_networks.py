@@ -43,8 +43,7 @@ if args.model=="baseNN":
 
     model = baseNN_settings["model_"+str(args.model_idx)]
 
-    x_train, y_train, _, _, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], n_inputs=n_inputs)
-    x_test, y_test = load_dataset(dataset_name=model["dataset"], n_inputs=atk_inputs)[2:4]
+    x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], n_inputs=atk_inputs)[2:]
 
     savedir = get_savedir(model=args.model, dataset=model["dataset"], architecture=model["architecture"], 
                          baseiters=None, debug=args.debug, model_idx=args.model_idx)
@@ -68,9 +67,7 @@ else:
 
         m = fullBNN_settings["model_"+str(args.model_idx)]
 
-        x_train, y_train, _, _, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], shuffle=True, 
-                                                                    n_inputs=n_inputs)
-        x_test, y_test = load_dataset(dataset_name=m["dataset"], n_inputs=atk_inputs)[2:4]
+        x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], n_inputs=atk_inputs)[2:]
 
         savedir = get_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
                               debug=args.debug, model_idx=args.model_idx)
@@ -82,8 +79,7 @@ else:
         m = redBNN_settings["model_"+str(args.model_idx)]
         base_m = baseNN_settings["model_"+str(m["baseNN_idx"])]
 
-        x_train, y_train, _, _, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], n_inputs=n_inputs)
-        x_test, y_test = load_dataset(dataset_name=m["dataset"], n_inputs=atk_inputs)[2:4]
+        x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], n_inputs=atk_inputs)[2:]
 
         savedir = get_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
                               debug=args.debug, model_idx=args.model_idx)
@@ -118,6 +114,11 @@ else:
             evaluate_attack(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
                               device=args.device, n_samples=n_samples)
 
+        mode_attack = load_attack(method=args.attack_method, filename=net.name+"_mode", savedir=savedir, 
+                                  n_samples=n_samples)
+        evaluate_attack(net=net, x_test=x_test, x_attack=mode_attack, y_test=y_test, 
+                          device=args.device, n_samples=n_samples, avg_posterior=True)
+
     else:
         batch_size = 4000 if m["inference"] == "hmc" else 128 
         num_workers = 0 if args.device=="cuda" else 4
@@ -127,7 +128,13 @@ else:
                               method=args.attack_method, n_samples=n_samples)
             save_attack(x_test, x_attack, method=args.attack_method, filename=net.name, 
                              savedir=savedir, n_samples=n_samples)
-
             evaluate_attack(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
                               device=args.device, n_samples=n_samples)
+
+        mode_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device,
+                          method=args.attack_method, n_samples=n_samples, avg_posterior=True)
+        save_attack(x_test, mode_attack, method=args.attack_method, filename=net.name+"_mode", 
+                         savedir=savedir, n_samples=n_samples)
+        evaluate_attack(net=net, x_test=x_test, x_attack=mode_attack, y_test=y_test, 
+                          device=args.device, n_samples=n_samples, avg_posterior=True)
 
