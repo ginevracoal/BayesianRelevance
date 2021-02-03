@@ -84,7 +84,7 @@ else:
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
-savedir = os.path.join(model_savedir, "lrp/pkl/")
+savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(args.layer_idx)+"/")
 
 ### Load explanations
 
@@ -196,7 +196,8 @@ plot_attacks_explanations(images=images,
 						  failed_attacks_idxs=det_failed_idxs,
 						  labels=labels, lrp_method=lrp_robustness_method,
 						  rule=args.rule, savedir=savedir, pxl_idxs=det_lrp_pxl_idxs,
-						  filename=lrp_robustness_method+"_det_lrp_attacks", layer_idx=-1)
+						  filename=lrp_robustness_method+"_det_lrp_attacks", 
+						  layer_idx=args.layer_idx)
 
 for samp_idx, n_samples in enumerate(n_samples_list):
 
@@ -210,7 +211,8 @@ for samp_idx, n_samples in enumerate(n_samples_list):
 							  failed_attacks_idxs=bay_failed_idxs[samp_idx],
 							  labels=labels, lrp_method=lrp_robustness_method,
 							  rule=args.rule, savedir=savedir, pxl_idxs=bay_lrp_pxl_idxs[samp_idx],
-							  filename=lrp_robustness_method+"_bay_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
+							  filename=lrp_robustness_method+"_bay_lrp_attacks_samp="+str(n_samples), 
+							  layer_idx=args.layer_idx)
 
 plot_attacks_explanations(images=images, 
 						  explanations=mode_lrp, 
@@ -222,7 +224,8 @@ plot_attacks_explanations(images=images,
 						  failed_attacks_idxs=mode_failed_idxs,
 						  labels=labels, lrp_method=lrp_robustness_method,
 						  rule=args.rule, savedir=savedir, pxl_idxs=mode_lrp_pxl_idxs,
-						  filename=lrp_robustness_method+"_mode_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
+						  filename=lrp_robustness_method+"_mode_lrp_attacks_samp="+str(n_samples), 
+						  layer_idx=args.layer_idx)
 
 filename=args.rule+"_lrp_wasserstein_"+m["dataset"]+"_images="+str(n_inputs)+\
 		 "_pxls="+str(topk)+"_atk="+str(args.attack_method)
@@ -233,4 +236,6 @@ plot_lrp.plot_wasserstein_dist(det_successful_atks_wass_dist=succ_wass_dist,
 							   bay_failed_atks_wass_dist=fail_bay_wass_dist,
 							   mode_successful_atks_wass_dist=succ_mode_dist,
 							   mode_failed_atks_wass_dist=fail_mode_dist,
-							   increasing_n_samples=n_samples_list, filename=filename, savedir=savedir)
+							   increasing_n_samples=n_samples_list, 
+							   filename=filename+"_layeridx="+str(args.layer_idx), 
+							   savedir=savedir)

@@ -228,18 +228,13 @@ class BNN(PyroModule):
 
             if avg_posterior is True:
 
-                # posterior_predictive = self.posterior_samples
-
                 avg_state_dict = {}
                 for key in self.basenet.state_dict().keys():
 
                     weights = []
                     for net in self.posterior_samples: 
-                    # for seed in sample_idxs:
-                    #     net = posterior_predictive[seed]
                         weights.append(net.state_dict()[key])
 
-                    # print(len(weights))
                     avg_weights = torch.stack(weights).mean(0)
                     avg_state_dict.update({str(key):avg_weights})
 

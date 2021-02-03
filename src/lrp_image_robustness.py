@@ -89,7 +89,7 @@ else:
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
-savedir = os.path.join(model_savedir, "lrp/pkl/")
+savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(args.layer_idx)+"/")
 
 ### Load explanations
 
@@ -242,7 +242,8 @@ plot_attacks_explanations(images=images,
 						  failed_attacks_idxs=det_failed_idxs,
 						  labels=labels, lrp_method=lrp_robustness_method,
 						  rule=args.rule, savedir=savedir, pxl_idxs=det_lrp_pxl_idxs,
-						  filename=lrp_robustness_method+"_det_lrp_attacks", layer_idx=-1)
+						  filename=lrp_robustness_method+"_det_lrp_attacks", 
+						  layer_idx=args.layer_idx)
 
 for samp_idx, n_samples in enumerate(n_samples_list):
 
@@ -256,7 +257,8 @@ for samp_idx, n_samples in enumerate(n_samples_list):
 							  failed_attacks_idxs=bay_failed_idxs[samp_idx],
 							  labels=labels, lrp_method=lrp_robustness_method,
 							  rule=args.rule, savedir=savedir, pxl_idxs=bay_lrp_pxl_idxs[samp_idx],
-							  filename=lrp_robustness_method+"_bay_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
+							  filename=lrp_robustness_method+"_bay_lrp_attacks_samp="+str(n_samples), 
+							  layer_idx=args.layer_idx)
 
 mode_list_idx = -1 # lrp mode computations 
 plot_attacks_explanations(images=images, 
@@ -269,7 +271,8 @@ plot_attacks_explanations(images=images,
 						  failed_attacks_idxs=mode_failed_idxs[mode_list_idx],
 						  labels=labels, lrp_method=lrp_robustness_method,
 						  rule=args.rule, savedir=savedir, pxl_idxs=mode_lrp_pxl_idxs,
-						  filename=lrp_robustness_method+"_mode_lrp_attacks_samp="+str(n_samples), layer_idx=-1)
+						  filename=lrp_robustness_method+"_mode_lrp_attacks_samp="+str(n_samples), 
+						  layer_idx=args.layer_idx)
 
 filename=args.rule+"_lrp_robustness"+m["dataset"]+"_images="+str(n_inputs)+\
 		 "_samples="+str(n_samples)+"_pxls="+str(topk)+"_atk="+str(args.attack_method)
@@ -282,7 +285,9 @@ plot_lrp.lrp_imagewise_robustness_distributions(
 									  mode_successful_lrp_robustness=succ_mode_lrp_robustness,
 									  mode_failed_lrp_robustness=fail_mode_lrp_robustness,
 									  n_samples_list=n_samples_list,
-									  savedir=savedir, filename="dist_"+filename)
+									  n_original_images=len(images),
+									  savedir=savedir, 
+									  filename="dist_"+filename+"_layeridx="+str(args.layer_idx))
 
 plot_lrp.lrp_robustness_scatterplot(adversarial_robustness=det_softmax_robustness, 
 									bayesian_adversarial_robustness=bay_softmax_robustness,
@@ -291,4 +296,5 @@ plot_lrp.lrp_robustness_scatterplot(adversarial_robustness=det_softmax_robustnes
 									bayesian_lrp_robustness=bay_lrp_robustness,
 									mode_lrp_robustness=mode_lrp_robustness,
 									n_samples_list=n_samples_list,
-									savedir=savedir, filename="scatterplot_"+filename)
+									savedir=savedir, 
+									filename="scatterplot_"+filename+"_layeridx="+str(args.layer_idx))

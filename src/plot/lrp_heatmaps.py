@@ -175,7 +175,7 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     cbar.set_label('Relevance', labelpad=-60)
 
     os.makedirs(savedir, exist_ok=True)
-    plt.savefig(os.path.join(savedir,filename+".png"))
+    plt.savefig(os.path.join(savedir,filename+"_layeridx="+str(layer_idx)+".png"))
 
 def plot_vanishing_explanations(images, samples_explanations, n_samples_list, rule, savedir, filename,
                                 layer_idx=-1):

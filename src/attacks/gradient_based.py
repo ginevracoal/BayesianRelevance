@@ -151,8 +151,11 @@ def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sampl
 	When using a Bayesian network `n_samples` should be specified for the evaluation.     
 	"""
 	print(f"\nEvaluating against the attacks", end="")
-	if n_samples:
-		print(f" with {n_samples} defense samples")
+	if avg_posterior:
+		print(" with the posterior mode")
+	else:
+		if n_samples:
+			print(f" with {n_samples} defense samples")
 	
 	x_test, x_attack, y_test = x_test.to(device), x_attack.to(device), y_test.to(device)
 
