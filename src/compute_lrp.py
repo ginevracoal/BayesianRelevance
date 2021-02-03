@@ -35,7 +35,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 n_samples_list=[1,5] if args.debug else [5,10,50]
-n_inputs=100 if args.debug else args.n_inputs
+n_inputs=200 if args.debug else args.n_inputs
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
@@ -140,7 +140,7 @@ else:
 
     mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, 
                                                 n_samples=n_samples, avg_posterior=True))
-    save_to_pickle(mode_attack_lrp[samp_idx+1], path=savedir, filename="mode_lrp_avg_post_samp"+str(n_samples))
+    save_to_pickle(mode_attack_lrp[samp_idx+1], path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples))
 
 ### plots
 

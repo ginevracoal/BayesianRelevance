@@ -215,8 +215,7 @@ def lrp_imagewise_robustness_distributions(det_successful_lrp_robustness, det_fa
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
-    fig, ax = plt.subplots(3, 2, figsize=(10, 7), sharex=True, #sharey=True, 
-                           dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(3, 2, figsize=(10, 7), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
 
     fig.text(0.3, 0.91, "Successful attacks", ha='center')
 
@@ -236,6 +235,8 @@ def lrp_imagewise_robustness_distributions(det_successful_lrp_robustness, det_fa
     
     ax[2,0].set_xlabel("LRP robustness")
     ax[2,1].set_xlabel("LRP robustness")
+    ax[2,0].set_xlim(0,1)
+    ax[2,1].set_xlim(0,1)
 
     ax[0,1].set_ylabel("det. attack\ndet. interpretation", rotation=270, labelpad=40)
     ax[0,1].yaxis.set_label_position("right")
@@ -244,9 +245,9 @@ def lrp_imagewise_robustness_distributions(det_successful_lrp_robustness, det_fa
     ax[2,1].set_ylabel("det. attack\nbay. interpretation", rotation=270, labelpad=40)
     ax[2,1].yaxis.set_label_position("right")
 
-    ax[0,1].legend()
-    ax[1,1].legend()
-    ax[2,1].legend()
+    ax[0,0].legend()
+    ax[1,0].legend()
+    ax[2,0].legend()
 
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)

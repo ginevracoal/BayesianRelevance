@@ -97,15 +97,12 @@ for n_samples in n_samples_list:
 	bay_lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
 	bay_attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
 
-# mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_samp="+str(n_samples))
-# mode_attack_lrp = load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
-
 mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
 
 mode_attack_lrp=[]
 for samp_idx, n_samples in enumerate(n_samples_list):
     mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
-mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples)))
+mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples)))
 mode_attack_lrp = np.array(mode_attack_lrp)
 
 ### Evaluate explanations
@@ -119,7 +116,6 @@ det_lrp_robustness, det_lrp_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp,
 succ_wass_dist = lrp_wasserstein_distance(det_lrp[det_successful_idxs], det_attack_lrp[det_successful_idxs], 
 										  det_lrp_pxl_idxs)
 
-# det_failed_idxs = np.setdiff1d(np.arange(len(images)), det_successful_idxs)
 fail_wass_dist = lrp_wasserstein_distance(det_lrp[det_failed_idxs], det_attack_lrp[det_failed_idxs], 
 										  det_lrp_pxl_idxs)
 
@@ -158,7 +154,6 @@ for samp_idx, n_samples in enumerate(n_samples_list):
 													   bay_lrp_pxl_idxs[samp_idx]))
 
 	failed_im_idxs = bay_failed_idxs[samp_idx]
-	# failed_im_idxs = np.setdiff1d(np.arange(len(images)), succ_im_idxs)
 	fail_bay_wass_dist.append(lrp_wasserstein_distance(bay_lrp[samp_idx][failed_im_idxs], 
 													   bay_attack_lrp[samp_idx][failed_im_idxs], 
 													   bay_lrp_pxl_idxs[samp_idx]))
@@ -183,7 +178,6 @@ mode_softmax_robustness = mode_softmax_robustness.detach().cpu().numpy()
 succ_mode_dist = lrp_wasserstein_distance(mode_lrp[mode_successful_idxs], mode_attack_lrp[mode_successful_idxs], 
 										  mode_lrp_pxl_idxs)
 
-# mode_failed_idxs = np.setdiff1d(np.arange(len(images)), mode_successful_idxs)
 fail_mode_dist = lrp_wasserstein_distance(mode_lrp[mode_failed_idxs], mode_attack_lrp[mode_failed_idxs], 
 										  mode_lrp_pxl_idxs)
 

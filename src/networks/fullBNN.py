@@ -226,18 +226,20 @@ class BNN(PyroModule):
             if n_samples>len(self.posterior_samples):
                 raise ValueError("Too many samples. Max available samples =", len(self.posterior_samples))
 
-            if avg_posterior:
+            if avg_posterior is True:
 
-                posterior_predictive = self.posterior_samples
+                # posterior_predictive = self.posterior_samples
 
                 avg_state_dict = {}
                 for key in self.basenet.state_dict().keys():
 
                     weights = []
-                    for seed in sample_idxs:
-                        net = posterior_predictive[seed]
+                    for net in self.posterior_samples: 
+                    # for seed in sample_idxs:
+                    #     net = posterior_predictive[seed]
                         weights.append(net.state_dict()[key])
 
+                    # print(len(weights))
                     avg_weights = torch.stack(weights).mean(0)
                     avg_state_dict.update({str(key):avg_weights})
 
@@ -255,9 +257,6 @@ class BNN(PyroModule):
         
         logits = torch.stack(preds)
         return logits.mean(0) if expected_out else logits
-
-    def get_logits(self, *args, **kwargs):
-        return self.forward(*args, **kwargs)
 
     def _train_hmc(self, train_loader, n_samples, warmup, step_size, num_steps, savedir, device):
         print("\n == fullBNN HMC training ==")
@@ -352,7 +351,7 @@ class BNN(PyroModule):
             self._train_hmc(train_loader, self.n_samples, self.warmup,
                             self.step_size, self.num_steps, savedir, device)
 
-    def evaluate(self, test_loader, device, n_samples=10):
+    def evaluate(self, test_loader, device, avg_posterior=False, n_samples=10):
         self.to(device)
         self.basenet.to(device)
 
@@ -362,7 +361,7 @@ class BNN(PyroModule):
             for x_batch, y_batch in test_loader:
 
                 x_batch = x_batch.to(device)
-                outputs = self.forward(x_batch, n_samples=n_samples, avg_posterior=False)
+                outputs = self.forward(x_batch, n_samples=n_samples, avg_posterior=avg_posterior)
                 predictions = outputs.to(device).argmax(-1)
                 labels = y_batch.to(device).argmax(-1)
                 correct_predictions += (predictions == labels).sum().item()

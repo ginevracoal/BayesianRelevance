@@ -39,8 +39,8 @@ args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
 n_samples_list=[1,5] if args.debug else [5, 10, 50]
-n_inputs=100 if args.debug else args.n_inputs
-topk=100 if args.debug else args.topk
+n_inputs=200 if args.debug else args.n_inputs
+topk=args.topk
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
@@ -102,13 +102,12 @@ for n_samples in n_samples_list:
 	bay_lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
 	bay_attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
 
-mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_samp="+str(n_samples))
-# mode_attack_lrp = load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
+mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
 
 mode_attack_lrp=[]
 for samp_idx, n_samples in enumerate(n_samples_list):
     mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
-mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples)))
+mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples)))
 mode_attack_lrp = np.array(mode_attack_lrp)
 
 ### Evaluate explanations
@@ -189,11 +188,11 @@ for samp_idx, n_samples in enumerate(n_samples_list):
 													   y_test=y_test, device=args.device, n_samples=n_samples, 
 													   return_classification_idxs=True)
 	succ_rob, succ_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[succ_idxs], 
-														  adversarial_heatmaps=mode_attack_lrp[samp_idx][succ_idxs], 
-														  topk=topk, method=lrp_robustness_method)
+													  adversarial_heatmaps=mode_attack_lrp[samp_idx][succ_idxs], 
+													  topk=topk, method=lrp_robustness_method)
 	fail_rob, fail_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[fail_idxs], 
-														  adversarial_heatmaps=mode_attack_lrp[samp_idx][fail_idxs], 
-														  topk=topk, method=lrp_robustness_method)
+													  adversarial_heatmaps=mode_attack_lrp[samp_idx][fail_idxs], 
+													  topk=topk, method=lrp_robustness_method)
 	mode_preds.append(preds) 
 	mode_atk_preds.append(atk_preds)
 	mode_softmax_robustness.append(softmax_rob.detach().cpu().numpy()) 
@@ -201,7 +200,7 @@ for samp_idx, n_samples in enumerate(n_samples_list):
 	mode_failed_idxs.append(failed_idxs)
 	succ_mode_lrp_robustness.append(succ_rob)
 	succ_mode_lrp_pxl_idxs.append(succ_pxl_idxs)
-	fail_mode_lrp_robustness.append(fail_rob)
+	fail_mode_lrp_robustness.append(fail_rob) 
 	fail_mode_lrp_pxl_idxs.append(fail_pxl_idxs)
 
 preds, atk_preds, softmax_rob, succ_idxs, fail_idxs = evaluate_attack(net=bayesnet, 
@@ -209,11 +208,11 @@ preds, atk_preds, softmax_rob, succ_idxs, fail_idxs = evaluate_attack(net=bayesn
 												   y_test=y_test, device=args.device, n_samples=n_samples, 
 												   return_classification_idxs=True)
 succ_rob, succ_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[succ_idxs], 
-													  adversarial_heatmaps=mode_attack_lrp[-1][succ_idxs], 
-													  topk=topk, method=lrp_robustness_method)
+										  adversarial_heatmaps=mode_attack_lrp[-1][succ_idxs], 
+										  topk=topk, method=lrp_robustness_method)
 fail_rob, fail_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[fail_idxs], 
-													  adversarial_heatmaps=mode_attack_lrp[-1][fail_idxs], 
-													  topk=topk, method=lrp_robustness_method)
+										  adversarial_heatmaps=mode_attack_lrp[-1][fail_idxs], 
+										  topk=topk, method=lrp_robustness_method)
 mode_preds.append(preds) 
 mode_atk_preds.append(atk_preds)
 mode_softmax_robustness.append(softmax_rob.detach().cpu().numpy()) 
