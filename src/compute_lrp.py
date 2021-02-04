@@ -58,6 +58,9 @@ model_savedir = get_savedir(model="baseNN", dataset=model["dataset"], architectu
 detnet = baseNN(inp_shape, num_classes, *list(model.values()))
 detnet.load(savedir=model_savedir, device=args.device)
 
+n_layers=detnet.n_layers
+layer_idx=args.layer_idx+n_layers if args.layer_idx<0 else args.layer_idx
+
 det_attack = load_attack(method=args.attack_method, filename=detnet.name, savedir=model_savedir)
 
 if args.model=="fullBNN":
@@ -84,18 +87,18 @@ else:
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
-savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(args.layer_idx)+"/")
+savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(layer_idx)+"/")
 
 ### Deterministic explanations
 
 if args.load:
-    det_lrp = load_from_pickle(path=savedir, layer_idx=args.layer_idx, filename="det_lrp")
-    det_attack_lrp = load_from_pickle(path=savedir, layer_idx=args.layer_idx, filename="det_attack_lrp")
+    det_lrp = load_from_pickle(path=savedir, layer_idx=layer_idx, filename="det_lrp")
+    det_attack_lrp = load_from_pickle(path=savedir, layer_idx=layer_idx, filename="det_attack_lrp")
 
 else:
 
-    det_lrp = compute_explanations(images, detnet, layer_idx=args.layer_idx, rule=args.rule)
-    det_attack_lrp = compute_explanations(det_attack, detnet, layer_idx=args.layer_idx, rule=args.rule)
+    det_lrp = compute_explanations(images, detnet, layer_idx=layer_idx, rule=args.rule)
+    det_attack_lrp = compute_explanations(det_attack, detnet, layer_idx=layer_idx, rule=args.rule)
 
     save_to_pickle(det_lrp, path=savedir, filename="det_lrp")
     save_to_pickle(det_attack_lrp, path=savedir, filename="det_attack_lrp")
@@ -124,24 +127,24 @@ else:
 
     for samp_idx, n_samples in enumerate(n_samples_list):
 
-        bay_lrp.append(compute_explanations(images, bayesnet, rule=args.rule, layer_idx=args.layer_idx, 
+        bay_lrp.append(compute_explanations(images, bayesnet, rule=args.rule, layer_idx=layer_idx, 
                                                 n_samples=n_samples))
-        bay_attack_lrp.append(compute_explanations(bay_attack[samp_idx], bayesnet, layer_idx=args.layer_idx,
+        bay_attack_lrp.append(compute_explanations(bay_attack[samp_idx], bayesnet, layer_idx=layer_idx,
                                                    rule=args.rule, n_samples=n_samples))
 
         save_to_pickle(bay_lrp[samp_idx], path=savedir, filename="bay_lrp_samp="+str(n_samples))
         save_to_pickle(bay_attack_lrp[samp_idx], path=savedir, filename="bay_attack_lrp_samp="+str(n_samples))
     
-    mode_lrp = compute_explanations(images, bayesnet, rule=args.rule, layer_idx=args.layer_idx, 
+    mode_lrp = compute_explanations(images, bayesnet, rule=args.rule, layer_idx=layer_idx, 
                                     n_samples=n_samples, avg_posterior=True)
     save_to_pickle(mode_lrp, path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
 
     for samp_idx, n_samples in enumerate(n_samples_list):
-        mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=args.layer_idx, 
+        mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx, 
                                                         n_samples=n_samples))
         save_to_pickle(mode_attack_lrp[samp_idx], path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
 
-    mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=args.layer_idx,
+    mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx,
                                                 n_samples=n_samples, avg_posterior=True))
     save_to_pickle(mode_attack_lrp[samp_idx+1], path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples))
 
