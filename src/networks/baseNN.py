@@ -48,6 +48,7 @@ class baseNN(nn.Module):
                     "_arch="+str(self.architecture)+"_act="+str(self.activation)+\
                     "_ep="+str(self.epochs)+"_lr="+str(self.lr)
         print("\nbaseNN total number of weights =", sum(p.numel() for p in self.parameters()))
+        self.n_layers = len(list(self.model.children()))-1
 
     def set_model(self, architecture, activation, input_shape, output_size, hidden_size):
 
@@ -151,9 +152,9 @@ class baseNN(nn.Module):
 
     def forward(self, inputs, layer_idx=-1, *args, **kwargs):
 
-        max_layer_idx = len(list(self.model.children()))-1
-        if abs(layer_idx)>max_layer_idx:
-            raise ValueError(f"Max number of available layers is {max_layer_idx}")
+        # max_layer_idx = len(list(self.model.children()))-1
+        if abs(layer_idx)>self.n_layers:
+            raise ValueError(f"Max number of available layers is {self.n_layers}")
 
         if layer_idx==-1:
             layer_idx=None

@@ -187,7 +187,6 @@ fail_mode_dist = lrp_wasserstein_distance(mode_lrp[mode_failed_idxs], mode_attac
 
 ### Plots
 
-savedir = os.path.join(model_savedir, "lrp/wasserstein/")
 
 plot_attacks_explanations(images=images, 
 						  explanations=det_lrp, 
@@ -230,6 +229,7 @@ plot_attacks_explanations(images=images,
 						  filename=lrp_robustness_method+"_mode_lrp_attacks_samp="+str(n_samples), 
 						  layer_idx=layer_idx)
 
+savedir = os.path.join(model_savedir, "lrp/wasserstein/")
 filename=args.rule+"_lrp_wasserstein_"+m["dataset"]+"_images="+str(n_inputs)+\
 		 "_pxls="+str(topk)+"_atk="+str(args.attack_method)
 

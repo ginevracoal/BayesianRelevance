@@ -233,7 +233,6 @@ mode_lrp_robustness, mode_lrp_pxl_idxs = lrp_robustness(original_heatmaps=mode_l
 
 ### Plots
 
-savedir = os.path.join(model_savedir, "lrp/robustness/")
 
 plot_attacks_explanations(images=images, 
 						  explanations=det_lrp, 
@@ -279,6 +278,8 @@ plot_attacks_explanations(images=images,
 
 filename=args.rule+"_lrp_robustness"+m["dataset"]+"_images="+str(n_inputs)+\
 		 "_samples="+str(n_samples)+"_pxls="+str(topk)+"_atk="+str(args.attack_method)
+		 
+savedir = os.path.join(model_savedir, "lrp/robustness/")
 
 plot_lrp.lrp_imagewise_robustness_distributions(
 									  det_successful_lrp_robustness=succ_det_lrp_robustness,
