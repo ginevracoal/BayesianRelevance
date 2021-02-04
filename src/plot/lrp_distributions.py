@@ -256,7 +256,7 @@ def lrp_imagewise_robustness_distributions(det_successful_lrp_robustness, det_fa
     ax[0,1].yaxis.set_label_position("right")
     ax[1,1].set_ylabel("det. attack\nbay. interpretation", rotation=270, labelpad=40)
     ax[1,1].yaxis.set_label_position("right")
-    ax[2,1].set_ylabel("det. attack\nbay. interpretation", rotation=270, labelpad=40)
+    ax[2,1].set_ylabel("bay. attack\nbay. interpretation", rotation=270, labelpad=40)
     ax[2,1].yaxis.set_label_position("right")
 
     ax[0,1].legend()
@@ -414,48 +414,112 @@ def lrp_imagewise_layers_robustness_distributions(det_successful_lrp_robustness,
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
-    fig, ax = plt.subplots(3, 2, figsize=(10, 6), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(n_layers, 2, figsize=(10, 9), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
     fig.tight_layout()
     
-    cmap = cm.get_cmap('Blues', n_layers)
-    hex_colors = [matplotlib.colors.rgb2hex(cmap(i)) for i in range(cmap.N)]
+    # cmap = cm.get_cmap('Blues', n_layers+3)
+    # hex_colors = [matplotlib.colors.rgb2hex(cmap(i)) for i in range(cmap.N)]
 
-    fig.subplots_adjust(top=0.95)
-    fig.text(0.2, 0.95, "Successful attacks", ha='center')
-    fig.text(0.6, 0.95, "Failed attacks", ha='center')
+    fig.subplots_adjust(top=0.98)
+    fig.text(0.3, 0.98, "Successful attacks", ha='center')
+    fig.text(0.75, 0.98, "Failed attacks", ha='center')
+
+    for layer_idx in range(n_layers-1):
+
+        # color = hex_colors[layer_idx+3]
+
+        sns.distplot(det_successful_lrp_robustness[layer_idx], ax=ax[layer_idx,0], label="deterministic",
+                        kde=True)#, color=color)
+        
+        for samp_idx, n_samples in enumerate(n_samples_list):
+            sns.distplot(bay_successful_lrp_robustness[layer_idx][samp_idx], ax=ax[layer_idx,0], 
+                        label="bayesian samp="+str(n_samples), kde=True)#, color=color)
+
+        sns.distplot(det_failed_lrp_robustness[layer_idx], ax=ax[layer_idx,1], label="deterministic",
+            kde=True)#, color=color)
+        
+        for samp_idx, n_samples in enumerate(n_samples_list):
+            sns.distplot(bay_failed_lrp_robustness[layer_idx][samp_idx], ax=ax[layer_idx,1], 
+                        label="bayesian samp="+str(n_samples),  kde=True)#, color=color)
+    
+        ax[layer_idx,1].yaxis.set_label_position("right")
+        ax[layer_idx,1].set_ylabel("idx="+str(layer_idx), rotation=270, labelpad=15)
+
+    ax[n_layers-1,0].set_xlabel("LRP robustness")
+    ax[n_layers-1,1].set_xlabel("LRP robustness")
+
+    # ax[0,1].set_ylabel("deterministic", rotation=270, labelpad=15)
+    # ax[0,1].yaxis.set_label_position("right")
+    # for samp_idx, n_samples in enumerate(n_samples_list):
+    #     ax[samp_idx+1,1].set_ylabel("bay. samp.="+str(n_samples), rotation=270, labelpad=15)
+        # ax[samp_idx+1,1].yaxis.set_label_position("right")
+
+    ax[n_layers-1,0].set_xlim(0,1)
+    ax[n_layers-1,1].set_xlim(0,1)
+
+    # fig.subplots_adjust(bottom=0.05)
+    # ax[n_layers-1,1].legend(bbox_to_anchor=(0., -0.5))
+    ax[0,0].legend(loc="upper left")
+
+    fig.savefig(os.path.join(savedir, filename+".png"))
+    plt.close(fig)
+
+
+def lrp_imagewise_layers_robustness_distributions(det_successful_lrp_robustness, det_failed_lrp_robustness,
+                                                   bay_successful_lrp_robustness, bay_failed_lrp_robustness,
+                                                   # mode_successful_lrp_robustness, mode_failed_lrp_robustness,
+                                                   n_samples_list, n_original_images, n_layers, savedir, filename):
+
+    os.makedirs(savedir, exist_ok=True) 
+
+    sns.set_style("darkgrid")
+    matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
+    fig, ax = plt.subplots(n_layers, 2, figsize=(10, 9), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig.tight_layout()
+    
+    # cmap = cm.get_cmap('Blues', n_layers+3)
+    # hex_colors = [matplotlib.colors.rgb2hex(cmap(i)) for i in range(cmap.N)]
+
+    fig.subplots_adjust(top=0.98)
+    fig.text(0.3, 0.98, "Successful attacks", ha='center')
+    fig.text(0.75, 0.98, "Failed attacks", ha='center')
 
     for layer_idx in range(n_layers):
 
-        color = hex_colors[layer_idx]
+        # color = hex_colors[layer_idx+3]
 
-        sns.distplot(det_successful_lrp_robustness[layer_idx], ax=ax[0,0],
-                        kde=True, color=color)
+        sns.distplot(det_successful_lrp_robustness[layer_idx], ax=ax[layer_idx,0], label="deterministic",
+                        kde=True)#, color=color)
         
         for samp_idx, n_samples in enumerate(n_samples_list):
-            sns.distplot(bay_successful_lrp_robustness[layer_idx][samp_idx], ax=ax[samp_idx+1,0], 
-                        kde=True, color=color)
+            sns.distplot(bay_successful_lrp_robustness[layer_idx][samp_idx], ax=ax[layer_idx,0], 
+                        label="bayesian samp="+str(n_samples), kde=True)#, color=color)
 
-        sns.distplot(det_failed_lrp_robustness[layer_idx], ax=ax[0,1], label="layer_idx="+str(layer_idx), 
-            kde=True, color=color)
+        sns.distplot(det_failed_lrp_robustness[layer_idx], ax=ax[layer_idx,1], label="deterministic",
+            kde=True)#, color=color)
         
         for samp_idx, n_samples in enumerate(n_samples_list):
-            sns.distplot(bay_failed_lrp_robustness[layer_idx][samp_idx], ax=ax[samp_idx+1,1], 
-                        kde=True, color=color)
+            sns.distplot(bay_failed_lrp_robustness[layer_idx][samp_idx], ax=ax[layer_idx,1], 
+                        label="bayesian samp="+str(n_samples),  kde=True)#, color=color)
     
-    ax[2,0].set_xlabel("LRP robustness")
-    ax[2,1].set_xlabel("LRP robustness")
+        ax[layer_idx,1].yaxis.set_label_position("right")
+        ax[layer_idx,1].set_ylabel("idx="+str(layer_idx+1), rotation=270, labelpad=15)
 
-    ax[0,1].set_ylabel("deterministic", rotation=270, labelpad=15)
-    ax[0,1].yaxis.set_label_position("right")
-    for samp_idx, n_samples in enumerate(n_samples_list):
-        ax[samp_idx+1,1].set_ylabel("bay. samp.="+str(n_samples), rotation=270, labelpad=15)
-        ax[samp_idx+1,1].yaxis.set_label_position("right")
+    ax[n_layers-1,0].set_xlabel("LRP robustness")
+    ax[n_layers-1,1].set_xlabel("LRP robustness")
 
-    ax[2,0].set_xlim(0,1)
-    ax[2,1].set_xlim(0,1)
+    # ax[0,1].set_ylabel("deterministic", rotation=270, labelpad=15)
+    # ax[0,1].yaxis.set_label_position("right")
+    # for samp_idx, n_samples in enumerate(n_samples_list):
+    #     ax[samp_idx+1,1].set_ylabel("bay. samp.="+str(n_samples), rotation=270, labelpad=15)
+        # ax[samp_idx+1,1].yaxis.set_label_position("right")
 
-    fig.subplots_adjust(right=0.75)
-    ax[0,1].legend(bbox_to_anchor=(1.1, 1))
+    ax[n_layers-1,0].set_xlim(0,1)
+    ax[n_layers-1,1].set_xlim(0,1)
+
+    # fig.subplots_adjust(bottom=0.05)
+    # ax[n_layers-1,1].legend(bbox_to_anchor=(0., -0.5))
+    ax[0,0].legend(loc="upper left")
 
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)

@@ -63,7 +63,7 @@ def select_informative_pixels(lrp_heatmaps, topk):
 	return chosen_pxls_lrp, chosen_pxl_idxs
 
 
-def compute_explanations(x_test, network, rule, normalize=True, n_samples=None, layer_idx=-1, avg_posterior=False):
+def compute_explanations(x_test, network, rule, normalize, n_samples=None, layer_idx=-1, avg_posterior=False):
 
 	print("\nLRP layer idx =", layer_idx)
 
@@ -85,18 +85,19 @@ def compute_explanations(x_test, network, rule, normalize=True, n_samples=None, 
 			# Backward pass (compute explanation)
 			y_hat.backward()
 			lrp = x.grad
+
 			if normalize:
 				lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
 			explanations.append(lrp)
 
-		return torch.stack(explanations)
+		explanations = torch.stack(explanations)
 
 	else:
 
-		posterior_explanations = []
+		explanations = []
 		for x in tqdm(x_test):
 
-			explanations = []
+			post_explanations = []
 			for j in range(n_samples):
 
 				# Forward pass
@@ -116,12 +117,13 @@ def compute_explanations(x_test, network, rule, normalize=True, n_samples=None, 
 
 				if normalize:
 					lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
-				explanations.append(lrp)
+				post_explanations.append(lrp)
 
-			posterior_explanations.append(torch.stack(explanations))
+			explanations.append(torch.stack(post_explanations))
 
-		avg_explanation = torch.stack(posterior_explanations).mean(1)   
-		return avg_explanation
+		explanations = torch.stack(explanations).mean(1)   
+
+	return explanations
 
 
 def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
@@ -186,16 +188,20 @@ def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
 	print("\nvanishing norms idxs = ", vanishing_norm_idxs)
 	return vanishing_norm_idxs, non_null_idxs
 
-def save_lrp(explanations, path, filename, layer_idx=-1):
-	filename = filename if layer_idx==-1 else filename+"_layer_idx="+str(layer_idx) 
-	savedir = os.path.join(path, lrp_savedir(layer_idx))
-	save_to_pickle(explanations, path=savedir, filename=filename)
+# def save_lrp(explanations, path, filename, normalize, layer_idx=-1):
+# 	filename = filename if layer_idx==-1 else filename+"_layer_idx="+str(layer_idx) 
+# 	if normalize:
+# 		filename = filename+"_norm"
+# 	savedir = os.path.join(path, lrp_savedir(layer_idx))
+# 	save_to_pickle(explanations, path=savedir, filename=filename)
 
-def load_lrp(path, filename, layer_idx=-1):
-	filename = filename if layer_idx==-1 else filename+"_layer_idx="+str(layer_idx) 
-	savedir = os.path.join(path, lrp_savedir(layer_idx))
-	explanations = load_from_pickle(path=savedir, filename=filename)
-	return explanations
+# def load_lrp(path, filename,  normalize, layer_idx=-1):
+# 	filename = filename if layer_idx==-1 else filename+"_layer_idx="+str(layer_idx) 
+# 	if normalize:
+# 		filename = filename+"_norm"
+# 	savedir = os.path.join(path, lrp_savedir(layer_idx))
+# 	explanations = load_from_pickle(path=savedir, filename=filename)
+# 	return explanations
 
 def lrp_distances(original_heatmaps, adversarial_heatmaps, pxl_idxs=None):
 

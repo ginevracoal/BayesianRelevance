@@ -32,12 +32,13 @@ parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBN
 parser.add_argument("--attack_library", type=str, default="grad_based", help="grad_based, deeprobust")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
+parser.add_argument("--normalize", default=True, type=eval, help="Normalize lrp heatmaps.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
-n_samples_list=[1,5] if args.debug else [5, 50]
+n_samples_list=[1,5] if args.debug else [5, 10, 50]
 n_inputs=200 if args.debug else args.n_inputs
 topk=args.topk
 
@@ -82,8 +83,8 @@ if args.model=="fullBNN":
 				bay_attack.append(load_attack(method=args.attack_method, filename=bayesnet.name, savedir=model_savedir, 
 													n_samples=n_samples))
 
-		mode_attack = load_attack(method=args.attack_method, filename=bayesnet.name+"_mode", savedir=model_savedir, 
-															n_samples=n_samples)
+		# mode_attack = load_attack(method=args.attack_method, filename=bayesnet.name+"_mode", savedir=model_savedir, 
+		# 													n_samples=n_samples)
 
 else:
 		raise NotImplementedError
@@ -97,7 +98,12 @@ bay_successful_lrp_robustness_layers=[]
 bay_failed_lrp_robustness_layers=[]
 
 for layer_idx in range(n_layers):
-	savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(layer_idx)+"/")
+	layer_idx+=1
+
+	if args.normalize:
+	    savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(layer_idx)+"_norm/")
+	else:
+	    savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(layer_idx)+"/")
 
 	### Load explanations
 
@@ -110,13 +116,13 @@ for layer_idx in range(n_layers):
 		bay_lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
 		bay_attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
 
-	mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
+	# mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
 
-	mode_attack_lrp=[]
-	for samp_idx, n_samples in enumerate(n_samples_list):
-		mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
-	mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples)))
-	mode_attack_lrp = np.array(mode_attack_lrp)
+	# mode_attack_lrp=[]
+	# for samp_idx, n_samples in enumerate(n_samples_list):
+	# 	mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
+	# mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples)))
+	# mode_attack_lrp = np.array(mode_attack_lrp)
 
 	### Evaluate explanations
 
@@ -246,6 +252,9 @@ savedir = os.path.join(model_savedir, "lrp/robustness/")
 
 filename=args.rule+"_lrp_robustness_"+m["dataset"]+"_images="+str(n_inputs)+\
 		  "_samples="+str(n_samples)+"_pxls="+str(topk)+"_atk="+str(args.attack_method)
+
+if args.normalize:
+	filename=filename+"_norm"
 
 plot_lrp.lrp_imagewise_layers_robustness_distributions(
 										det_successful_lrp_robustness=det_successful_lrp_robustness_layers,

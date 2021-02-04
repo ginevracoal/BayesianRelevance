@@ -115,7 +115,7 @@ else:
                               device=args.device, n_samples=n_samples)
 
         mode_attack = load_attack(method=args.attack_method, filename=net.name+"_mode", savedir=savedir, 
-                                  n_sa  mples=n_samples)
+                                  n_samples=n_samples)
         evaluate_attack(net=net, x_test=x_test, x_attack=mode_attack, y_test=y_test, 
                           device=args.device, n_samples=n_samples, avg_posterior=True)
 

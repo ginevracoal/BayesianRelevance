@@ -29,6 +29,7 @@ parser.add_argument("--attack_library", type=str, default="grad_based", help="gr
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--layer_idx", default=-1, type=int, help="Layer idx for LRP computation.")
+parser.add_argument("--normalize", default=True, type=eval, help="Normalize lrp heatmaps.")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
@@ -59,7 +60,7 @@ detnet = baseNN(inp_shape, num_classes, *list(model.values()))
 detnet.load(savedir=model_savedir, device=args.device)
 
 n_layers=detnet.n_layers
-layer_idx=args.layer_idx+n_layers if args.layer_idx<0 else args.layer_idx
+layer_idx=args.layer_idx+n_layers+1 if args.layer_idx<0 else args.layer_idx
 
 det_attack = load_attack(method=args.attack_method, filename=detnet.name, savedir=model_savedir)
 
@@ -87,7 +88,11 @@ else:
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
-savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(layer_idx)+"/")
+
+if args.normalize:
+    savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(layer_idx)+"_norm/")
+else:
+    savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(layer_idx)+"/")
 
 ### Deterministic explanations
 
@@ -97,8 +102,8 @@ if args.load:
 
 else:
 
-    det_lrp = compute_explanations(images, detnet, layer_idx=layer_idx, rule=args.rule)
-    det_attack_lrp = compute_explanations(det_attack, detnet, layer_idx=layer_idx, rule=args.rule)
+    det_lrp = compute_explanations(images, detnet, layer_idx=layer_idx, rule=args.rule, normalize=args.normalize)
+    det_attack_lrp = compute_explanations(det_attack, detnet, layer_idx=layer_idx, rule=args.rule, normalize=args.normalize)
 
     save_to_pickle(det_lrp, path=savedir, filename="det_lrp")
     save_to_pickle(det_attack_lrp, path=savedir, filename="det_attack_lrp")
@@ -128,24 +133,24 @@ else:
     for samp_idx, n_samples in enumerate(n_samples_list):
 
         bay_lrp.append(compute_explanations(images, bayesnet, rule=args.rule, layer_idx=layer_idx, 
-                                                n_samples=n_samples))
+                                                n_samples=n_samples, normalize=args.normalize))
         bay_attack_lrp.append(compute_explanations(bay_attack[samp_idx], bayesnet, layer_idx=layer_idx,
-                                                   rule=args.rule, n_samples=n_samples))
+                                                   rule=args.rule, n_samples=n_samples, normalize=args.normalize))
 
         save_to_pickle(bay_lrp[samp_idx], path=savedir, filename="bay_lrp_samp="+str(n_samples))
         save_to_pickle(bay_attack_lrp[samp_idx], path=savedir, filename="bay_attack_lrp_samp="+str(n_samples))
     
     mode_lrp = compute_explanations(images, bayesnet, rule=args.rule, layer_idx=layer_idx, 
-                                    n_samples=n_samples, avg_posterior=True)
+                                    n_samples=n_samples, avg_posterior=True, normalize=args.normalize)
     save_to_pickle(mode_lrp, path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
 
     for samp_idx, n_samples in enumerate(n_samples_list):
         mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx, 
-                                                        n_samples=n_samples))
+                                                        n_samples=n_samples, normalize=args.normalize))
         save_to_pickle(mode_attack_lrp[samp_idx], path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
 
     mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx,
-                                                n_samples=n_samples, avg_posterior=True))
+                                                n_samples=n_samples, avg_posterior=True, normalize=args.normalize))
     save_to_pickle(mode_attack_lrp[samp_idx+1], path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples))
 
 ### plots

@@ -28,6 +28,7 @@ parser.add_argument("--attack_library", type=str, default="grad_based", help="gr
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--layer_idx", default=-1, type=int, help="Layer idx for LRP computation.")
+parser.add_argument("--normalize", default=True, type=eval, help="Normalize lrp heatmaps.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
@@ -60,7 +61,7 @@ detnet = baseNN(inp_shape, num_classes, *list(model.values()))
 detnet.load(savedir=model_savedir, device=args.device)
 
 n_layers=detnet.n_layers
-layer_idx=args.layer_idx+n_layers if args.layer_idx<0 else args.layer_idx
+layer_idx=args.layer_idx+n_layers+1 if args.layer_idx<0 else args.layer_idx
 
 det_attack = load_attack(method=args.attack_method, filename=detnet.name, savedir=model_savedir)
 
@@ -87,7 +88,11 @@ else:
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
-savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(layer_idx)+"/")
+
+if args.normalize:
+    savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(layer_idx)+"_norm/")
+else:
+    savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(layer_idx)+"/")
 
 ### Load explanations
 
@@ -231,7 +236,9 @@ plot_attacks_explanations(images=images,
 
 savedir = os.path.join(model_savedir, "lrp/wasserstein/")
 filename=args.rule+"_lrp_wasserstein_"+m["dataset"]+"_images="+str(n_inputs)+\
-		 "_pxls="+str(topk)+"_atk="+str(args.attack_method)
+		 "_pxls="+str(topk)+"_atk="+str(args.attack_method)+"_layeridx="+str(layer_idx)
+if args.normalize:
+	filename=filename+"_norm"
 
 plot_lrp.plot_wasserstein_dist(det_successful_atks_wass_dist=succ_wass_dist, 
 							   det_failed_atks_wass_dist=fail_wass_dist, 
@@ -240,5 +247,5 @@ plot_lrp.plot_wasserstein_dist(det_successful_atks_wass_dist=succ_wass_dist,
 							   mode_successful_atks_wass_dist=succ_mode_dist,
 							   mode_failed_atks_wass_dist=fail_mode_dist,
 							   increasing_n_samples=n_samples_list, 
-							   filename=filename+"_layeridx="+str(layer_idx), 
+							   filename="wass_"+filename, 
 							   savedir=savedir)

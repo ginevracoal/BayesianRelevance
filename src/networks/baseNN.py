@@ -48,7 +48,7 @@ class baseNN(nn.Module):
                     "_arch="+str(self.architecture)+"_act="+str(self.activation)+\
                     "_ep="+str(self.epochs)+"_lr="+str(self.lr)
         print("\nbaseNN total number of weights =", sum(p.numel() for p in self.parameters()))
-        self.n_layers = len(list(self.model.children()))-1
+        self.n_layers = len(list(self.model.children()))
 
     def set_model(self, architecture, activation, input_shape, output_size, hidden_size):
 
@@ -156,7 +156,9 @@ class baseNN(nn.Module):
         if abs(layer_idx)>self.n_layers:
             raise ValueError(f"Max number of available layers is {self.n_layers}")
 
-        if layer_idx==-1:
+        if layer_idx==0:
+            raise ValueError("Layer 0 does not exist.")
+        elif layer_idx==-1:
             layer_idx=None
         else:
             if layer_idx<0:

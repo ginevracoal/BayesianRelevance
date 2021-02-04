@@ -33,6 +33,7 @@ parser.add_argument("--attack_library", type=str, default="grad_based", help="gr
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--layer_idx", default=-1, type=int, help="Layer idx for LRP computation.")
+parser.add_argument("--normalize", default=True, type=eval, help="Normalize lrp heatmaps.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
@@ -65,7 +66,7 @@ detnet = baseNN(inp_shape, num_classes, *list(model.values()))
 detnet.load(savedir=model_savedir, device=args.device)
 
 n_layers=detnet.n_layers
-layer_idx=args.layer_idx+n_layers if args.layer_idx<0 else args.layer_idx
+layer_idx=args.layer_idx+n_layers+1 if args.layer_idx<0 else args.layer_idx
 
 det_attack = load_attack(method=args.attack_method, filename=detnet.name, savedir=model_savedir)
 
@@ -92,7 +93,11 @@ else:
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
-savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(layer_idx)+"/")
+
+if args.normalize:
+    savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(layer_idx)+"_norm/")
+else:
+    savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(layer_idx)+"/")
 
 ### Load explanations
 
@@ -233,7 +238,6 @@ mode_lrp_robustness, mode_lrp_pxl_idxs = lrp_robustness(original_heatmaps=mode_l
 
 ### Plots
 
-
 plot_attacks_explanations(images=images, 
 						  explanations=det_lrp, 
 						  attacks=det_attack, 
@@ -277,11 +281,14 @@ plot_attacks_explanations(images=images,
 						  layer_idx=layer_idx)
 
 filename=args.rule+"_lrp_robustness"+m["dataset"]+"_images="+str(n_inputs)+\
-		 "_samples="+str(n_samples)+"_pxls="+str(topk)+"_atk="+str(args.attack_method)
+		 "_samples="+str(n_samples)+"_pxls="+str(topk)+"_atk="+str(args.attack_method)+"_layeridx="+str(layer_idx)
+if args.normalize:
+	filename=filename+"_norm"
 		 
 savedir = os.path.join(model_savedir, "lrp/robustness/")
 
-plot_lrp.lrp_imagewise_robustness_distributions(
+if args.layer_idx==-1 or args.layer_idx==n_layers-1:
+	plot_lrp.lrp_imagewise_robustness_distributions(
 									  det_successful_lrp_robustness=succ_det_lrp_robustness,
 									  det_failed_lrp_robustness=fail_det_lrp_robustness,
 									  bay_successful_lrp_robustness=succ_bay_lrp_robustness,
@@ -291,14 +298,14 @@ plot_lrp.lrp_imagewise_robustness_distributions(
 									  n_samples_list=n_samples_list,
 									  n_original_images=len(images),
 									  savedir=savedir, 
-									  filename="dist_"+filename+"_layeridx="+str(layer_idx))
+									  filename="dist_"+filename)
 
-plot_lrp.lrp_robustness_scatterplot(adversarial_robustness=det_softmax_robustness, 
-									bayesian_adversarial_robustness=bay_softmax_robustness,
-									mode_adversarial_robustness=mode_softmax_robustness[mode_list_idx],
-									lrp_robustness=det_lrp_robustness, 
-									bayesian_lrp_robustness=bay_lrp_robustness,
-									mode_lrp_robustness=mode_lrp_robustness,
-									n_samples_list=n_samples_list,
-									savedir=savedir, 
-									filename="scatterplot_"+filename+"_layeridx="+str(layer_idx))
+	plot_lrp.lrp_robustness_scatterplot(adversarial_robustness=det_softmax_robustness, 
+										bayesian_adversarial_robustness=bay_softmax_robustness,
+										mode_adversarial_robustness=mode_softmax_robustness[mode_list_idx],
+										lrp_robustness=det_lrp_robustness, 
+										bayesian_lrp_robustness=bay_lrp_robustness,
+										mode_lrp_robustness=mode_lrp_robustness,
+										n_samples_list=n_samples_list,
+										savedir=savedir, 
+										filename="scatterplot_"+filename)
