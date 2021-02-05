@@ -315,8 +315,7 @@ class BNN(PyroModule):
                 y_batch = y_batch.to(device)
                 loss += svi.step(x_data=x_batch, y_data=y_batch.argmax(dim=-1))
 
-                # outputs = self.forward(x_batch, n_samples=10, training=True, avg_posterior=False).to(device)
-                outputs = self.forward(x_batch, n_samples=1, training=True, avg_posterior=False).to(device)
+                outputs = self.forward(x_batch, n_samples=10, training=True, avg_posterior=False).to(device)
                 predictions = outputs.argmax(-1)
                 labels = y_batch.argmax(-1)
                 correct_predictions += (predictions == labels).sum().item()
