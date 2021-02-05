@@ -44,6 +44,9 @@ fullBNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation
                     "model_3":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
                              "lr":None, "n_samples":50, "warmup":100},
+                     "model_4":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
+                             "architecture":"conv", "inference":"svi", "epochs":5, 
+                             "lr":0.01, "n_samples":None, "warmup":None},
                     }  
 
 
@@ -66,6 +69,7 @@ class BNN(PyroModule):
                               activation=activation, architecture=architecture, 
                               epochs=epochs, lr=lr)
         self.name = self.get_name()
+        self.n_layers = self.basenet.n_layers
 
     def get_name(self, n_inputs=None):
         
@@ -214,12 +218,12 @@ class BNN(PyroModule):
                             w = guide_trace.nodes[str(f"module$$${key}")]["value"]
                             weights.update({str(key):w})
 
-                        self.basenet.load_state_dict(weights)
-                        preds.append(self.basenet.forward(inputs, layer_idx=layer_idx, *args, **kwargs))
+                        # self.basenet.load_state_dict(weights)
+                        # preds.append(self.basenet.forward(inputs, layer_idx=layer_idx, *args, **kwargs))
 
-                        # basenet_copy = copy.deepcopy(self.basenet)
-                        # basenet_copy.load_state_dict(weights)
-                        # preds.append(basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs))
+                        basenet_copy = copy.deepcopy(self.basenet)
+                        basenet_copy.load_state_dict(weights)
+                        preds.append(basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs))
 
         elif self.inference == "hmc":
 
@@ -311,7 +315,8 @@ class BNN(PyroModule):
                 y_batch = y_batch.to(device)
                 loss += svi.step(x_data=x_batch, y_data=y_batch.argmax(dim=-1))
 
-                outputs = self.forward(x_batch, n_samples=10, training=True, avg_posterior=False).to(device)
+                # outputs = self.forward(x_batch, n_samples=10, training=True, avg_posterior=False).to(device)
+                outputs = self.forward(x_batch, n_samples=1, training=True, avg_posterior=False).to(device)
                 predictions = outputs.argmax(-1)
                 labels = y_batch.argmax(-1)
                 correct_predictions += (predictions == labels).sum().item()

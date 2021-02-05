@@ -77,7 +77,9 @@ def compute_explanations(x_test, network, rule, normalize, n_samples=None, layer
 			# Forward pass
 			y_hat = network.forward(x.unsqueeze(0), explain=True, rule=rule, layer_idx=layer_idx,
 									avg_posterior=avg_posterior)
-			# y_hat = nnf.softmax(y_hat, dim=-1)
+
+			if layer_idx==-1 or layer_idx==network.n_layers:
+				y_hat = nnf.softmax(y_hat, dim=-1)
 
 			# Choose argmax
 			y_hat = y_hat[torch.arange(x.shape[0]), y_hat.max(1)[1]].sum()
@@ -90,39 +92,64 @@ def compute_explanations(x_test, network, rule, normalize, n_samples=None, layer
 				lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
 			explanations.append(lrp)
 
-		explanations = torch.stack(explanations)
-
 	else:
 
 		explanations = []
 		for x in tqdm(x_test):
 
-			post_explanations = []
-			for j in range(n_samples):
+			# Forward pass
+			x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
+			x_copy.requires_grad = True	
+			y_hat = network.forward(inputs=x_copy, n_samples=n_samples,
+									explain=True, rule=rule, layer_idx=layer_idx)
 
-				# Forward pass
-				x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
-				x_copy.requires_grad = True
-				y_hat = network.forward(inputs=x_copy, n_samples=1, sample_idxs=[j], 
-										explain=True, rule=rule, layer_idx=layer_idx)
-				# y_hat = nnf.softmax(y_hat, dim=-1)
+			if layer_idx==-1 or layer_idx==network.n_layers:
+				y_hat = nnf.softmax(y_hat, dim=-1)
 
-				# Choose argmax
-				y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
-				y_hat = y_hat.sum()
+			# Choose argmax
+			y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
+			y_hat = y_hat.sum()
 
-				# Backward pass (compute explanation)
-				y_hat.backward()
-				lrp = x_copy.grad.squeeze(1)
+			# Backward pass (compute explanation)
+			y_hat.backward()
+			lrp = x_copy.grad.squeeze(1)
 
-				if normalize:
-					lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
-				post_explanations.append(lrp)
+			if normalize:
+				lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
 
-			explanations.append(torch.stack(post_explanations))
+			explanations.append(lrp)
 
-		explanations = torch.stack(explanations).mean(1)   
+		# explanations = []
+		# for x in tqdm(x_test):
 
+		# 	post_explanations = []
+		# 	for j in range(n_samples):
+
+		# 		# Forward pass
+		# 		x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
+		# 		x_copy.requires_grad = True
+		# 		y_hat = network.forward(inputs=x_copy, n_samples=1, sample_idxs=[j], 
+		# 								explain=True, rule=rule, layer_idx=layer_idx)
+				
+		# 		if layer_idx==-1 or layer_idx==network.n_layers:
+		# 			y_hat = nnf.softmax(y_hat, dim=-1)
+
+		# 		# Choose argmax
+		# 		y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
+		# 		y_hat = y_hat.sum()
+
+		# 		# Backward pass (compute explanation)
+		# 		y_hat.backward()
+		# 		lrp = x_copy.grad.squeeze(1)
+
+		# 		if normalize:
+		# 			lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
+		# 		post_explanations.append(lrp)
+
+		# 	# print(torch.stack(post_explanations).mean(0).min(),torch.stack(post_explanations).mean(0).max())
+		# 	explanations.append(torch.stack(post_explanations).mean(0))
+
+	explanations = torch.stack(explanations) 
 	return explanations
 
 
@@ -188,22 +215,7 @@ def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
 	print("\nvanishing norms idxs = ", vanishing_norm_idxs)
 	return vanishing_norm_idxs, non_null_idxs
 
-# def save_lrp(explanations, path, filename, normalize, layer_idx=-1):
-# 	filename = filename if layer_idx==-1 else filename+"_layer_idx="+str(layer_idx) 
-# 	if normalize:
-# 		filename = filename+"_norm"
-# 	savedir = os.path.join(path, lrp_savedir(layer_idx))
-# 	save_to_pickle(explanations, path=savedir, filename=filename)
-
-# def load_lrp(path, filename,  normalize, layer_idx=-1):
-# 	filename = filename if layer_idx==-1 else filename+"_layer_idx="+str(layer_idx) 
-# 	if normalize:
-# 		filename = filename+"_norm"
-# 	savedir = os.path.join(path, lrp_savedir(layer_idx))
-# 	explanations = load_from_pickle(path=savedir, filename=filename)
-# 	return explanations
-
-def lrp_distances(original_heatmaps, adversarial_heatmaps, pxl_idxs=None):
+def lrp_distances(original_heatmaps, adversarial_heatmaps, pxl_idxs=None, axis_norm=0):
 
 	original_heatmaps = original_heatmaps.reshape(*original_heatmaps.shape[:1], -1)
 	adversarial_heatmaps = adversarial_heatmaps.reshape(*adversarial_heatmaps.shape[:1], -1)
@@ -212,7 +224,7 @@ def lrp_distances(original_heatmaps, adversarial_heatmaps, pxl_idxs=None):
 		original_heatmaps = original_heatmaps[:, pxl_idxs]
 		adversarial_heatmaps = adversarial_heatmaps[:, pxl_idxs]
 
-	distances = torch.norm(original_heatmaps-adversarial_heatmaps, dim=0)
+	distances = torch.norm(original_heatmaps-adversarial_heatmaps, dim=axis_norm)
 	return distances
 
 def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method):

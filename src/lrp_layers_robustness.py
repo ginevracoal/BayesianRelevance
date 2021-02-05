@@ -32,7 +32,7 @@ parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBN
 parser.add_argument("--attack_library", type=str, default="grad_based", help="grad_based, deeprobust")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
-parser.add_argument("--normalize", default=True, type=eval, help="Normalize lrp heatmaps.")
+parser.add_argument("--normalize", default=False, type=eval, help="Normalize lrp heatmaps.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
@@ -83,9 +83,6 @@ if args.model=="fullBNN":
 				bay_attack.append(load_attack(method=args.attack_method, filename=bayesnet.name, savedir=model_savedir, 
 													n_samples=n_samples))
 
-		# mode_attack = load_attack(method=args.attack_method, filename=bayesnet.name+"_mode", savedir=model_savedir, 
-		# 													n_samples=n_samples)
-
 else:
 		raise NotImplementedError
 
@@ -96,6 +93,11 @@ det_successful_lrp_robustness_layers=[]
 det_failed_lrp_robustness_layers=[]
 bay_successful_lrp_robustness_layers=[]
 bay_failed_lrp_robustness_layers=[]
+
+det_successful_norm_layers=[]
+det_failed_norm_layers=[]
+bay_successful_norm_layers=[]
+bay_failed_norm_layers=[]
 
 for layer_idx in range(n_layers):
 	layer_idx+=1
@@ -116,14 +118,6 @@ for layer_idx in range(n_layers):
 		bay_lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
 		bay_attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
 
-	# mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
-
-	# mode_attack_lrp=[]
-	# for samp_idx, n_samples in enumerate(n_samples_list):
-	# 	mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
-	# mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples)))
-	# mode_attack_lrp = np.array(mode_attack_lrp)
-
 	### Evaluate explanations
 
 	det_preds, det_atk_preds, det_softmax_robustness, det_successful_idxs, det_failed_idxs = evaluate_attack(net=detnet, 
@@ -140,6 +134,11 @@ for layer_idx in range(n_layers):
 	fail_det_lrp_robustness, fail_det_lrp_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp[det_failed_idxs], 
 																	adversarial_heatmaps=det_attack_lrp[det_failed_idxs], 
 																	topk=topk, method=lrp_robustness_method)
+	
+	det_successful_norm = lrp_distances(det_lrp[det_successful_idxs], det_attack_lrp[det_successful_idxs], 
+										axis_norm=1).detach().cpu().numpy()
+	det_failed_norm = lrp_distances(det_lrp[det_failed_idxs], det_attack_lrp[det_failed_idxs], 
+									axis_norm=1).detach().cpu().numpy()
 
 	bay_preds=[]
 	bay_atk_preds=[]
@@ -153,6 +152,9 @@ for layer_idx in range(n_layers):
 	succ_bay_lrp_pxl_idxs=[]
 	fail_bay_lrp_robustness=[]
 	fail_bay_lrp_pxl_idxs=[]
+
+	bay_successful_norm=[]
+	bay_failed_norm=[]
 
 	for samp_idx, n_samples in enumerate(n_samples_list):
 
@@ -184,66 +186,22 @@ for layer_idx in range(n_layers):
 			fail_bay_lrp_robustness.append(bay_lrp_rob)
 			fail_bay_lrp_pxl_idxs.append(fail_lrp_pxl_idxs)
 
+			bay_successful_norm.append(lrp_distances(bay_lrp[samp_idx][successf_idxs], 
+													bay_attack_lrp[samp_idx][successf_idxs], 
+													axis_norm=1).detach().cpu().numpy())
+			bay_failed_norm.append(lrp_distances(bay_lrp[samp_idx][failed_idxs], 
+												bay_attack_lrp[samp_idx][failed_idxs], 
+												axis_norm=1).detach().cpu().numpy())
+
 	det_successful_lrp_robustness_layers.append(succ_det_lrp_robustness)
 	det_failed_lrp_robustness_layers.append(fail_det_lrp_robustness)
 	bay_successful_lrp_robustness_layers.append(succ_bay_lrp_robustness)
 	bay_failed_lrp_robustness_layers.append(fail_bay_lrp_robustness)
 
-# mode_preds=[]
-# mode_atk_preds=[]
-# mode_softmax_robustness=[]
-# mode_successful_idxs=[]
-# mode_failed_idxs=[]
-# succ_mode_lrp_robustness=[]
-# succ_mode_lrp_pxl_idxs=[]
-# fail_mode_lrp_robustness=[]
-# fail_mode_lrp_pxl_idxs=[]
-
-# for samp_idx, n_samples in enumerate(n_samples_list):
-
-# 		preds, atk_preds, softmax_rob, succ_idxs, fail_idxs = evaluate_attack(net=bayesnet, 
-# 															 x_test=images, x_attack=mode_attack,
-# 															 y_test=y_test, device=args.device, n_samples=n_samples, 
-# 															 return_classification_idxs=True)
-# 		succ_rob, succ_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[succ_idxs], 
-# 												adversarial_heatmaps=mode_attack_lrp[samp_idx][succ_idxs], 
-# 												topk=topk, method=lrp_robustness_method)
-# 		fail_rob, fail_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[fail_idxs], 
-# 												adversarial_heatmaps=mode_attack_lrp[samp_idx][fail_idxs], 
-# 												topk=topk, method=lrp_robustness_method)
-# 		mode_preds.append(preds) 
-# 		mode_atk_preds.append(atk_preds)
-# 		mode_softmax_robustness.append(softmax_rob.detach().cpu().numpy()) 
-# 		mode_successful_idxs.append(succ_idxs)
-# 		mode_failed_idxs.append(failed_idxs)
-# 		succ_mode_lrp_robustness.append(succ_rob)
-# 		succ_mode_lrp_pxl_idxs.append(succ_pxl_idxs)
-# 		fail_mode_lrp_robustness.append(fail_rob) 
-# 		fail_mode_lrp_pxl_idxs.append(fail_pxl_idxs)
-
-# preds, atk_preds, softmax_rob, succ_idxs, fail_idxs = evaluate_attack(net=bayesnet, 
-# 														 x_test=images, x_attack=mode_attack, avg_posterior=True,
-# 														 y_test=y_test, device=args.device, n_samples=n_samples, 
-# 														 return_classification_idxs=True)
-# succ_rob, succ_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[succ_idxs], 
-# 										adversarial_heatmaps=mode_attack_lrp[-1][succ_idxs], 
-# 										topk=topk, method=lrp_robustness_method)
-# fail_rob, fail_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[fail_idxs], 
-# 										adversarial_heatmaps=mode_attack_lrp[-1][fail_idxs], 
-# 										topk=topk, method=lrp_robustness_method)
-# mode_preds.append(preds) 
-# mode_atk_preds.append(atk_preds)
-# mode_softmax_robustness.append(softmax_rob.detach().cpu().numpy()) 
-# mode_successful_idxs.append(succ_idxs)
-# mode_failed_idxs.append(failed_idxs)
-# succ_mode_lrp_robustness.append(succ_rob)
-# succ_mode_lrp_pxl_idxs.append(succ_pxl_idxs)
-# fail_mode_lrp_robustness.append(fail_rob)
-# fail_mode_lrp_pxl_idxs.append(fail_pxl_idxs)
-
-# mode_lrp_robustness, mode_lrp_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
-# 														adversarial_heatmaps=mode_attack_lrp[-1], 
-# 														topk=topk, method=lrp_robustness_method)
+	det_successful_norm_layers.append(det_successful_norm)
+	det_failed_norm_layers.append(det_failed_norm)
+	bay_successful_norm_layers.append(bay_successful_norm)
+	bay_failed_norm_layers.append(bay_failed_norm)
 
 
 ### Plots
@@ -261,10 +219,24 @@ plot_lrp.lrp_imagewise_layers_robustness_distributions(
 										det_failed_lrp_robustness=det_failed_lrp_robustness_layers,
 										bay_successful_lrp_robustness=bay_successful_lrp_robustness_layers,
 										bay_failed_lrp_robustness=bay_failed_lrp_robustness_layers,
-										# mode_successful_lrp_robustness=succ_mode_lrp_robustness_layers,
-										# mode_failed_lrp_robustness=fail_mode_lrp_robustness_layers,
 										n_samples_list=n_samples_list,
 										n_original_images=len(images),
 										n_layers=n_layers,
 										savedir=savedir, 
 										filename="dist_"+filename+"_layers")
+
+# if args.normalize is False:
+plot_lrp.lrp_layers_robustness_scatterplot(
+											det_successful_lrp_robustness=det_successful_lrp_robustness_layers,
+											det_failed_lrp_robustness=det_failed_lrp_robustness_layers,
+											bay_successful_lrp_robustness=bay_successful_lrp_robustness_layers,
+											bay_failed_lrp_robustness=bay_failed_lrp_robustness_layers,
+											det_successful_lrp_norm=det_successful_norm_layers,
+											det_failed_lrp_norm=det_failed_norm_layers,
+											bay_successful_lrp_norm=bay_successful_norm_layers,
+											bay_failed_lrp_norm=bay_failed_norm_layers,
+											n_samples_list=n_samples_list,
+											n_original_images=len(images),
+											n_layers=n_layers,
+											savedir=savedir, 
+											filename="scatterplot_"+filename+"_layers")

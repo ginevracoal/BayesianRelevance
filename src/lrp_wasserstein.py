@@ -21,22 +21,22 @@ import attacks.deeprobust as deeprobust
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=1000, type=int, help="Number of test points")
-parser.add_argument("--topk", default=10, type=int, help="Top k most relevant pixels.")
+parser.add_argument("--topk", default=300, type=int, help="Top k most relevant pixels.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--attack_library", type=str, default="grad_based", help="grad_based, deeprobust")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--layer_idx", default=-1, type=int, help="Layer idx for LRP computation.")
-parser.add_argument("--normalize", default=True, type=eval, help="Normalize lrp heatmaps.")
+parser.add_argument("--normalize", default=False, type=eval, help="Normalize lrp heatmaps.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
 lrp_robustness_method = "pixelwise"
 n_samples_list=[1,5] if args.debug else [5,10,50]
-n_inputs=100 if args.debug else args.n_inputs
-topk=100 if args.debug else args.topk
+n_inputs=200 if args.debug else args.n_inputs
+topk=200 if args.debug else args.topk
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)

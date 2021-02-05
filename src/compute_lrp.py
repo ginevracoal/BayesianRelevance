@@ -29,7 +29,7 @@ parser.add_argument("--attack_library", type=str, default="grad_based", help="gr
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--layer_idx", default=-1, type=int, help="Layer idx for LRP computation.")
-parser.add_argument("--normalize", default=True, type=eval, help="Normalize lrp heatmaps.")
+parser.add_argument("--normalize", default=False, type=eval, help="Normalize lrp heatmaps.")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  

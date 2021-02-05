@@ -26,6 +26,8 @@ baseNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation"
                              "architecture":"fc2", "epochs":15, "lr":0.001},
                    "model_3":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
                             "architecture":"fc2", "epochs":15, "lr":0.001},
+                    "model_4":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
+                            "architecture":"conv", "epochs":5, "lr":0.001},
                             }
 
 class baseNN(nn.Module):
@@ -48,7 +50,7 @@ class baseNN(nn.Module):
                     "_arch="+str(self.architecture)+"_act="+str(self.activation)+\
                     "_ep="+str(self.epochs)+"_lr="+str(self.lr)
         print("\nbaseNN total number of weights =", sum(p.numel() for p in self.parameters()))
-        self.n_layers = len(list(self.model.children()))
+        self.n_layers = len(list(self.model.children()))+1
 
     def set_model(self, architecture, activation, input_shape, output_size, hidden_size):
 

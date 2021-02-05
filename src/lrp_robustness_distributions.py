@@ -33,7 +33,7 @@ parser.add_argument("--attack_library", type=str, default="grad_based", help="gr
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--layer_idx", default=-1, type=int, help="Layer idx for LRP computation.")
-parser.add_argument("--normalize", default=True, type=eval, help="Normalize lrp heatmaps.")
+parser.add_argument("--normalize", default=False, type=eval, help="Normalize lrp heatmaps.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
@@ -109,6 +109,7 @@ bay_attack_lrp=[]
 for n_samples in n_samples_list:
 	bay_lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
 	bay_attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
+
 
 mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
 
@@ -287,25 +288,25 @@ if args.normalize:
 		 
 savedir = os.path.join(model_savedir, "lrp/robustness/")
 
-if args.layer_idx==-1 or args.layer_idx==n_layers-1:
-	plot_lrp.lrp_imagewise_robustness_distributions(
-									  det_successful_lrp_robustness=succ_det_lrp_robustness,
-									  det_failed_lrp_robustness=fail_det_lrp_robustness,
-									  bay_successful_lrp_robustness=succ_bay_lrp_robustness,
-									  bay_failed_lrp_robustness=fail_bay_lrp_robustness,
-									  mode_successful_lrp_robustness=succ_mode_lrp_robustness,
-									  mode_failed_lrp_robustness=fail_mode_lrp_robustness,
-									  n_samples_list=n_samples_list,
-									  n_original_images=len(images),
-									  savedir=savedir, 
-									  filename="dist_"+filename)
+# if args.layer_idx==-1 or args.layer_idx==n_layers:
+plot_lrp.lrp_imagewise_robustness_distributions(
+								  det_successful_lrp_robustness=succ_det_lrp_robustness,
+								  det_failed_lrp_robustness=fail_det_lrp_robustness,
+								  bay_successful_lrp_robustness=succ_bay_lrp_robustness,
+								  bay_failed_lrp_robustness=fail_bay_lrp_robustness,
+								  mode_successful_lrp_robustness=succ_mode_lrp_robustness,
+								  mode_failed_lrp_robustness=fail_mode_lrp_robustness,
+								  n_samples_list=n_samples_list,
+								  n_original_images=len(images),
+								  savedir=savedir, 
+								  filename="dist_"+filename)
 
-	plot_lrp.lrp_robustness_scatterplot(adversarial_robustness=det_softmax_robustness, 
-										bayesian_adversarial_robustness=bay_softmax_robustness,
-										mode_adversarial_robustness=mode_softmax_robustness[mode_list_idx],
-										lrp_robustness=det_lrp_robustness, 
-										bayesian_lrp_robustness=bay_lrp_robustness,
-										mode_lrp_robustness=mode_lrp_robustness,
-										n_samples_list=n_samples_list,
-										savedir=savedir, 
-										filename="scatterplot_"+filename)
+plot_lrp.lrp_robustness_scatterplot(adversarial_robustness=det_softmax_robustness, 
+									bayesian_adversarial_robustness=bay_softmax_robustness,
+									mode_adversarial_robustness=mode_softmax_robustness[mode_list_idx],
+									lrp_robustness=det_lrp_robustness, 
+									bayesian_lrp_robustness=bay_lrp_robustness,
+									mode_lrp_robustness=mode_lrp_robustness,
+									n_samples_list=n_samples_list,
+									savedir=savedir, 
+									filename="scatterplot_"+filename)
