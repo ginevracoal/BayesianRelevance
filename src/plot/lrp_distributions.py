@@ -471,7 +471,7 @@ def lrp_imagewise_layers_robustness_distributions(det_successful_lrp_robustness,
     os.makedirs(savedir, exist_ok=True) 
 
     sns.set_style("darkgrid")
-    matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
+    matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
     fig, ax = plt.subplots(n_layers, 4, figsize=(10, 8), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
     fig.tight_layout()
     
@@ -493,19 +493,19 @@ def lrp_imagewise_layers_robustness_distributions(det_successful_lrp_robustness,
             sns.distplot(bay_failed_lrp_robustness[layer_idx][samp_idx], ax=ax[layer_idx,3], 
                         label="bayesian samp="+str(n_samples),  kde=True)
     
-        ax[layer_idx,1].yaxis.set_label_position("right")
-        ax[layer_idx,1].set_ylabel("idx="+str(layer_idx+1), rotation=270, labelpad=15)
+        ax[layer_idx,3].yaxis.set_label_position("right")
+        ax[layer_idx,3].set_ylabel("idx="+str(layer_idx+1), rotation=270, labelpad=15)
 
     ax[n_layers-1,0].set_xlabel("LRP robustness")
     ax[n_layers-1,1].set_xlabel("LRP robustness")
-
-    for layer_idx in range(n_layers):
-        ax[layer_idx,0].set_ylabel("LRP diff. norm")
 
     ax[n_layers-1,0].set_xlim(0,1)
     ax[n_layers-1,1].set_xlim(0,1)
 
     ax[0,0].legend(loc="upper left")
+    plt.setp(ax[0,0].get_legend().get_texts(), fontsize='8')
+    plt.legend(frameon=False)
+    plt.subplots_adjust(hspace=0.1)
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)
 
@@ -562,6 +562,9 @@ def lrp_layers_robustness_scatterplot(det_successful_lrp_robustness, det_failed_
     for col_idx in range(4):
         ax[n_layers-1,col_idx].set_xlabel("LRP robustness")
         ax[n_layers-1,col_idx].set_xlim(0,1)
+
+    for layer_idx in range(n_layers):
+        ax[layer_idx,0].set_ylabel("LRP diff. norm")
 
     plt.legend(frameon=False)
     plt.setp(ax[0,0].get_legend().get_texts(), fontsize='8')
