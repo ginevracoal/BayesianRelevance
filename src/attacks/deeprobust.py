@@ -40,13 +40,15 @@ def attack(net, x_test, y_test, device, method, n_samples=None, sample_idxs=None
 			perturbed_image = torch.clamp(perturbed_image, 0., 1.)
 			adversarial_attacks.append(perturbed_image)
 
+		del net.avg_posterior
+
 	else:
 
-		if sample_idxs is not None:
-			if len(sample_idxs) != n_samples:
-				raise ValueError("Number of sample_idxs should match number of samples.")
-		else:
-			sample_idxs = list(range(n_samples))
+		# if sample_idxs is not None:
+		# 	if len(sample_idxs) != n_samples:
+		# 		raise ValueError("Number of sample_idxs should match number of samples.")
+		# else:
+		# 	sample_idxs = list(range(n_samples))
 
 		for idx in tqdm(range(len(x_test))):
 			image = x_test[idx].unsqueeze(0)
@@ -62,6 +64,8 @@ def attack(net, x_test, y_test, device, method, n_samples=None, sample_idxs=None
 				samples_attacks.append(perturbed_image)
 
 			adversarial_attacks.append(torch.stack(samples_attacks).mean(0))
+
+		del net.n_samples, net.sample_idxs
 
 	adversarial_attacks = torch.cat(adversarial_attacks)
 	return adversarial_attacks
@@ -207,9 +211,9 @@ def _deeprobust_attack(net, image, label, method, device):
 
 def save_attack(inputs, attacks, method, model_savedir, atk_mode=False, n_samples=None):
 
-	filename, savedir = get_atk_filename_savedir(attack_method=method, model_savedir=model_savedir, 
+	filename, savedir = get_atk_filename_savedir(attack_method=method+"_deeprobust", model_savedir=model_savedir, 
 											     atk_mode=atk_mode, n_samples=n_samples)
-	save_to_pickle(data=attacks, path=savedir, filename=filename+"_deeprobust")
+	save_to_pickle(data=attacks, path=savedir, filename=filename)
 
 	set_seed(0)
 	idxs = np.random.choice(len(inputs), 10, replace=False)
@@ -221,7 +225,7 @@ def save_attack(inputs, attacks, method, model_savedir, atk_mode=False, n_sample
 
 
 def load_attack(method, model_savedir, atk_mode=False, n_samples=None):
-	filename, savedir = get_atk_filename_savedir(attack_method=method, model_savedir=model_savedir, 
+	filename, savedir = get_atk_filename_savedir(attack_method=method+"_deeprobust", model_savedir=model_savedir, 
 											     atk_mode=atk_mode, n_samples=n_samples)
-	return load_from_pickle(path=savedir, filename=filename+"_deeprobust")
+	return load_from_pickle(path=savedir, filename=filename)
 

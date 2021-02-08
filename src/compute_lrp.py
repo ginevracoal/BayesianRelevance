@@ -35,7 +35,7 @@ parser.add_argument("--debug", default=False, type=eval, help="Run script in deb
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-n_samples_list=[1,5] if args.debug else [5,10,50]
+n_samples_list=[1,5] if args.debug else [1,10,50]
 n_inputs=200 if args.debug else args.n_inputs
 
 print("PyTorch Version: ", torch.__version__)

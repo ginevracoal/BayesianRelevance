@@ -101,10 +101,10 @@ else:
         bayesian_attack_samples=[1,5]
     else:
         if m["inference"]=="svi":
-            bayesian_attack_samples=[5,10,50]
+            bayesian_attack_samples=[1,10,50]
 
         elif m["inference"]=="hmc":
-            bayesian_attack_samples=[5,10,50]
+            bayesian_attack_samples=[1,10,50]
     
     if args.load:
 

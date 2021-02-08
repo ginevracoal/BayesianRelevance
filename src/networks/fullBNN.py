@@ -34,33 +34,33 @@ DEBUG=False
 
 fullBNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
                              "architecture":"conv", "inference":"svi", "epochs":5, 
-                             "lr":0.01, "n_samples":None, "warmup":None},
+                             "lr":0.01, "hmc_samples":None, "warmup":None},
                     "model_1":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
                              "architecture":"conv", "inference":"svi", "epochs":15,
-                             "lr":0.001, "n_samples":None, "warmup":None},
+                             "lr":0.001, "hmc_samples":None, "warmup":None},
                     "model_2":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
-                             "lr":None, "n_samples":50, "warmup":100}, 
+                             "lr":None, "hmc_samples":50, "warmup":100}, 
                     "model_3":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
-                             "lr":None, "n_samples":50, "warmup":100},
+                             "lr":None, "hmc_samples":50, "warmup":100},
                      "model_4":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
                              "architecture":"conv", "inference":"svi", "epochs":5, 
-                             "lr":0.01, "n_samples":None, "warmup":None},
+                             "lr":0.01, "hmc_samples":None, "warmup":None},
                     }  
 
 
 class BNN(PyroModule):
 
     def __init__(self, dataset_name, hidden_size, activation, architecture, inference, 
-                 epochs, lr, n_samples, warmup, input_shape, output_size):
+                 epochs, lr, hmc_samples, warmup, input_shape, output_size):
         super(BNN, self).__init__()
         self.dataset_name = dataset_name
         self.inference = inference
         self.architecture = architecture
         self.epochs = epochs
         self.lr = lr
-        self.n_samples = 20 if DEBUG else n_samples
+        self.hmc_samples = 20 if DEBUG else hmc_samples
         self.warmup = 5 if DEBUG else warmup
         self.step_size = 0.5
         self.num_steps = 10
@@ -354,7 +354,7 @@ class BNN(PyroModule):
             self._train_svi(train_loader, self.epochs, self.lr, savedir, device)
 
         elif self.inference == "hmc":
-            self._train_hmc(train_loader, self.n_samples, self.warmup,
+            self._train_hmc(train_loader, self.hmc_samples, self.warmup,
                             self.step_size, self.num_steps, savedir, device)
 
     def evaluate(self, test_loader, device, avg_posterior=False, n_samples=10):
