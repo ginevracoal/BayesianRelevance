@@ -36,7 +36,7 @@ if args.model=="baseNN":
     train_loader, test_loader, inp_shape, out_size = data_loaders(dataset_name=model["dataset"], n_inputs=n_inputs,
                                                                   batch_size=128, shuffle=True)
 
-    savedir = get_savedir(model=args.model, dataset=model["dataset"], architecture=model["architecture"], 
+    savedir = get_model_savedir(model=args.model, dataset=model["dataset"], architecture=model["architecture"], 
                          baseiters=None, debug=args.debug, model_idx=args.model_idx)
     
     net = baseNN(inp_shape, out_size, *list(model.values()))
@@ -58,7 +58,7 @@ else:
         train_loader, test_loader, inp_shape, out_size = data_loaders(dataset_name=m["dataset"], n_inputs=n_inputs,
                                                                       batch_size=128, shuffle=True)
 
-        savedir = get_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
+        savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
                               debug=args.debug, model_idx=args.model_idx)
 
         net = BNN(m["dataset"], *list(m.values())[1:], inp_shape, out_size)
@@ -71,10 +71,10 @@ else:
         train_loader, test_loader, inp_shape, out_size = data_loaders(dataset_name=m["dataset"], n_inputs=n_inputs,
                                                                   batch_size=128, shuffle=True)
 
-        savedir = get_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
+        savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
                               debug=args.debug, model_idx=args.model_idx)
         basenet = baseNN(inp_shape, out_size, *list(base_m.values()))
-        basenet_savedir = get_savedir(model="baseNN", dataset=m["dataset"], 
+        basenet_savedir = get_model_savedir(model="baseNN", dataset=m["dataset"], 
                           architecture=m["architecture"], debug=args.debug, model_idx=m["baseNN_idx"])
         basenet.load(savedir=basenet_savedir, device=args.device)
 
