@@ -123,13 +123,13 @@ def attack(net, x_test, y_test, device, method,
 	adversarial_attack = torch.cat(adversarial_attack)
 	return adversarial_attack
 
-def save_attack(inputs, attacks, method, filename, savedir, n_samples=None):
-	
-	name = filename+"_"+str(method)
-	name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
-
-	savedir = os.path.join(savedir, ATK_DIR)
-	save_to_pickle(data=attacks, path=savedir, filename=name)
+def save_attack(inputs, attacks, method, model_savedir, atk_mode=False, n_samples=None):
+	   
+	filename = str(method)+"_attackSamp="+str(n_samples)+"_attack" if n_samples else str(method)+"_attack"
+	if atk_mode:
+		filename+="_mode"
+	savedir = os.path.join(model_savedir, str(method)+"/"+ATK_DIR)
+	save_to_pickle(data=attacks, path=savedir, filename=filename)
 
 	set_seed(0)
 	idxs = np.random.choice(len(inputs), 10, replace=False)
@@ -137,13 +137,14 @@ def save_attack(inputs, attacks, method, filename, savedir, n_samples=None):
 	perturbed_images_plot = torch.stack([attacks[i].squeeze() for i in idxs])
 	plot_grid_attacks(original_images=original_images_plot.detach().cpu(), 
 					  perturbed_images=perturbed_images_plot.detach().cpu(), 
-					  filename=name, savedir=savedir)
+					  filename=filename, savedir=savedir)
 
-def load_attack(method, filename, savedir, n_samples=None):
-	savedir = os.path.join(savedir, ATK_DIR)
-	name = filename+"_"+str(method)
-	name = name+"_attackSamp="+str(n_samples)+"_attack" if n_samples else name+"_attack"
-	return load_from_pickle(path=savedir, filename=name)
+def load_attack(method, model_savedir, atk_mode=False, n_samples=None):
+	filename = str(method)+"_attackSamp="+str(n_samples)+"_attack" if n_samples else str(method)+"_attack"
+	if atk_mode:
+		filename+="_mode"
+	savedir = os.path.join(model_savedir, str(method)+"/"+ATK_DIR)
+	return load_from_pickle(path=savedir, filename=filename)
 
 def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sample_idxs=None, 
 					 avg_posterior=False, return_classification_idxs=False):

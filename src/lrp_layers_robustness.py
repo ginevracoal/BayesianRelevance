@@ -59,20 +59,20 @@ model = baseNN_settings["model_"+str(args.model_idx)]
 
 _, _, x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], 
 															shuffle=False, n_inputs=n_inputs)
-model_savedir = get_savedir(model="baseNN", dataset=model["dataset"], architecture=model["architecture"], 
+model_savedir = get_model_savedir(model="baseNN", dataset=model["dataset"], architecture=model["architecture"], 
 											debug=args.debug, model_idx=args.model_idx)
 detnet = baseNN(inp_shape, num_classes, *list(model.values()))
 detnet.load(savedir=model_savedir, device=args.device)
 
 n_layers = detnet.n_layers
 
-det_attack = load_attack(method=args.attack_method, filename=detnet.name, savedir=model_savedir)
+det_attack = load_attack(method=args.attack_method, model_savedir=model_savedir)
 
 if args.model=="fullBNN":
 
 		m = fullBNN_settings["model_"+str(args.model_idx)]
 
-		model_savedir = get_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
+		model_savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
 																model_idx=args.model_idx, debug=args.debug)
 
 		bayesnet = BNN(m["dataset"], *list(m.values())[1:], inp_shape, num_classes)
@@ -80,7 +80,7 @@ if args.model=="fullBNN":
 
 		bay_attack=[]
 		for n_samples in n_samples_list:
-				bay_attack.append(load_attack(method=args.attack_method, filename=bayesnet.name, savedir=model_savedir, 
+				bay_attack.append(load_attack(method=args.attack_method, model_savedir=model_savedir, 
 													n_samples=n_samples))
 
 else:
@@ -102,10 +102,8 @@ bay_failed_norm_layers=[]
 for layer_idx in range(n_layers):
 	layer_idx+=1
 
-	if args.normalize:
-	    savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(layer_idx)+"_norm/")
-	else:
-	    savedir = os.path.join(model_savedir, "lrp/pkl_layer_idx="+str(layer_idx)+"/")
+	savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
+                          	  layer_idx=layer_idx, normalize=args.normalize)
 
 	### Load explanations
 
