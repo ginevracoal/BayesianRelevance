@@ -125,10 +125,8 @@ def attack(net, x_test, y_test, device, method,
 
 def save_attack(inputs, attacks, method, model_savedir, atk_mode=False, n_samples=None):
 	   
-	filename = str(method)+"_attackSamp="+str(n_samples)+"_attack" if n_samples else str(method)+"_attack"
-	if atk_mode:
-		filename+="_mode"
-	savedir = os.path.join(model_savedir, str(method)+"/"+ATK_DIR)
+	filename, savedir = get_atk_filename_savedir(attack_method=method, model_savedir=model_savedir, 
+												 atk_mode=atk_mode, n_samples=n_samples)
 	save_to_pickle(data=attacks, path=savedir, filename=filename)
 
 	set_seed(0)
@@ -140,10 +138,8 @@ def save_attack(inputs, attacks, method, model_savedir, atk_mode=False, n_sample
 					  filename=filename, savedir=savedir)
 
 def load_attack(method, model_savedir, atk_mode=False, n_samples=None):
-	filename = str(method)+"_attackSamp="+str(n_samples)+"_attack" if n_samples else str(method)+"_attack"
-	if atk_mode:
-		filename+="_mode"
-	savedir = os.path.join(model_savedir, str(method)+"/"+ATK_DIR)
+	filename, savedir = get_atk_filename_savedir(attack_method=method, model_savedir=model_savedir, 
+												 atk_mode=atk_mode, n_samples=n_samples)
 	return load_from_pickle(path=savedir, filename=filename)
 
 def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sample_idxs=None, 

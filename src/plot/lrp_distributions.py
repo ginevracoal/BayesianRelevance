@@ -498,6 +498,8 @@ def lrp_imagewise_layers_robustness_distributions(det_successful_lrp_robustness,
 
     ax[n_layers-1,0].set_xlabel("LRP robustness")
     ax[n_layers-1,1].set_xlabel("LRP robustness")
+    ax[n_layers-1,2].set_xlabel("LRP robustness")
+    ax[n_layers-1,3].set_xlabel("LRP robustness")
 
     ax[n_layers-1,0].set_xlim(0,1)
     ax[n_layers-1,1].set_xlim(0,1)
@@ -520,7 +522,7 @@ def lrp_layers_robustness_scatterplot(det_successful_lrp_robustness, det_failed_
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
-    fig, ax = plt.subplots(n_layers, 4, figsize=(10, 10), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(n_layers, 4, figsize=(10, 8), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
     fig.tight_layout()
     
     # cmap = cm.get_cmap('Blues', n_layers+3)

@@ -176,6 +176,13 @@ class BNN(PyroModule):
     def forward(self, inputs, n_samples=10, avg_posterior=False, sample_idxs=None, training=False,
                 expected_out=True, layer_idx=-1, *args, **kwargs):
 
+        # change external attack libraries behavior #
+        n_samples = self.n_samples if hasattr(self, "n_samples") else n_samples
+        sample_idxs = self.sample_idxs if hasattr(self, "sample_idxs") else sample_idxs
+        avg_posterior = self.avg_posterior if hasattr(self, "avg_posterior") else avg_posterior
+        layer_idx = self.layer_idx if hasattr(self, "layer_idx") else layer_idx
+        #############################################
+
         if sample_idxs:
             if len(sample_idxs) != n_samples:
                 raise ValueError("Number of sample_idxs should match number of samples.")

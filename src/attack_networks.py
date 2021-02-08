@@ -52,12 +52,12 @@ if args.model=="baseNN":
     net.load(savedir=savedir, device=args.device)
 
     if args.load:
-        x_attack = load_attack(method=args.attack_method, savedir=savedir)
+        x_attack = load_attack(method=args.attack_method, model_savedir=savedir)
     
     else:
         x_attack = attack(net=net, x_test=x_test, y_test=y_test,
                           device=args.device, method=args.attack_method)
-        save_attack(x_test, x_attack, method=args.attack_method, savedir=savedir)
+        save_attack(x_test, x_attack, method=args.attack_method, model_savedir=savedir)
 
     evaluate_attack(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, device=args.device)
 

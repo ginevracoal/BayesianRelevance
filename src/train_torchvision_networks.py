@@ -1,3 +1,5 @@
+# TODO: refactor
+
 from __future__ import division
 from __future__ import print_function
 
@@ -7,7 +9,7 @@ from networks.torchvision.baseNN import *
 from networks.torchvision.redBNN import *
 from utils.data import load_from_pickle
 from utils.seeding import *
-from utils.savedir import _get_torchvision_savedir
+from utils.savedir import get_savedir
 
 parser = ArgumentParser()
 parser.add_argument("--dataset", type=str, default="animals10", 
@@ -27,16 +29,18 @@ print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
 
 
-n_inputs, iters, n_samples = (20, 2, 2) if args.debug else (args.n_inputs, args.iters, args.n_samples)
+n_inputs, iters, n_samples = (20, 2, 2) if args.debug else (args.inputs, args.iters, args.samples)
 
-savedir = get_savedir(args.architecture, args.dataset, args.architecture, args.inference, args.iters, 
-                                    args.debug)
+savedir = get_savedir(architecture=args.architecture, dataset=args.dataset, inference=args.inference, iters=args.iters, 
+                      debug=args.debug, model=args.model, torchvision=True)
+print(savedir)
+exit()
 
 if args.device=="cuda":
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 num_workers=0 if args.device=="cuda" else 4
-device = torch.device(args.device)
+device=torch.device(args.device)
 
 batch_size = 1 if args.inference=="laplace" else 128
 dataloaders_dict, num_classes, _ = load_data(dataset_name=args.dataset, phases=['train','val'],

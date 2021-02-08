@@ -37,8 +37,9 @@ redBNN_settings = {"model_0":{"dataset":"mnist", "inference":"svi", "hidden_size
                             "activation":"leaky", "architecture":"conv", "baseNN_idx":0},
                    "model_1":{"dataset":"fashion_mnist", "inference":"svi", "hidden_size":1024, 
                             "n_inputs":60000, "epochs":5, "lr":0.01, 
-                            "activation":"leaky", "architecture":"fc2", "baseNN_idx":1},
+                            "activation":"leaky", "architecture":"conv", "baseNN_idx":1},
                     }
+
                    
 def get_hyperparams(model_dict):
 
