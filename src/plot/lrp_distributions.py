@@ -464,9 +464,9 @@ def plot_wasserstein_dist(det_successful_atks_wass_dist, det_failed_atks_wass_di
     # plt.close(fig)
 
 
-def lrp_imagewise_layers_robustness_distributions(det_successful_lrp_robustness, det_failed_lrp_robustness,
-                                                   bay_successful_lrp_robustness, bay_failed_lrp_robustness,
-                                                   n_samples_list, n_original_images, n_layers, savedir, filename):
+def lrp_layers_robustness_distributions(det_successful_lrp_robustness, det_failed_lrp_robustness,
+                                       bay_successful_lrp_robustness, bay_failed_lrp_robustness,
+                                       n_samples_list, n_original_images, n_layers, savedir, filename):
 
     os.makedirs(savedir, exist_ok=True) 
 

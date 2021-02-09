@@ -76,6 +76,9 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
                               predictions, attacks_predictions, successful_attacks_idxs, failed_attacks_idxs,
                               labels, pxl_idxs, lrp_method, rule, savedir, filename, layer_idx=-1):
 
+    if len(successful_attacks_idxs)<3 or len(failed_attacks_idxs)<3:
+        return None
+
     images_cmap='Greys'
 
     set_seed(0)

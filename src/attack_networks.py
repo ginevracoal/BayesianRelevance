@@ -22,10 +22,13 @@ parser.add_argument("--debug", default=False, type=eval, help="Run script in deb
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-n_inputs=200 if args.debug else args.n_inputs
-bayesian_attack_samples=[1,2] if args.debug else [1,10,50]
+n_inputs=100 if args.debug else args.n_inputs
+bayesian_attack_samples=[1,2] if args.debug else [5, 10,50]
 
 print("PyTorch Version: ", torch.__version__)
+
+if args.attack_method=="deepfool":
+  args.device="cpu"
 
 if args.device=="cuda":
     torch.set_default_tensor_type('torch.cuda.FloatTensor')

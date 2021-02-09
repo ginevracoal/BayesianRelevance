@@ -83,7 +83,7 @@ class BNN(PyroModule):
         if self.inference == "svi":
             return name+"_ep="+str(self.epochs)+"_lr="+str(self.lr)
         elif self.inference == "hmc":
-            return name+"_samp="+str(self.n_samples)+"_warm="+str(self.warmup)+\
+            return name+"_samp="+str(self.hmc_samples)+"_warm="+str(self.warmup)+\
                    "_stepsize="+str(self.step_size)+"_numsteps="+str(self.num_steps)
 
     def model(self, x_data, y_data):
@@ -99,8 +99,8 @@ class BNN(PyroModule):
 
         with pyro.plate("data", len(x_data)):
             logits = lifted_module(x_data)
-            lhat = nnf.log_softmax(logits, dim=-1)
-            obs = pyro.sample("obs", Categorical(logits=lhat), obs=y_data)
+            logits = nnf.log_softmax(logits, dim=-1)
+            obs = pyro.sample("obs", Categorical(logits=logits), obs=y_data)
 
     def guide(self, x_data, y_data=None):
 
@@ -161,13 +161,13 @@ class BNN(PyroModule):
             os.makedirs(savedir, exist_ok=True)  
 
             self.posterior_samples=[]
-            for idx in range(self.n_samples):
+            for idx in range(self.hmc_samples):
                 net_copy = copy.deepcopy(self.basenet)
                 fullpath=os.path.join(savedir, filename+"_"+str(idx)+".pt")    
                 net_copy.load_state_dict(torch.load(fullpath))
                 self.posterior_samples.append(net_copy)  
 
-            if len(self.posterior_samples)!=self.n_samples:
+            if len(self.posterior_samples)!=self.hmc_samples:
                 raise AttributeError("wrong number of posterior models")
 
         self.to(device)
@@ -202,17 +202,20 @@ class BNN(PyroModule):
 
                 basenet_copy = copy.deepcopy(self.basenet)
                 basenet_copy.load_state_dict(avg_state_dict)
-                preds = [basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)]
+                out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
+                out = nnf.softmax(out, dim=-1)
+                preds = [out]
 
             else:
 
                 preds = []  
 
                 if training:
-
-                    for _ in range(n_samples):
-                        guide_trace = poutine.trace(self.guide).get_trace(inputs)   
-                        preds.append(guide_trace.nodes['_RETURN']['value'])
+                    # for _ in range(n_samples):
+                    guide_trace = poutine.trace(self.guide).get_trace(inputs)  
+                    out = guide_trace.nodes['_RETURN']['value']
+                    out = nnf.softmax(out, dim=-1)
+                    preds.append(out)
 
                 else:
                     for seed in sample_idxs:
@@ -230,7 +233,9 @@ class BNN(PyroModule):
 
                         basenet_copy = copy.deepcopy(self.basenet)
                         basenet_copy.load_state_dict(weights)
-                        preds.append(basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs))
+                        out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
+                        out = nnf.softmax(out, dim=-1)
+                        preds.append(out)
 
         elif self.inference == "hmc":
 
@@ -251,15 +256,18 @@ class BNN(PyroModule):
 
                 basenet_copy = copy.deepcopy(self.basenet)
                 basenet_copy.load_state_dict(avg_state_dict)
-                preds = [basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)]
+                out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
+                out = nnf.softmax(out, dim=-1)
+                preds = [out]
 
             else:
-
                 preds = []
                 posterior_predictive = self.posterior_samples
                 for seed in sample_idxs:
                     net = posterior_predictive[seed]
-                    preds.append(net.forward(inputs, layer_idx=layer_idx, *args, **kwargs))
+                    out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
+                    out = nnf.softmax(out, dim=-1)
+                    preds.append(out)
         
         logits = torch.stack(preds)
         return logits.mean(0) if expected_out else logits
@@ -322,7 +330,7 @@ class BNN(PyroModule):
                 y_batch = y_batch.to(device)
                 loss += svi.step(x_data=x_batch, y_data=y_batch.argmax(dim=-1))
 
-                outputs = self.forward(x_batch, n_samples=10, training=True, avg_posterior=False).to(device)
+                outputs = self.forward(x_batch, training=True, avg_posterior=False).to(device)
                 predictions = outputs.argmax(-1)
                 labels = y_batch.argmax(-1)
                 correct_predictions += (predictions == labels).sum().item()

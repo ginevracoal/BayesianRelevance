@@ -25,7 +25,7 @@ from attacks.gradient_based import evaluate_attack
 from attacks.run_attacks import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_inputs", default=1000, type=int, help="Number of test points")
+parser.add_argument("--n_inputs", default=100, type=int, help="Number of test points")
 parser.add_argument("--topk", default=300, type=int, help="Top k most relevant pixels.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
@@ -39,7 +39,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
-n_samples_list=[1,5] if args.debug else [1, 10, 50]
+n_samples_list=[1,5] if args.debug else [5, 10, 50]
 n_inputs=200 if args.debug else args.n_inputs
 topk=args.topk
 

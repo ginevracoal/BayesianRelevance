@@ -78,8 +78,9 @@ def compute_explanations(x_test, network, rule, normalize, n_samples=None, layer
 			y_hat = network.forward(x.unsqueeze(0), explain=True, rule=rule, layer_idx=layer_idx,
 									avg_posterior=avg_posterior)
 
-			if layer_idx==-1 or layer_idx==network.n_layers:
-				y_hat = nnf.softmax(y_hat, dim=-1)
+			if n_samples is None: # deterministic case
+				if layer_idx==-1 or layer_idx==network.n_layers:
+					y_hat = nnf.softmax(y_hat, dim=-1)
 
 			# Choose argmax
 			y_hat = y_hat[torch.arange(x.shape[0]), y_hat.max(1)[1]].sum()
@@ -103,8 +104,8 @@ def compute_explanations(x_test, network, rule, normalize, n_samples=None, layer
 			y_hat = network.forward(inputs=x_copy, n_samples=n_samples,
 									explain=True, rule=rule, layer_idx=layer_idx)
 
-			if layer_idx==-1 or layer_idx==network.n_layers:
-				y_hat = nnf.softmax(y_hat, dim=-1)
+			# if layer_idx==-1 or layer_idx==network.n_layers:
+			# 	y_hat = nnf.softmax(y_hat, dim=-1)
 
 			# Choose argmax
 			y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
@@ -216,6 +217,9 @@ def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
 	return vanishing_norm_idxs, non_null_idxs
 
 def lrp_distances(original_heatmaps, adversarial_heatmaps, pxl_idxs=None, axis_norm=0):
+
+	if original_heatmaps.shape[0]==0:
+		return torch.empty(0)
 
 	original_heatmaps = original_heatmaps.reshape(*original_heatmaps.shape[:1], -1)
 	adversarial_heatmaps = adversarial_heatmaps.reshape(*adversarial_heatmaps.shape[:1], -1)

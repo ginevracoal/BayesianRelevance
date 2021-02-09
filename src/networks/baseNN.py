@@ -51,7 +51,7 @@ class baseNN(nn.Module):
                     "_ep="+str(self.epochs)+"_lr="+str(self.lr)
 
         print("\nbaseNN total number of weights =", sum(p.numel() for p in self.parameters()))
-        self.n_layers = len(list(self.model.children()))+1
+        self.n_layers = len(list(self.model.children()))
         learnable_params = self.model.state_dict()
         self.n_learnable_layers = int(len(learnable_params)/2)
 
@@ -168,7 +168,6 @@ class baseNN(nn.Module):
 
         preds = nn.Sequential(*list(self.model.children())[:layer_idx])(inputs)
         return preds
-        # return nnf.softmax(preds, dim=-1)
 
     def get_logits(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
