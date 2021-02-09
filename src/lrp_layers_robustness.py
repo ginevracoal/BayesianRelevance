@@ -37,8 +37,8 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
-n_samples_list=[1,5] if args.debug else [5, 10, 50]
-n_inputs=200 if args.debug else args.n_inputs
+n_samples_list=[2,10,50]
+n_inputs=100 if args.debug else args.n_inputs
 topk=args.topk
 
 print("PyTorch Version: ", torch.__version__)
@@ -78,7 +78,7 @@ if args.model=="fullBNN":
 													n_samples=n_samples))
 
 else:
-		raise NotImplementedError
+	raise NotImplementedError
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)

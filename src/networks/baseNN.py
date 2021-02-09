@@ -51,7 +51,7 @@ class baseNN(nn.Module):
                     "_ep="+str(self.epochs)+"_lr="+str(self.lr)
 
         print("\nbaseNN total number of weights =", sum(p.numel() for p in self.parameters()))
-        self.n_layers = len(list(self.model.children()))
+        self.n_layers = len(list(self.model.children()))+1
         learnable_params = self.model.state_dict()
         self.n_learnable_layers = int(len(learnable_params)/2)
 

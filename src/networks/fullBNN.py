@@ -203,7 +203,8 @@ class BNN(PyroModule):
                 basenet_copy = copy.deepcopy(self.basenet)
                 basenet_copy.load_state_dict(avg_state_dict)
                 out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
-                out = nnf.softmax(out, dim=-1)
+                if layer_idx==-1 or layer_idx==self.n_layers:
+                    out = nnf.softmax(out, dim=-1)
                 preds = [out]
 
             else:
@@ -211,7 +212,6 @@ class BNN(PyroModule):
                 preds = []  
 
                 if training:
-                    # for _ in range(n_samples):
                     guide_trace = poutine.trace(self.guide).get_trace(inputs)  
                     out = guide_trace.nodes['_RETURN']['value']
                     out = nnf.softmax(out, dim=-1)
@@ -234,7 +234,8 @@ class BNN(PyroModule):
                         basenet_copy = copy.deepcopy(self.basenet)
                         basenet_copy.load_state_dict(weights)
                         out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
-                        out = nnf.softmax(out, dim=-1)
+                        if layer_idx==-1 or layer_idx==self.n_layers:
+                            out = nnf.softmax(out, dim=-1)
                         preds.append(out)
 
         elif self.inference == "hmc":
@@ -257,7 +258,8 @@ class BNN(PyroModule):
                 basenet_copy = copy.deepcopy(self.basenet)
                 basenet_copy.load_state_dict(avg_state_dict)
                 out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
-                out = nnf.softmax(out, dim=-1)
+                if layer_idx==-1 or layer_idx==self.n_layers:
+                    out = nnf.softmax(out, dim=-1)
                 preds = [out]
 
             else:
@@ -266,11 +268,12 @@ class BNN(PyroModule):
                 for seed in sample_idxs:
                     net = posterior_predictive[seed]
                     out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
-                    out = nnf.softmax(out, dim=-1)
+                    if layer_idx==-1 or layer_idx==self.n_layers:
+                        out = nnf.softmax(out, dim=-1)
                     preds.append(out)
         
-        logits = torch.stack(preds)
-        return logits.mean(0) if expected_out else logits
+        preds = torch.stack(preds)
+        return preds.mean(0) if expected_out else preds
 
     def _train_hmc(self, train_loader, n_samples, warmup, step_size, num_steps, savedir, device):
         print("\n == fullBNN HMC training ==")

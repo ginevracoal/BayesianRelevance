@@ -35,7 +35,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 n_inputs=100 if args.debug else args.n_inputs
-n_samples_list=[1,5] if args.debug else [5,10,50]
+n_samples_list=[2,10,50]
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)

@@ -267,14 +267,15 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method):
 	return np.array(robustness), np.array(chosen_pxl_idxs)
 
 
-def lrp_wasserstein_distance(lrp, attack_lrp, pxl_idxs):
+def lrp_wasserstein_distance(original_heatmaps, adversarial_heatmaps, pxl_idxs=None):
 
-	flat_lrp = np.array(lrp.reshape(*lrp.shape[:1], -1).detach().cpu().numpy())
-	flat_attack_lrp = np.array(attack_lrp.reshape(*attack_lrp.shape[:1], -1).detach().cpu().numpy())
+	flat_lrp = np.array(original_heatmaps.reshape(*original_heatmaps.shape[:1], -1).detach().cpu().numpy())
+	flat_attack_lrp = np.array(adversarial_heatmaps.reshape(*adversarial_heatmaps.shape[:1], -1).detach().cpu().numpy())
 
-	wess_dist = []
+	wass_dist = []
 
-	for pxl_idx in pxl_idxs:
-		wess_dist.append(wasserstein_distance(flat_lrp[:, pxl_idx], flat_attack_lrp[:, pxl_idx]))
+	for im_idx in range(len(original_heatmaps)):
+		im_pxl_idxs = pxl_idxs[im_idx]
+		wass_dist.append(wasserstein_distance(flat_lrp[im_idx, im_pxl_idxs], flat_attack_lrp[im_idx, im_pxl_idxs]))
 	
-	return np.array(wess_dist)
+	return np.array(wass_dist)
