@@ -38,7 +38,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
-n_samples_list=[1,5] if args.debug else [5, 10, 50]
+n_samples_list=[1,5] if args.debug else [1, 10, 50]
 n_inputs=200 if args.debug else args.n_inputs
 topk=args.topk
 
@@ -103,7 +103,7 @@ for layer_idx in range(n_layers):
 	layer_idx+=1
 
 	savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                          	  layer_idx=layer_idx, normalize=args.normalize)
+                          	   attack_library=args.attack_library, layer_idx=layer_idx, normalize=args.normalize)
 
 	### Load explanations
 
@@ -204,7 +204,8 @@ for layer_idx in range(n_layers):
 
 ### Plots
 
-savedir = os.path.join(model_savedir, "lrp/robustness/")
+savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
+                      	  attack_library=args.attack_library, normalize=args.normalize)
 
 filename=args.rule+"_lrp_robustness_"+m["dataset"]+"_images="+str(n_inputs)+\
 		  "_samples="+str(n_samples)+"_pxls="+str(topk)+"_atk="+str(args.attack_method)

@@ -62,14 +62,15 @@ class redBNN(PyroModule):
         self.basenet = base_net
         self.hyperparams = hyperparams
         self.layer_idx = layer_idx
-        self.name = self.set_name()
 
         w, b, w_name, b_name = self._bayesian_layer(layer_idx)
+        self.name = self._set_name()
         print("\nBayesian layer:", w_name, b_name)
         print("redBNN n. of learnable weights = ", sum(p.numel() for p in [w,b]))
+        self.n_layers=self.basenet.n_layers
 
 
-    def set_name(self):
+    def _set_name(self):
 
         name = str(self.basenet.dataset_name)+"_redBNN_idx="+str(self.layer_idx)+"_hid="+str(self.hidden_size)+\
                     "_arch="+str(self.architecture)+"_act="+str(self.activation)
@@ -85,12 +86,14 @@ class redBNN(PyroModule):
     def _bayesian_layer(self, layer_idx):
 
         learnable_params = self.basenet.model.state_dict()
+        n_learnable_layers = int(len(learnable_params)/2)
+        layer_idx=layer_idx+n_learnable_layers+1 if layer_idx<0 else layer_idx
 
         if layer_idx > len(learnable_params)/2:
-            raise ValueError(f"\n\nThere are only {int(len(learnable_params)/2)} learnable layers.\n")
+            raise ValueError(f"\n\nThere are only {n_learnable_layers} learnable layers.\n")
 
-        w_name, w = list(learnable_params.items())[2*layer_idx]
-        b_name, b = list(learnable_params.items())[2*layer_idx+1]
+        w_name, w = list(learnable_params.items())[2*(layer_idx-1)]
+        b_name, b = list(learnable_params.items())[2*(layer_idx-1)+1]
 
         return w, b, w_name, b_name
 
@@ -193,8 +196,8 @@ class redBNN(PyroModule):
         self.basenet.to(device)
         self.device=device
 
-    def forward(self, inputs, n_samples, sample_idxs=None, training=False, expected_out=True, 
-                explain=False, rule=None):
+    def forward(self, inputs, n_samples=10, avg_posterior=False, sample_idxs=None, training=False,
+                expected_out=True, layer_idx=-1, *args, **kwargs):
 
         if sample_idxs:
             if len(sample_idxs) != n_samples:
@@ -230,10 +233,11 @@ class redBNN(PyroModule):
                         if key in [w_name, b_name]:
                             w = guide_trace.nodes[str(f"module$$${key}")]["value"]
                             weights.update({str(key):w})
+                    
+                    basenet_copy = copy.deepcopy(self.basenet)
+                    basenet_copy.model.load_state_dict(weights)
+                    preds.append(basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs))
 
-                    self.basenet.model.load_state_dict(weights)
-                    self.basenet.to(self.device)
-                    preds.append(self.basenet.forward(inputs, explain=explain, rule=rule))
 
         elif self.inference == "hmc":
 
@@ -306,7 +310,7 @@ class redBNN(PyroModule):
         epochs, lr = (self.hyperparams["epochs"], self.hyperparams["lr"])
 
         optimizer = pyro.optim.Adam({"lr":lr})
-        elbo = TraceMeanField_ELBO()
+        elbo = Trace_ELBO()
         svi = SVI(self.model, self.guide, optimizer, loss=elbo)
 
         loss_list = []
@@ -323,7 +327,7 @@ class redBNN(PyroModule):
                 y_batch = y_batch.to(device)
                 loss += svi.step(x_data=x_batch, y_data=y_batch.argmax(dim=-1))
 
-                outputs = self.forward(x_batch, n_samples=10, training=True).to(device)
+                outputs = self.forward(x_batch, n_samples=10, training=True, avg_posterior=False).to(device)
                 predictions = outputs.argmax(-1)
                 labels = y_batch.argmax(-1)
                 correct_predictions += (predictions == labels).sum().item()

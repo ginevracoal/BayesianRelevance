@@ -19,14 +19,14 @@ parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx f
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--attack_library", type=str, default="grad_based", help="grad_based, deeprobust")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-parser.add_argument("--atk_inputs", default=1000, type=int, help="Number of test points to be attacked.")
-parser.add_argument("--bayesian_layer_idx", default=-1, type=int, help="Index for the Bayesian layer in redBNN.")
+parser.add_argument("--n_inputs", default=1000, type=int, help="Number of test points to be attacked.")
+parser.add_argument("--redBNN_layer_idx", default=-1, type=int, help="Index for the Bayesian layer in redBNN.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-n_inputs=200 if args.debug else None
-atk_inputs=200 if args.debug else args.atk_inputs
+n_inputs=200 if args.debug else args.n_inputs
+bayesian_attack_samples=[1,2] if args.debug else [50]
 
 print("PyTorch Version: ", torch.__version__)
 
@@ -43,7 +43,7 @@ if args.model=="baseNN":
 
     model = baseNN_settings["model_"+str(args.model_idx)]
 
-    x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], n_inputs=atk_inputs)[2:]
+    x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], n_inputs=n_inputs)[2:]
 
     savedir = get_model_savedir(model=args.model, dataset=model["dataset"], architecture=model["architecture"], 
                          baseiters=None, debug=args.debug, model_idx=args.model_idx)
@@ -67,7 +67,7 @@ else:
 
         m = fullBNN_settings["model_"+str(args.model_idx)]
 
-        x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], n_inputs=atk_inputs)[2:]
+        x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], n_inputs=n_inputs)[2:]
 
         savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
                               debug=args.debug, model_idx=args.model_idx)
@@ -79,33 +79,26 @@ else:
         m = redBNN_settings["model_"+str(args.model_idx)]
         base_m = baseNN_settings["model_"+str(m["baseNN_idx"])]
 
-        x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], n_inputs=atk_inputs)[2:]
+        x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], n_inputs=n_inputs)[2:]
 
+        layer_idx=args.redBNN_layer_idx+basenet.n_learnable_layers+1 if args.redBNN_layer_idx<0 else args.redBNN_layer_idx
         savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
-                              debug=args.debug, model_idx=args.model_idx)
+                              debug=args.debug, model_idx=args.model_idx, layer_idx=layer_idx)
         basenet = baseNN(inp_shape, out_size, *list(base_m.values()))
         basenet_savedir = get_model_savedir(model="baseNN", dataset=m["dataset"], 
                           architecture=m["architecture"], debug=args.debug, model_idx=m["baseNN_idx"])
         basenet.load(savedir=basenet_savedir, device=args.device)
 
         hyp = get_hyperparams(m)
+
         net = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=basenet, hyperparams=hyp,
-                     layer_idx=args.bayesian_layer_idx)
+                     layer_idx=layer_idx)
 
     else:
         raise NotImplementedError
 
     net.load(savedir=savedir, device=args.device)
 
-    if args.debug:
-        bayesian_attack_samples=[1,5]
-    else:
-        if m["inference"]=="svi":
-            bayesian_attack_samples=[1,10,50]
-
-        elif m["inference"]=="hmc":
-            bayesian_attack_samples=[1,10,50]
-    
     if args.load:
 
         for n_samples in bayesian_attack_samples:

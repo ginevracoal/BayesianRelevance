@@ -375,3 +375,6 @@ class BNN(PyroModule):
             accuracy = 100 * correct_predictions / len(test_loader.dataset)
             print("Accuracy: %.2f%%" % (accuracy))
             return accuracy
+            
+    def get_logits(self, *args, **kwargs):
+        return self.forward(*args, **kwargs)

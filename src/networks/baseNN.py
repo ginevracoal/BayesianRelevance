@@ -49,8 +49,11 @@ class baseNN(nn.Module):
         self.name = str(dataset_name)+"_baseNN_hid="+str(hidden_size)+\
                     "_arch="+str(self.architecture)+"_act="+str(self.activation)+\
                     "_ep="+str(self.epochs)+"_lr="+str(self.lr)
+
         print("\nbaseNN total number of weights =", sum(p.numel() for p in self.parameters()))
         self.n_layers = len(list(self.model.children()))+1
+        learnable_params = self.model.state_dict()
+        self.n_learnable_layers = int(len(learnable_params)/2)
 
     def set_model(self, architecture, activation, input_shape, output_size, hidden_size):
 
@@ -154,21 +157,21 @@ class baseNN(nn.Module):
 
     def forward(self, inputs, layer_idx=-1, *args, **kwargs):
 
-        # max_layer_idx = len(list(self.model.children()))-1
         if abs(layer_idx)>self.n_layers:
             raise ValueError(f"Max number of available layers is {self.n_layers}")
 
         if layer_idx==0:
             raise ValueError("Layer 0 does not exist.")
-        elif layer_idx==-1:
-            layer_idx=None
         else:
             if layer_idx<0:
-                layer_idx+=1
+                layer_idx+=self.n_layers+1
 
         preds = nn.Sequential(*list(self.model.children())[:layer_idx])(inputs)
         return preds
         # return nnf.softmax(preds, dim=-1)
+
+    def get_logits(self, *args, **kwargs):
+        return self.forward(*args, **kwargs)
 
     def save(self, savedir):
 

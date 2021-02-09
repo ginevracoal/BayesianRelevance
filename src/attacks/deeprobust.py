@@ -19,7 +19,7 @@ from deeprobust.image.attack.Nattack import NATTACK
 from deeprobust.image.attack.YOPOpgd import FASTPGD
 from deeprobust.image.attack.deepfool import DeepFool
 
-def attack(net, x_test, y_test, device, method, n_samples=None, sample_idxs=None, avg_posterior=False):
+def attack(net, x_test, y_test, device, method, hyperparams={}, n_samples=None, sample_idxs=None, avg_posterior=False):
 
 	print(f"\n\nCrafting {method} attacks")
 
@@ -35,8 +35,10 @@ def attack(net, x_test, y_test, device, method, n_samples=None, sample_idxs=None
 			image = x_test[idx].unsqueeze(0)
 			label = y_test[idx].argmax(-1).unsqueeze(0)
 			num_classes = len(y_test[idx])
+			hyperparams['num_classes']=num_classes
 
-			perturbed_image = _deeprobust_attack(net=net, image=image, label=label, method=method, device=device)
+			perturbed_image = _deeprobust_attack(net=net, image=image, label=label, method=method, 
+												 device=device, hyperparams=hyperparams)
 			perturbed_image = torch.clamp(perturbed_image, 0., 1.)
 			adversarial_attacks.append(perturbed_image)
 
@@ -44,22 +46,24 @@ def attack(net, x_test, y_test, device, method, n_samples=None, sample_idxs=None
 
 	else:
 
-		# if sample_idxs is not None:
-		# 	if len(sample_idxs) != n_samples:
-		# 		raise ValueError("Number of sample_idxs should match number of samples.")
-		# else:
-		# 	sample_idxs = list(range(n_samples))
+		if sample_idxs is not None:
+			if len(sample_idxs) != n_samples:
+				raise ValueError("Number of sample_idxs should match number of samples.")
+		else:
+			sample_idxs = list(range(n_samples))
 
 		for idx in tqdm(range(len(x_test))):
 			image = x_test[idx].unsqueeze(0)
 			label = y_test[idx].argmax(-1).unsqueeze(0)
 			num_classes = len(y_test[idx])
+			hyperparams['num_classes']=num_classes
 
 			samples_attacks=[]
 			for idx in sample_idxs:
 				net.n_samples, net.sample_idxs = (1, [idx])
 
-				perturbed_image = _deeprobust_attack(net=net, image=image, label=label, method=method, device=device)
+				perturbed_image = _deeprobust_attack(net=net, image=image, label=label, method=method, 
+													 device=device, hyperparams=hyperparams)
 				perturbed_image = torch.clamp(perturbed_image, 0., 1.)
 				samples_attacks.append(perturbed_image)
 
@@ -70,7 +74,7 @@ def attack(net, x_test, y_test, device, method, n_samples=None, sample_idxs=None
 	adversarial_attacks = torch.cat(adversarial_attacks)
 	return adversarial_attacks
 
-def _deeprobust_attack(net, image, label, method, device):
+def _deeprobust_attack(net, image, label, method, device, hyperparams=None):
 
 	if method == "fgsm":
 		adversary = FGSM
@@ -95,9 +99,11 @@ def _deeprobust_attack(net, image, label, method, device):
 
 	elif method == "nattack":
 		adversary = NATTACK
-		adversary_params = {}
+		adversary_params = {'classnum':hyperparams['num_classes']}
 		adv = adversary(net, device)
-		perturbed_image = adv.generate()
+		print(type(image))
+		dataloader = DataLoader(dataset=list(zip(image, label)), batch_size=1)
+		perturbed_image = adv.generate(dataloader=dataloader, **adversary_params)
 
 	elif method == "yopo":
 		adversary = FASTPGD

@@ -29,6 +29,7 @@ parser.add_argument("--attack_library", type=str, default="grad_based", help="gr
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--layer_idx", default=-1, type=int, help="Layer idx for LRP computation.")
+parser.add_argument("--redBNN_layer_idx", default=-1, type=int, help="Bayesian layer idx in redBNN.")
 parser.add_argument("--normalize", default=False, type=eval, help="Normalize lrp heatmaps.")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
@@ -52,16 +53,11 @@ if args.device=="cuda":
 
 model = baseNN_settings["model_"+str(args.model_idx)]
 
-_, _, x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], 
-                                                            shuffle=False, n_inputs=n_inputs)
+x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], shuffle=False, n_inputs=n_inputs)[2:]
 model_savedir = get_model_savedir(model="baseNN", dataset=model["dataset"], architecture=model["architecture"], 
                                   debug=args.debug, model_idx=args.model_idx)
 detnet = baseNN(inp_shape, num_classes, *list(model.values()))
 detnet.load(savedir=model_savedir, device=args.device)
-
-n_layers=detnet.n_layers
-layer_idx=args.layer_idx+n_layers+1 if args.layer_idx<0 else args.layer_idx
-
 det_attack = load_attack(method=args.attack_method, model_savedir=model_savedir)
 
 if args.model=="fullBNN":
@@ -74,23 +70,46 @@ if args.model=="fullBNN":
     bayesnet = BNN(m["dataset"], *list(m.values())[1:], inp_shape, num_classes)
     bayesnet.load(savedir=model_savedir, device=args.device)
 
-    bay_attack=[]
-    for n_samples in n_samples_list:
 
-        bay_attack.append(load_attack(method=args.attack_method, model_savedir=model_savedir, 
-                                      n_samples=n_samples))
+elif args.model=="redBNN":
 
-    mode_attack = load_attack(method=args.attack_method, model_savedir=model_savedir, 
-                              n_samples=n_samples, atk_mode=True)
+    m = redBNN_settings["model_"+str(args.model_idx)]
+    base_m = baseNN_settings["model_"+str(m["baseNN_idx"])]
+
+    x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], shuffle=False, n_inputs=n_inputs)[2:]
+
+    basenet = baseNN(inp_shape, out_size, *list(base_m.values()))
+    basenet_savedir = get_model_savedir(model="baseNN", dataset=m["dataset"], 
+                      architecture=m["architecture"], debug=args.debug, model_idx=m["baseNN_idx"])
+    basenet.load(savedir=basenet_savedir, device=args.device)
+
+    hyp = get_hyperparams(m)
+
+    layer_idx=args.redBNN_layer_idx+basenet.n_learnable_layers+1 if args.redBNN_layer_idx<0 else args.redBNN_layer_idx
+    bayesnet = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=basenet, hyperparams=hyp,
+                      layer_idx=layer_idx)
+    model_savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
+                          debug=args.debug, model_idx=args.model_idx, layer_idx=layer_idx)
+    bayesnet.load(savedir=model_savedir, device=args.device)
 
 else:
     raise NotImplementedError
 
+bay_attack=[]
+for n_samples in n_samples_list:
+
+    bay_attack.append(load_attack(method=args.attack_method, model_savedir=model_savedir, 
+                                  n_samples=n_samples))
+
+mode_attack = load_attack(method=args.attack_method, model_savedir=model_savedir, 
+                          n_samples=n_samples, atk_mode=True)
+
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
 
+layer_idx=args.layer_idx+detnet.n_layers+1 if args.layer_idx<0 else args.layer_idx
 savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                          layer_idx=layer_idx, normalize=args.normalize)
+                          attack_library=args.attack_library, layer_idx=layer_idx, normalize=args.normalize)
 
 ### Deterministic explanations
 

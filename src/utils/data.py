@@ -275,7 +275,8 @@ def save_to_pickle(data, path, filename):
 
     full_path=os.path.join(path, filename+".pkl")
     print("\nSaving pickle: ", full_path)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    # os.makedirs(os.path.dirname(path), exist_ok=True)
+    os.makedirs(path, exist_ok=True)
     with open(full_path, 'wb') as f:
         pkl.dump(data, f)
 

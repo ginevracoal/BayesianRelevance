@@ -33,8 +33,8 @@ parser.add_argument("--debug", default=False, type=eval, help="Run script in deb
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
-lrp_robustness_method = "pixelwise"
-n_samples_list=[1,5] if args.debug else [5,10,50]
+lrp_robustness_method = "imagewise"
+n_samples_list=[1,5] if args.debug else [1,10,50]
 n_inputs=200 if args.debug else args.n_inputs
 topk=200 if args.debug else args.topk
 
@@ -44,7 +44,7 @@ print("Torchvision Version: ", torchvision.__version__)
 atk_lib = eval(args.attack_library)
 attack = atk_lib.attack
 load_attack = atk_lib.load_attack
-evaluate_attack = atk_lib.evaluate_attack
+evaluate_attack = grad_based.evaluate_attack
 
 if args.device=="cuda":
 	torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -59,9 +59,6 @@ model_savedir = get_model_savedir(model="baseNN", dataset=model["dataset"], arch
 					  debug=args.debug, model_idx=args.model_idx)
 detnet = baseNN(inp_shape, num_classes, *list(model.values()))
 detnet.load(savedir=model_savedir, device=args.device)
-
-n_layers=detnet.n_layers
-layer_idx=args.layer_idx+n_layers+1 if args.layer_idx<0 else args.layer_idx
 
 det_attack = load_attack(method=args.attack_method, model_savedir=model_savedir)
 
@@ -89,8 +86,9 @@ else:
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
 
+layer_idx=args.layer_idx+detnet.n_layers+1 if args.layer_idx<0 else args.layer_idx
 savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                          layer_idx=layer_idx, normalize=args.normalize)
+                          attack_library=args.attack_library, layer_idx=layer_idx, normalize=args.normalize)
 
 ### Load explanations
 
@@ -190,6 +188,8 @@ fail_mode_dist = lrp_wasserstein_distance(mode_lrp[mode_failed_idxs], mode_attac
 
 ### Plots
 
+savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
+                      	  attack_library=args.attack_library, normalize=args.normalize)
 
 plot_attacks_explanations(images=images, 
 						  explanations=det_lrp, 
@@ -232,7 +232,6 @@ plot_attacks_explanations(images=images,
 						  filename=lrp_robustness_method+"_mode_lrp_attacks_samp="+str(n_samples), 
 						  layer_idx=layer_idx)
 
-savedir = os.path.join(model_savedir, "lrp/wasserstein/")
 filename=args.rule+"_lrp_wasserstein_"+m["dataset"]+"_images="+str(n_inputs)+\
 		 "_pxls="+str(topk)+"_atk="+str(args.attack_method)+"_layeridx="+str(layer_idx)
 if args.normalize:
