@@ -21,15 +21,14 @@ from networks.redBNN import *
 from utils.lrp import *
 from plot.lrp_heatmaps import *
 import plot.lrp_distributions as plot_lrp
-import attacks.gradient_based as grad_based
-import attacks.deeprobust as deeprobust
+from attacks.gradient_based import evaluate_attack
+from attacks.run_attacks import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=1000, type=int, help="Number of test points")
 parser.add_argument("--topk", default=300, type=int, help="Top k most relevant pixels.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
-parser.add_argument("--attack_library", type=str, default="grad_based", help="grad_based, deeprobust")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--normalize", default=False, type=eval, help="Normalize lrp heatmaps.")
@@ -44,11 +43,6 @@ topk=args.topk
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
-
-atk_lib = eval(args.attack_library)
-attack = atk_lib.attack
-load_attack = atk_lib.load_attack
-evaluate_attack = atk_lib.evaluate_attack
 
 if args.device=="cuda":
 		torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -103,7 +97,7 @@ for layer_idx in range(n_layers):
 	layer_idx+=1
 
 	savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                          	   attack_library=args.attack_library, layer_idx=layer_idx, normalize=args.normalize)
+                          	  layer_idx=layer_idx, normalize=args.normalize)
 
 	### Load explanations
 
@@ -205,7 +199,7 @@ for layer_idx in range(n_layers):
 ### Plots
 
 savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                      	  attack_library=args.attack_library, normalize=args.normalize)
+                      	  normalize=args.normalize)
 
 filename=args.rule+"_lrp_robustness_"+m["dataset"]+"_images="+str(n_inputs)+\
 		  "_samples="+str(n_samples)+"_pxls="+str(topk)+"_atk="+str(args.attack_method)

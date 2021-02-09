@@ -16,15 +16,14 @@ from networks.redBNN import *
 from utils.lrp import *
 from plot.lrp_heatmaps import *
 import plot.lrp_distributions as plot_lrp
-import attacks.gradient_based as grad_based
-import attacks.deeprobust as deeprobust
+from attacks.gradient_based import evaluate_attack
+from attacks.run_attacks import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=1000, type=int, help="Number of test points")
 parser.add_argument("--topk", default=300, type=int, help="Top k most relevant pixels.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
-parser.add_argument("--attack_library", type=str, default="grad_based", help="grad_based, deeprobust")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--layer_idx", default=-1, type=int, help="Layer idx for LRP computation.")
@@ -40,11 +39,6 @@ topk=200 if args.debug else args.topk
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
-
-atk_lib = eval(args.attack_library)
-attack = atk_lib.attack
-load_attack = atk_lib.load_attack
-evaluate_attack = grad_based.evaluate_attack
 
 if args.device=="cuda":
 	torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -88,7 +82,7 @@ labels = y_test.argmax(-1).to(args.device)
 
 layer_idx=args.layer_idx+detnet.n_layers+1 if args.layer_idx<0 else args.layer_idx
 savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                          attack_library=args.attack_library, layer_idx=layer_idx, normalize=args.normalize)
+                          layer_idx=layer_idx, normalize=args.normalize)
 
 ### Load explanations
 
@@ -189,7 +183,7 @@ fail_mode_dist = lrp_wasserstein_distance(mode_lrp[mode_failed_idxs], mode_attac
 ### Plots
 
 savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                      	  attack_library=args.attack_library, normalize=args.normalize)
+                      	  normalize=args.normalize)
 
 plot_attacks_explanations(images=images, 
 						  explanations=det_lrp, 

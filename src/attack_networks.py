@@ -2,13 +2,11 @@ import os
 import torch
 import argparse
 import numpy as np
-
 from utils.data import *
 from utils import savedir
 from utils.seeding import *
-import attacks.gradient_based as grad_based
-import attacks.deeprobust as deeprobust
-
+from attacks.gradient_based import evaluate_attack
+from attacks.run_attacks import *
 from networks.baseNN import *
 from networks.fullBNN import *
 from networks.redBNN import *
@@ -17,24 +15,17 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings.")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
-parser.add_argument("--attack_library", type=str, default="grad_based", help="grad_based, deeprobust")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-parser.add_argument("--n_inputs", default=1000, type=int, help="Number of test points to be attacked.")
+parser.add_argument("--n_inputs", default=100, type=int, help="Number of test points to be attacked.")
 parser.add_argument("--redBNN_layer_idx", default=-1, type=int, help="Index for the Bayesian layer in redBNN.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
 n_inputs=200 if args.debug else args.n_inputs
-bayesian_attack_samples=[1,2] if args.debug else [50]
+bayesian_attack_samples=[1,2] if args.debug else [1,10,50]
 
 print("PyTorch Version: ", torch.__version__)
-
-atk_lib = eval(args.attack_library)
-attack = atk_lib.attack
-load_attack = atk_lib.load_attack
-save_attack = atk_lib.save_attack
-evaluate_attack = grad_based.evaluate_attack
 
 if args.device=="cuda":
     torch.set_default_tensor_type('torch.cuda.FloatTensor')

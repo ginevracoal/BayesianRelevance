@@ -12,12 +12,13 @@ from attacks.robustness_measures import softmax_robustness
 import attacks.torchvision_gradient_based as torchvision_atks
 from torch.autograd.gradcheck import zero_gradients
 
-from deeprobust.image.attack.fgsm import FGSM
-from deeprobust.image.attack.pgd import PGD
-from deeprobust.image.attack.cw import CarliniWagner
+from attacks.deeprobust.fgsm import FGSM
+from attacks.deeprobust.pgd import PGD
+from attacks.deeprobust.cw import CarliniWagner
+from attacks.deepfool import DeepFool
+
 from deeprobust.image.attack.Nattack import NATTACK
 from deeprobust.image.attack.YOPOpgd import FASTPGD
-from deeprobust.image.attack.deepfool import DeepFool
 
 def attack(net, x_test, y_test, device, method, hyperparams={}, n_samples=None, sample_idxs=None, avg_posterior=False):
 
@@ -37,7 +38,7 @@ def attack(net, x_test, y_test, device, method, hyperparams={}, n_samples=None, 
 			num_classes = len(y_test[idx])
 			hyperparams['num_classes']=num_classes
 
-			perturbed_image = _deeprobust_attack(net=net, image=image, label=label, method=method, 
+			perturbed_image = run_attack(net=net, image=image, label=label, method=method, 
 												 device=device, hyperparams=hyperparams)
 			perturbed_image = torch.clamp(perturbed_image, 0., 1.)
 			adversarial_attacks.append(perturbed_image)
@@ -62,7 +63,7 @@ def attack(net, x_test, y_test, device, method, hyperparams={}, n_samples=None, 
 			for idx in sample_idxs:
 				net.n_samples, net.sample_idxs = (1, [idx])
 
-				perturbed_image = _deeprobust_attack(net=net, image=image, label=label, method=method, 
+				perturbed_image = run_attack(net=net, image=image, label=label, method=method, 
 													 device=device, hyperparams=hyperparams)
 				perturbed_image = torch.clamp(perturbed_image, 0., 1.)
 				samples_attacks.append(perturbed_image)
@@ -74,7 +75,7 @@ def attack(net, x_test, y_test, device, method, hyperparams={}, n_samples=None, 
 	adversarial_attacks = torch.cat(adversarial_attacks)
 	return adversarial_attacks
 
-def _deeprobust_attack(net, image, label, method, device, hyperparams=None):
+def run_attack(net, image, label, method, device, hyperparams=None):
 
 	if method == "fgsm":
 		adversary = FGSM
@@ -97,25 +98,23 @@ def _deeprobust_attack(net, image, label, method, device, hyperparams=None):
 		target_label = 1 # todo: set to random different class
 		perturbed_image = adv.generate(image, label, target_label=target_label, **adversary_params)
 
-	elif method == "nattack":
-		adversary = NATTACK
-		adversary_params = {'classnum':hyperparams['num_classes']}
-		adv = adversary(net, device)
-		print(type(image))
-		dataloader = DataLoader(dataset=list(zip(image, label)), batch_size=1)
-		perturbed_image = adv.generate(dataloader=dataloader, **adversary_params)
-
-	elif method == "yopo":
-		adversary = FASTPGD
-		adversary_params = {}
-		adv = adversary(net, device)
-		perturbed_image = adv.generate(image, label, **adversary_params)
-
 	elif method == "deepfool":
-		adversary = DeepFool
-		adversary_params = {}
-		adv = adversary(net, device)
-		perturbed_image = adv.generate(image, label, **adversary_params)
+		perturbed_image=DeepFool(image, net=net, num_classes=10, overshoot=0.02, max_iter=10)[-1].squeeze(0)
+
+	# elif method == "nattack": # runs on CPU only
+	# 	adversary = NATTACK
+	# 	adversary_params = {'classnum':hyperparams['num_classes']}
+	# 	adv = adversary(net, "cpu")
+	# 	dataloader = DataLoader(dataset=list(zip(image, label)), batch_size=1)
+	# 	perturbed_image = adv.generate(dataloader=dataloader, **adversary_params)
+
+	# 	print(perturbed_image)
+
+	# elif method == "yopo":
+	# 	adversary = FASTPGD
+	# 	adversary_params = {}
+	# 	adv = adversary(net, device)
+	# 	perturbed_image = adv.generate(image, label, **adversary_params)
 
 	return perturbed_image
 
@@ -217,7 +216,7 @@ def _deeprobust_attack(net, image, label, method, device, hyperparams=None):
 
 def save_attack(inputs, attacks, method, model_savedir, atk_mode=False, n_samples=None):
 
-	filename, savedir = get_atk_filename_savedir(attack_method=method+"_deeprobust", model_savedir=model_savedir, 
+	filename, savedir = get_atk_filename_savedir(attack_method=method, model_savedir=model_savedir, 
 											     atk_mode=atk_mode, n_samples=n_samples)
 	save_to_pickle(data=attacks, path=savedir, filename=filename)
 
@@ -231,7 +230,7 @@ def save_attack(inputs, attacks, method, model_savedir, atk_mode=False, n_sample
 
 
 def load_attack(method, model_savedir, atk_mode=False, n_samples=None):
-	filename, savedir = get_atk_filename_savedir(attack_method=method+"_deeprobust", model_savedir=model_savedir, 
+	filename, savedir = get_atk_filename_savedir(attack_method=method, model_savedir=model_savedir, 
 											     atk_mode=atk_mode, n_samples=n_samples)
 	return load_from_pickle(path=savedir, filename=filename)
 

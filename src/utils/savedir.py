@@ -34,9 +34,9 @@ def get_model_savedir(model, dataset, architecture, iters=None, inference=None, 
     else:
         return os.path.join(TESTS, savedir)
 
-def get_lrp_savedir(model_savedir, attack_method, attack_library, layer_idx=None, normalize=False):
+def get_lrp_savedir(model_savedir, attack_method, layer_idx=None, normalize=False):
 
-    savedir = str(attack_method)+"_deeprobust" if attack_library=="deeprobust" else str(attack_method)
+    savedir = str(attack_method)
     savedir += "/lrp_norm/" if normalize else "/lrp/"
 
     if layer_idx:
