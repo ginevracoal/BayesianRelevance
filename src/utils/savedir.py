@@ -34,10 +34,10 @@ def get_model_savedir(model, dataset, architecture, iters=None, inference=None, 
     else:
         return os.path.join(TESTS, savedir)
 
-def get_lrp_savedir(model_savedir, attack_method, layer_idx=None, normalize=False):
+def get_lrp_savedir(model_savedir, attack_method, lrp_method, layer_idx=None):#, normalize=False):
 
-    savedir = str(attack_method)
-    savedir += "/lrp_norm/" if normalize else "/lrp/"
+    savedir = str(attack_method)+"/"+str(lrp_method)+"_lrp/"
+    # savedir += "/lrp_norm/" if normalize else "/lrp/"
 
     if layer_idx:
         savedir += "pkl_layer_idx="+str(layer_idx)

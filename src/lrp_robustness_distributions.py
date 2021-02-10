@@ -25,11 +25,12 @@ from attacks.gradient_based import evaluate_attack
 from attacks.run_attacks import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_inputs", default=100, type=int, help="Number of test points")
+parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
 parser.add_argument("--topk", default=300, type=int, help="Top k most relevant pixels.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
+parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--layer_idx", default=-1, type=int, help="Layer idx for LRP computation.")
 parser.add_argument("--redBNN_layer_idx", default=-1, type=int, help="Bayesian layer idx in redBNN.")
@@ -39,7 +40,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
-n_samples_list=[2,10,50]
+n_samples_list=[10,50]
 n_inputs=100 if args.debug else args.n_inputs
 topk=args.topk
 
@@ -108,7 +109,7 @@ labels = y_test.argmax(-1).to(args.device)
 
 layer_idx=args.layer_idx+detnet.n_layers+1 if args.layer_idx<0 else args.layer_idx
 savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                          layer_idx=layer_idx, normalize=args.normalize)
+                          layer_idx=layer_idx, lrp_method=args.lrp_method)
 
 ### Load explanations
 
@@ -128,6 +129,21 @@ for samp_idx, n_samples in enumerate(n_samples_list):
     mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
 mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples)))
 mode_attack_lrp = np.array(mode_attack_lrp)
+
+### Normalize heatmaps
+
+if args.normalize:
+	for im_idx in range(det_lrp.shape[0]):
+		det_lrp[im_idx] = normalize(det_lrp[im_idx])
+		det_attack_lrp[im_idx] = normalize(det_attack_lrp[im_idx])
+		mode_lrp[im_idx] = normalize(mode_lrp[im_idx])
+
+		for samp_idx in range(len(n_samples_list)):
+			bay_lrp[samp_idx][im_idx] = normalize(bay_lrp[samp_idx][im_idx])
+			bay_attack_lrp[samp_idx][im_idx] = normalize(bay_attack_lrp[samp_idx][im_idx])
+			mode_attack_lrp[samp_idx][im_idx] = normalize(mode_attack_lrp[samp_idx][im_idx])
+
+		mode_attack_lrp[samp_idx+1][im_idx] = normalize(mode_attack_lrp[samp_idx+1][im_idx])
 
 ### Evaluate explanations
 
@@ -249,6 +265,10 @@ mode_lrp_robustness, mode_lrp_pxl_idxs = lrp_robustness(original_heatmaps=mode_l
 
 ### Plots
 
+filename = lrp_robustness_method
+if args.normalize:
+	filename+="_norm"
+
 plot_attacks_explanations(images=images, 
 						  explanations=det_lrp, 
 						  attacks=det_attack, 
@@ -259,7 +279,7 @@ plot_attacks_explanations(images=images,
 						  failed_attacks_idxs=det_failed_idxs,
 						  labels=labels, lrp_method=lrp_robustness_method,
 						  rule=args.rule, savedir=savedir, pxl_idxs=det_lrp_pxl_idxs,
-						  filename=lrp_robustness_method+"_det_lrp_attacks", 
+						  filename="det_lrp_attacks_"+filename, 
 						  layer_idx=layer_idx)
 
 for samp_idx, n_samples in enumerate(n_samples_list):
@@ -274,7 +294,7 @@ for samp_idx, n_samples in enumerate(n_samples_list):
 							  failed_attacks_idxs=bay_failed_idxs[samp_idx],
 							  labels=labels, lrp_method=lrp_robustness_method,
 							  rule=args.rule, savedir=savedir, pxl_idxs=bay_lrp_pxl_idxs[samp_idx],
-							  filename=lrp_robustness_method+"_bay_lrp_attacks_samp="+str(n_samples), 
+							  filename="bay_lrp_attacks_samp="+str(n_samples)+"_"+filename, 
 							  layer_idx=layer_idx)
 
 mode_list_idx = -1 # lrp mode computations 
@@ -288,13 +308,13 @@ plot_attacks_explanations(images=images,
 						  failed_attacks_idxs=mode_failed_idxs[mode_list_idx],
 						  labels=labels, lrp_method=lrp_robustness_method,
 						  rule=args.rule, savedir=savedir, pxl_idxs=mode_lrp_pxl_idxs,
-						  filename=lrp_robustness_method+"_mode_lrp_attacks_samp="+str(n_samples), 
+						  filename="mode_lrp_attacks_samp="+str(n_samples)+"_"+filename, 
 						  layer_idx=layer_idx)
 
 filename=args.rule+"_lrp_robustness"+m["dataset"]+"_images="+str(n_inputs)+\
 		 "_samples="+str(n_samples)+"_pxls="+str(topk)+"_atk="+str(args.attack_method)+"_layeridx="+str(layer_idx)
 if args.normalize:
-	filename=filename+"_norm"
+	filename+="_norm"
 		 
 plot_lrp.lrp_imagewise_robustness_distributions(
 								  det_successful_lrp_robustness=succ_det_lrp_robustness,

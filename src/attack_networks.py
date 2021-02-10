@@ -16,7 +16,7 @@ parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings.")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-parser.add_argument("--n_inputs", default=100, type=int, help="Number of test points to be attacked.")
+parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points to be attacked.")
 parser.add_argument("--redBNN_layer_idx", default=-1, type=int, help="Index for the Bayesian layer in redBNN.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  

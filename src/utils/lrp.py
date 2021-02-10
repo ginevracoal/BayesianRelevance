@@ -63,7 +63,7 @@ def select_informative_pixels(lrp_heatmaps, topk):
 	return chosen_pxls_lrp, chosen_pxl_idxs
 
 
-def compute_explanations(x_test, network, rule, normalize, n_samples=None, layer_idx=-1, avg_posterior=False):
+def compute_explanations(x_test, network, rule, method, n_samples=None, layer_idx=-1, avg_posterior=False):
 
 	print("\nLRP layer idx =", layer_idx)
 
@@ -89,70 +89,68 @@ def compute_explanations(x_test, network, rule, normalize, n_samples=None, layer
 			y_hat.backward()
 			lrp = x.grad
 
-			if normalize:
-				lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
 			explanations.append(lrp)
 
 	else:
 
-		explanations = []
-		for x in tqdm(x_test):
+		if method=="avg_prediction":
 
-			# Forward pass
-			x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
-			x_copy.requires_grad = True	
-			y_hat = network.forward(inputs=x_copy, n_samples=n_samples,
-									explain=True, rule=rule, layer_idx=layer_idx)
+			explanations = []
+			for x in tqdm(x_test):
 
-			# if layer_idx==-1 or layer_idx==network.n_layers:
-			# 	y_hat = nnf.softmax(y_hat, dim=-1)
+				# Forward pass
+				x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
+				x_copy.requires_grad = True	
+				y_hat = network.forward(inputs=x_copy, n_samples=n_samples, explain=True, rule=rule, layer_idx=layer_idx)
 
-			# Choose argmax
-			y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
-			y_hat = y_hat.sum()
+				# Choose argmax
+				y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
+				y_hat = y_hat.sum()
 
-			# Backward pass (compute explanation)
-			y_hat.backward()
-			lrp = x_copy.grad.squeeze(1)
+				# Backward pass (compute explanation)
+				y_hat.backward()
+				lrp = x_copy.grad.squeeze(1)
 
-			if normalize:
-				lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
+				# if normalize:
+				# 	lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
 
-			explanations.append(lrp)
+				explanations.append(lrp)
 
-		# explanations = []
-		# for x in tqdm(x_test):
+		elif method=="avg_heatmap":
 
-		# 	post_explanations = []
-		# 	for j in range(n_samples):
+			explanations = []
+			for x in tqdm(x_test):
 
-		# 		# Forward pass
-		# 		x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
-		# 		x_copy.requires_grad = True
-		# 		y_hat = network.forward(inputs=x_copy, n_samples=1, sample_idxs=[j], 
-		# 								explain=True, rule=rule, layer_idx=layer_idx)
-				
-		# 		if layer_idx==-1 or layer_idx==network.n_layers:
-		# 			y_hat = nnf.softmax(y_hat, dim=-1)
+				post_explanations = []
+				for j in range(n_samples):
 
-		# 		# Choose argmax
-		# 		y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
-		# 		y_hat = y_hat.sum()
+					# Forward pass
+					x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
+					x_copy.requires_grad = True
+					y_hat = network.forward(inputs=x_copy, n_samples=1, sample_idxs=[j], 
+											explain=True, rule=rule, layer_idx=layer_idx)
+					
+					# Choose argmax
+					y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
+					y_hat = y_hat.sum()
 
-		# 		# Backward pass (compute explanation)
-		# 		y_hat.backward()
-		# 		lrp = x_copy.grad.squeeze(1)
+					# Backward pass (compute explanation)
+					y_hat.backward()
+					lrp = x_copy.grad.squeeze(1)
 
-		# 		if normalize:
-		# 			lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
-		# 		post_explanations.append(lrp)
+					# if normalize:
+					# 	lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
 
-		# 	# print(torch.stack(post_explanations).mean(0).min(),torch.stack(post_explanations).mean(0).max())
-		# 	explanations.append(torch.stack(post_explanations).mean(0))
+					post_explanations.append(lrp)
+
+				# print(torch.stack(post_explanations).mean(0).min(),torch.stack(post_explanations).mean(0).max())
+				explanations.append(torch.stack(post_explanations).mean(0))
 
 	explanations = torch.stack(explanations) 
 	return explanations
 
+def normalize(lrp):
+	return 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
 
 def compute_vanishing_norm_idxs(inputs, n_samples_list, norm="linfty"):
 

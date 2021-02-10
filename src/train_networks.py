@@ -54,9 +54,11 @@ else:
     if args.model=="fullBNN":
 
         m = fullBNN_settings["model_"+str(args.model_idx)]
+        batch_size = 4000 if m["inference"] == "hmc" else 128 
+        # num_workers = 0 if args.device=="cuda" else 4
 
         train_loader, test_loader, inp_shape, out_size = data_loaders(dataset_name=m["dataset"], n_inputs=n_inputs,
-                                                                      batch_size=128, shuffle=True)
+                                                                      batch_size=batch_size, shuffle=True)
 
         savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
                               debug=args.debug, model_idx=args.model_idx)
@@ -67,6 +69,7 @@ else:
         
         m = redBNN_settings["model_"+str(args.model_idx)]
         base_m = baseNN_settings["model_"+str(m["baseNN_idx"])]
+        batch_size = 4000 if m["inference"] == "hmc" else 128 
 
         train_loader, test_loader, inp_shape, out_size = data_loaders(dataset_name=m["dataset"], n_inputs=n_inputs,
                                                                   batch_size=128, shuffle=True)
@@ -77,7 +80,7 @@ else:
         basenet.load(savedir=basenet_savedir, device=args.device)
 
         hyp = get_hyperparams(m)
-        layer_idx=-1#args.redBNN_layer_idx+basenet.n_learnable_layers+1 if args.redBNN_layer_idx<0 else args.redBNN_layer_idx
+        layer_idx=args.redBNN_layer_idx+basenet.n_learnable_layers+1 if args.redBNN_layer_idx<0 else args.redBNN_layer_idx
         net = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=basenet, hyperparams=hyp,
                      layer_idx=args.redBNN_layer_idx)
         savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
@@ -99,8 +102,6 @@ else:
         net.load(savedir=savedir, device=args.device)
 
     else:
-        batch_size = 4000 if m["inference"] == "hmc" else 128 
-        num_workers = 0 if args.device=="cuda" else 4
         net.train(train_loader=train_loader, savedir=savedir, device=args.device)
 
     for n_samples in bayesian_attack_samples:

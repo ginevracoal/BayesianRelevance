@@ -25,11 +25,12 @@ from attacks.gradient_based import evaluate_attack
 from attacks.run_attacks import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_inputs", default=100, type=int, help="Number of test points")
+parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
 parser.add_argument("--topk", default=300, type=int, help="Top k most relevant pixels.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
+parser.add_argument("--lrp_method", default="avg_prediction", type=str, help="avg_prediction, avg_heatmap")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--normalize", default=False, type=eval, help="Normalize lrp heatmaps.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
@@ -37,7 +38,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
-n_samples_list=[2,10,50]
+n_samples_list=[10,50]
 n_inputs=100 if args.debug else args.n_inputs
 topk=args.topk
 
@@ -97,7 +98,7 @@ for layer_idx in range(n_layers):
 	layer_idx+=1
 
 	savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                          	  layer_idx=layer_idx, normalize=args.normalize)
+                          	  layer_idx=layer_idx, method=args.lrp_method)
 
 	### Load explanations
 
@@ -109,6 +110,17 @@ for layer_idx in range(n_layers):
 	for n_samples in n_samples_list:
 		bay_lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
 		bay_attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
+
+	### Normalize heatmaps
+
+	if args.normalize:
+		for im_idx in range(det_lrp.shape[0]):
+			det_lrp[im_idx] = normalize(det_lrp[im_idx])
+			det_attack_lrp[im_idx] = normalize(det_attack_lrp[im_idx])
+
+			for samp_idx in range(len(n_samples_list)):
+				bay_lrp[samp_idx][im_idx] = normalize(bay_lrp[samp_idx][im_idx])
+				bay_attack_lrp[samp_idx][im_idx] = normalize(bay_attack_lrp[samp_idx][im_idx])
 
 	### Evaluate explanations
 
@@ -199,13 +211,13 @@ for layer_idx in range(n_layers):
 ### Plots
 
 savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                      	  normalize=args.normalize)
+                      	  method=args.lrp_method)
 
 filename=args.rule+"_lrp_robustness_"+m["dataset"]+"_images="+str(n_inputs)+\
 		  "_samples="+str(n_samples)+"_pxls="+str(topk)+"_atk="+str(args.attack_method)
 
 if args.normalize:
-	filename=filename+"_norm"
+	filename+="_norm"
 
 plot_lrp.lrp_layers_robustness_distributions(
 										det_successful_lrp_robustness=det_successful_lrp_robustness_layers,
@@ -218,7 +230,6 @@ plot_lrp.lrp_layers_robustness_distributions(
 										savedir=savedir, 
 										filename="dist_"+filename+"_layers")
 
-# if args.normalize is False:
 plot_lrp.lrp_layers_robustness_scatterplot(
 											det_successful_lrp_robustness=det_successful_lrp_robustness_layers,
 											det_failed_lrp_robustness=det_failed_lrp_robustness_layers,
