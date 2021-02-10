@@ -44,9 +44,6 @@ fullBNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation
                     "model_3":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
                              "lr":None, "hmc_samples":50, "warmup":100},
-                     "model_4":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
-                             "architecture":"conv", "inference":"svi", "epochs":5, 
-                             "lr":0.01, "hmc_samples":None, "warmup":None},
                     }  
 
 
@@ -173,14 +170,11 @@ class BNN(PyroModule):
         self.to(device)
         self.basenet.to(device)
 
-    def forward(self, inputs, n_samples=10, avg_posterior=False, sample_idxs=None, training=False,
-                expected_out=True, layer_idx=-1, *args, **kwargs):
+    def _set_correct_layer_idx(self, layer_idx):
+        return self.basenet._set_correct_layer_idx(layer_idx)
 
-        if layer_idx==0:
-            raise ValueError("Layer 0 does not exist.")
-        else:
-            if layer_idx<0:
-                layer_idx+=self.n_layers+1
+    def forward(self, inputs, n_samples=10, avg_posterior=False, sample_idxs=None, training=False,
+                expected_out=True, softmax=False, layer_idx=-1, *args, **kwargs):
 
         # change external attack libraries behavior #
         n_samples = self.n_samples if hasattr(self, "n_samples") else n_samples
@@ -209,7 +203,7 @@ class BNN(PyroModule):
                 basenet_copy = copy.deepcopy(self.basenet)
                 basenet_copy.load_state_dict(avg_state_dict)
                 out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
-                if layer_idx==-1 or layer_idx==self.n_layers:
+                if softmax:
                     out = nnf.softmax(out, dim=-1)
                 preds = [out]
 
@@ -220,7 +214,8 @@ class BNN(PyroModule):
                 if training:
                     guide_trace = poutine.trace(self.guide).get_trace(inputs)  
                     out = guide_trace.nodes['_RETURN']['value']
-                    out = nnf.softmax(out, dim=-1)
+                    if softmax:
+                        out = nnf.softmax(out, dim=-1)
                     preds.append(out)
 
                 else:
@@ -241,9 +236,8 @@ class BNN(PyroModule):
                         basenet_copy.load_state_dict(weights)
 
                         out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
-                        if layer_idx==-1 or layer_idx==self.n_layers:
+                        if softmax:
                             out = nnf.softmax(out, dim=-1)
-
                         preds.append(out)
 
         elif self.inference == "hmc":
@@ -266,7 +260,7 @@ class BNN(PyroModule):
                 basenet_copy = copy.deepcopy(self.basenet)
                 basenet_copy.load_state_dict(avg_state_dict)
                 out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
-                if layer_idx==-1 or layer_idx==self.n_layers:
+                if softmax:
                     out = nnf.softmax(out, dim=-1)
                 preds = [out]
 
@@ -275,8 +269,8 @@ class BNN(PyroModule):
                 posterior_predictive = self.posterior_samples
                 for seed in sample_idxs:
                     net = posterior_predictive[seed]
-                    out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
-                    if layer_idx==-1 or layer_idx==self.n_layers:
+                    out = net.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
+                    if softmax:
                         out = nnf.softmax(out, dim=-1)
                     preds.append(out)
         
@@ -396,4 +390,4 @@ class BNN(PyroModule):
             return accuracy
             
     def get_logits(self, *args, **kwargs):
-        return self.forward(layer_idx=-2, *args, **kwargs)
+        return self.forward(layer_idx=-1, *args, **kwargs)

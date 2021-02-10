@@ -24,11 +24,11 @@ from attacks.run_attacks import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
-parser.add_argument("--topk", default=300, type=int, help="Top k most relevant pixels.")
+parser.add_argument("--topk", default=100, type=int, help="Top k most relevant pixels.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-parser.add_argument("--lrp_method", default="avg_prediction", type=str, help="avg_prediction, avg_heatmap")
+parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--normalize", default=False, type=eval, help="Normalize lrp heatmaps.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")

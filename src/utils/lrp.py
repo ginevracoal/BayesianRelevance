@@ -68,14 +68,13 @@ def compute_explanations(x_test, network, rule, method, n_samples=None, layer_id
 
 	print("\nLRP layer idx =", layer_idx)
 
-	if layer_idx==-1 or layer_idx==network.n_layers:
-		print("Softmax layer")
+	layer_idx = network._set_correct_layer_idx(layer_idx)
+
+	import itertools
+	if hasattr(network, "basenet"):
+		print(nn.Sequential(*list(network.basenet.model.children())[:layer_idx]))
 	else:
-		import itertools
-		if hasattr(network, "basenet"):
-			print(nn.Sequential(*list(network.basenet.model.children())[:layer_idx]))
-		else:
-			print(nn.Sequential(*list(network.model.children())[:layer_idx]))
+		print(nn.Sequential(*list(network.model.children())[:layer_idx]))
 
 	if n_samples is None or avg_posterior is True:
 
@@ -87,10 +86,6 @@ def compute_explanations(x_test, network, rule, method, n_samples=None, layer_id
 			# Forward pass
 			y_hat = network.forward(x.unsqueeze(0), explain=True, rule=rule, layer_idx=layer_idx,
 									avg_posterior=avg_posterior)
-
-			if n_samples is None: # deterministic out
-				if layer_idx==-1 or layer_idx==network.n_layers:
-					y_hat = nnf.softmax(y_hat, dim=-1)
 
 			# Choose argmax
 			y_hat = y_hat[torch.arange(x.shape[0]), y_hat.max(1)[1]].sum()

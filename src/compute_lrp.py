@@ -25,9 +25,8 @@ parser.add_argument("--n_inputs", default=500, type=int, help="Number of test po
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="fullBNN")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-parser.add_argument("--lrp_method", default="avg_prediction", type=str, help="avg_prediction, avg_heatmap")
+parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
-parser.add_argument("--layer_idx", default=-1, type=int, help="Layer idx for LRP computation.")
 parser.add_argument("--redBNN_layer_idx", default=-1, type=int, help="Bayesian layer idx in redBNN.")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
@@ -35,7 +34,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 n_inputs=100 if args.debug else args.n_inputs
-n_samples_list=[10,50]
+n_samples_list=[10, 50]
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
@@ -101,70 +100,70 @@ mode_attack = load_attack(method=args.attack_method, model_savedir=model_savedir
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
 
-layer_idx=args.layer_idx+detnet.n_layers+1 if args.layer_idx<0 else args.layer_idx
-savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                          layer_idx=layer_idx, lrp_method=args.lrp_method)
+for layer_idx in detnet.learnable_layers_idxs:
 
-### Deterministic explanations
+    savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
+                              layer_idx=layer_idx, lrp_method=args.lrp_method)
 
-if args.load:
-    det_lrp = load_from_pickle(path=savedir, layer_idx=layer_idx, filename="det_lrp")
-    det_attack_lrp = load_from_pickle(path=savedir, layer_idx=layer_idx, filename="det_attack_lrp")
+    ### Deterministic explanations
 
-else:
+    if args.load:
+        det_lrp = load_from_pickle(path=savedir, layer_idx=layer_idx, filename="det_lrp")
+        det_attack_lrp = load_from_pickle(path=savedir, layer_idx=layer_idx, filename="det_attack_lrp")
 
-    det_lrp = compute_explanations(images, detnet, layer_idx=layer_idx, rule=args.rule, method=args.lrp_method)
-    det_attack_lrp = compute_explanations(det_attack, detnet, layer_idx=layer_idx, rule=args.rule, method=args.lrp_method)
+    else:
 
-    save_to_pickle(det_lrp, path=savedir, filename="det_lrp")
-    save_to_pickle(det_attack_lrp, path=savedir, filename="det_attack_lrp")
+        det_lrp = compute_explanations(images, detnet, layer_idx=layer_idx, rule=args.rule, method=args.lrp_method)
+        det_attack_lrp = compute_explanations(det_attack, detnet, layer_idx=layer_idx, rule=args.rule, method=args.lrp_method)
 
+        save_to_pickle(det_lrp, path=savedir, filename="det_lrp")
+        save_to_pickle(det_attack_lrp, path=savedir, filename="det_attack_lrp")
 
-### Bayesian explanations
+    ### Bayesian explanations
 
-bay_lrp=[]
-bay_attack_lrp=[]
-mode_attack_lrp=[]
+    bay_lrp=[]
+    bay_attack_lrp=[]
+    mode_attack_lrp=[]
 
-if args.load:
+    if args.load:
 
-    for n_samples in n_samples_list:
-        bay_lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
-        bay_attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
+        for n_samples in n_samples_list:
+            bay_lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
+            bay_attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
 
-    mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
+        mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
 
-    for samp_idx, n_samples in enumerate(n_samples_list):
-        mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
-    
-    mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples)))
+        for samp_idx, n_samples in enumerate(n_samples_list):
+            mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
+        
+        mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples)))
 
-else:
+    else:
 
-    for samp_idx, n_samples in enumerate(n_samples_list):
+        for samp_idx, n_samples in enumerate(n_samples_list):
 
-        bay_lrp.append(compute_explanations(images, bayesnet, rule=args.rule, layer_idx=layer_idx, 
-                                            n_samples=n_samples, method=args.lrp_method))
-        bay_attack_lrp.append(compute_explanations(bay_attack[samp_idx], bayesnet, layer_idx=layer_idx,
-                                                   rule=args.rule, n_samples=n_samples, method=args.lrp_method))
+            bay_lrp.append(compute_explanations(images, bayesnet, rule=args.rule, layer_idx=layer_idx, 
+                                                n_samples=n_samples, method=args.lrp_method))
+            bay_attack_lrp.append(compute_explanations(bay_attack[samp_idx], bayesnet, layer_idx=layer_idx,
+                                                       rule=args.rule, n_samples=n_samples, method=args.lrp_method))
 
-        save_to_pickle(bay_lrp[samp_idx], path=savedir, filename="bay_lrp_samp="+str(n_samples))
-        save_to_pickle(bay_attack_lrp[samp_idx], path=savedir, filename="bay_attack_lrp_samp="+str(n_samples))
-    
-    mode_lrp = compute_explanations(images, bayesnet, rule=args.rule, layer_idx=layer_idx, 
-                                    n_samples=n_samples, avg_posterior=True, method=args.lrp_method)
-    save_to_pickle(mode_lrp, path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
+            save_to_pickle(bay_lrp[samp_idx], path=savedir, filename="bay_lrp_samp="+str(n_samples))
+            save_to_pickle(bay_attack_lrp[samp_idx], path=savedir, filename="bay_attack_lrp_samp="+str(n_samples))
+        
+        mode_lrp = compute_explanations(images, bayesnet, rule=args.rule, layer_idx=layer_idx, 
+                                        n_samples=n_samples, avg_posterior=True, method=args.lrp_method)
+        save_to_pickle(mode_lrp, path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
 
-    for samp_idx, n_samples in enumerate(n_samples_list):
-        mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx, 
-                                                    n_samples=n_samples, method=args.lrp_method))
-        save_to_pickle(mode_attack_lrp[samp_idx], path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
+        for samp_idx, n_samples in enumerate(n_samples_list):
+            mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx, 
+                                                        n_samples=n_samples, method=args.lrp_method))
+            save_to_pickle(mode_attack_lrp[samp_idx], path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
 
-    mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx,
-                                                n_samples=n_samples, avg_posterior=True, method=args.lrp_method))
-    save_to_pickle(mode_attack_lrp[samp_idx+1], path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples))
+        mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx,
+                                                    n_samples=n_samples, avg_posterior=True, method=args.lrp_method))
+        save_to_pickle(mode_attack_lrp[samp_idx+1], path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples))
 
-### plots
+### Plots
 
 # plot_vanishing_explanations(images_plt, samples_explanations, n_samples_list=bayesian_samples,
 #     rule=args.rule, savedir=savedir, filename=args.rule+"_vanishing_explanations")

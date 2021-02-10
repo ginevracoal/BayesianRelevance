@@ -51,7 +51,7 @@ class baseNN(nn.Module):
                     "_ep="+str(self.epochs)+"_lr="+str(self.lr)
 
         print("\nbaseNN total number of weights =", sum(p.numel() for p in self.parameters()))
-        self.n_layers = len(list(self.model.children()))+1
+        self.n_layers = len(list(self.model.children()))
         learnable_params = self.model.state_dict()
         self.n_learnable_layers = int(len(learnable_params)/2)
 
@@ -79,6 +79,8 @@ class baseNN(nn.Module):
                 activ(),
                 nn.Linear(hidden_size, output_size))
 
+            self.learnable_layers_idxs = [1, 3]
+
         elif architecture == "fc2":
             self.model = nn.Sequential(
                 nn.Flatten(),
@@ -88,6 +90,8 @@ class baseNN(nn.Module):
                 activ(),
                 nn.Linear(hidden_size, output_size)
                 )
+
+            self.learnable_layers_idxs = [1, 3, 5]
 
         elif architecture == "fc4":
             self.model = nn.Sequential(
@@ -102,6 +106,8 @@ class baseNN(nn.Module):
                 activ(),
                 nn.Linear(hidden_size, output_size))
 
+            self.learnable_layers_idxs = [1, 3, 5, 7, 9]
+
         elif architecture == "conv":
 
             if self.dataset_name in ["mnist","fashion_mnist"]:
@@ -115,6 +121,8 @@ class baseNN(nn.Module):
                     nn.MaxPool2d(kernel_size=2, stride=1),
                     nn.Flatten(),
                     nn.Linear(int(hidden_size/(4*4))*input_size, output_size))
+
+                self.learnable_layers_idxs = [0, 3, 7]
 
             else:
                 raise NotImplementedError()
@@ -155,22 +163,47 @@ class baseNN(nn.Module):
         execution_time(start=start, end=time.time())
         self.save(savedir)
 
-    def forward(self, inputs, layer_idx=-1, *args, **kwargs):
+    def _get_learnable_layer_idx(self, layer_idx):
 
         if abs(layer_idx)>self.n_layers:
             raise ValueError(f"Max number of available layers is {self.n_layers}")
 
-        if layer_idx==0:
-            raise ValueError("Layer 0 does not exist.")
+        if layer_idx<0:
+            layer_idx = self.learnable_layers_idxs[layer_idx]
+        else:
+            layer_idx = self.learnable_layers_idxs[layer_idx]
+
+        return layer_idx
+
+    def _set_correct_layer_idx(self, layer_idx):
+
+        """
+        -1 = n_learnable_layers-1 = last learnable layer idx
+        0 = -n_learnable_layers = firsy learnable layer idx  
+        """
+
+        if abs(layer_idx)>self.n_layers:
+            raise ValueError(f"Max number of available layers is {self.n_layers}")
+
+        if layer_idx==-1:
+            layer_idx=None
         else:
             if layer_idx<0:
                 layer_idx+=self.n_layers+1
+            else:
+                layer_idx+=1
+
+        return layer_idx
+
+    def forward(self, inputs, layer_idx=-1, *args, **kwargs):
+
+        layer_idx = self._set_correct_layer_idx(layer_idx)
 
         preds = nn.Sequential(*list(self.model.children())[:layer_idx])(inputs)
         return preds
 
     def get_logits(self, *args, **kwargs):
-        return self.forward(layer_idx=-2, *args, **kwargs)
+        return self.forward(layer_idx=-1, *args, **kwargs)
 
     def save(self, savedir):
 

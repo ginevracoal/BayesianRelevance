@@ -30,9 +30,9 @@ parser.add_argument("--topk", default=300, type=int, help="Top k most relevant p
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-parser.add_argument("--lrp_method", default="avg_prediction", type=str, help="avg_prediction, avg_heatmap")
+parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
-parser.add_argument("--normalize", default=False, type=eval, help="Normalize lrp heatmaps.")
+parser.add_argument("--normalize", default=True, type=eval, help="Normalize lrp heatmaps.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
@@ -58,8 +58,6 @@ model_savedir = get_model_savedir(model="baseNN", dataset=model["dataset"], arch
 											debug=args.debug, model_idx=args.model_idx)
 detnet = baseNN(inp_shape, num_classes, *list(model.values()))
 detnet.load(savedir=model_savedir, device=args.device)
-
-n_layers = detnet.n_layers
 
 det_attack = load_attack(method=args.attack_method, model_savedir=model_savedir)
 
@@ -94,8 +92,7 @@ det_failed_norm_layers=[]
 bay_successful_norm_layers=[]
 bay_failed_norm_layers=[]
 
-for layer_idx in range(n_layers):
-	layer_idx+=1
+for layer_idx in detnet.learnable_layers_idxs:
 
 	savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
                           	  layer_idx=layer_idx, lrp_method=args.lrp_method)
@@ -225,7 +222,7 @@ plot_lrp.lrp_layers_robustness_distributions(
 										bay_failed_lrp_robustness=bay_failed_lrp_robustness_layers,
 										n_samples_list=n_samples_list,
 										n_original_images=len(images),
-										n_layers=n_layers,
+										n_learnable_layers=detnet.n_learnable_layers,
 										savedir=savedir, 
 										filename="dist_"+filename+"_layers")
 
@@ -240,6 +237,6 @@ plot_lrp.lrp_layers_robustness_scatterplot(
 											bay_failed_lrp_norm=bay_failed_norm_layers,
 											n_samples_list=n_samples_list,
 											n_original_images=len(images),
-											n_layers=n_layers,
+											n_learnable_layers=detnet.n_learnable_layers,
 											savedir=savedir, 
 											filename="scatterplot_"+filename+"_layers")

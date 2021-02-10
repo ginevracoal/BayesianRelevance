@@ -481,20 +481,20 @@ def plot_wasserstein_dist(bay_wass_dist_layers, mode_wass_dist_layers, increasin
 
 def lrp_layers_robustness_distributions(det_successful_lrp_robustness, det_failed_lrp_robustness,
                                        bay_successful_lrp_robustness, bay_failed_lrp_robustness,
-                                       n_samples_list, n_original_images, n_layers, savedir, filename):
+                                       n_samples_list, n_original_images, n_learnable_layers, savedir, filename):
 
     os.makedirs(savedir, exist_ok=True) 
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
-    fig, ax = plt.subplots(n_layers, 2, figsize=(10, 8), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(n_learnable_layers, 2, figsize=(10, 8), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
     fig.tight_layout()
     
     fig.subplots_adjust(top=0.98)
     fig.text(0.3, 0.98, "Successful attacks", ha='center')
     fig.text(0.75, 0.98, "Failed attacks", ha='center')
 
-    for layer_idx in range(n_layers):
+    for layer_idx in range(n_learnable_layers):
 
         sns.distplot(det_successful_lrp_robustness[layer_idx], ax=ax[layer_idx,0], label="deterministic",  kde=True)
         
@@ -510,13 +510,13 @@ def lrp_layers_robustness_distributions(det_successful_lrp_robustness, det_faile
         ax[layer_idx,1].yaxis.set_label_position("right")
         ax[layer_idx,1].set_ylabel("idx="+str(layer_idx+1), rotation=270, labelpad=15)
 
-    ax[n_layers-1,0].set_xlabel("LRP robustness")
-    ax[n_layers-1,1].set_xlabel("LRP robustness")
-    # ax[n_layers-1,2].set_xlabel("LRP robustness")
-    # ax[n_layers-1,3].set_xlabel("LRP robustness")
+    ax[n_learnable_layers-1,0].set_xlabel("LRP robustness")
+    ax[n_learnable_layers-1,1].set_xlabel("LRP robustness")
+    # ax[n_learnable_layers-1,2].set_xlabel("LRP robustness")
+    # ax[n_learnable_layers-1,3].set_xlabel("LRP robustness")
 
-    ax[n_layers-1,0].set_xlim(-0.01,1.01)
-    ax[n_layers-1,1].set_xlim(-0.01,1.01)
+    # ax[n_learnable_layers-1,0].set_xlim(-0.01,1.01)
+    # ax[n_learnable_layers-1,1].set_xlim(-0.01,1.01)
 
     ax[0,0].legend(loc="upper left")
     plt.setp(ax[0,0].get_legend().get_texts(), fontsize='8')
@@ -530,16 +530,16 @@ def lrp_layers_robustness_scatterplot(det_successful_lrp_robustness, det_failed_
                                        bay_successful_lrp_robustness, bay_failed_lrp_robustness,
                                        det_successful_lrp_norm, det_failed_lrp_norm,
                                        bay_successful_lrp_norm, bay_failed_lrp_norm,
-                                       n_samples_list, n_original_images, n_layers, savedir, filename):
+                                       n_samples_list, n_original_images, n_learnable_layers, savedir, filename):
 
     os.makedirs(savedir, exist_ok=True) 
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
-    fig, ax = plt.subplots(n_layers, 2, figsize=(10, 8), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(n_learnable_layers, 2, figsize=(10, 8), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
     fig.tight_layout()
     
-    # cmap = cm.get_cmap('Blues', n_layers+3)
+    # cmap = cm.get_cmap('Blues', n_learnable_layers+3)
     # hex_colors = [matplotlib.colors.rgb2hex(cmap(i)) for i in range(cmap.N)]
 
     fig.subplots_adjust(top=0.97)
@@ -547,7 +547,7 @@ def lrp_layers_robustness_scatterplot(det_successful_lrp_robustness, det_failed_
     fig.text(0.75, 0.98, "Failed attacks", ha='center')
     alpha=0.4
 
-    for layer_idx in range(n_layers):
+    for layer_idx in range(n_learnable_layers):
 
         # color = hex_colors[layer_idx+3]
         legend = 'brief' if layer_idx==0 else False
@@ -576,11 +576,10 @@ def lrp_layers_robustness_scatterplot(det_successful_lrp_robustness, det_failed_
         ax[layer_idx,1].set_ylabel("idx="+str(layer_idx+1), rotation=270, labelpad=15)
 
     for col_idx in range(2):
-        ax[n_layers-1,col_idx].set_xlabel("LRP robustness")
-        ax[n_layers-1,col_idx].set_xlim(-0.01,1.01)
+        ax[n_learnable_layers-1,col_idx].set_xlabel("LRP robustness")
+        # ax[n_learnable_layers-1,col_idx].set_xlim(-0.01,1.01)
 
-    for layer_idx in range(n_layers):
-        ax[layer_idx,0].set_ylabel("LRP diff. norm")
+    ax[int(n_learnable_layers/2),0].set_ylabel("LRP diff. norm")
 
     plt.legend(frameon=False)
     plt.setp(ax[0,0].get_legend().get_texts(), fontsize='8')
