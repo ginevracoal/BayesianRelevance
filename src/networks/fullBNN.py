@@ -176,6 +176,12 @@ class BNN(PyroModule):
     def forward(self, inputs, n_samples=10, avg_posterior=False, sample_idxs=None, training=False,
                 expected_out=True, layer_idx=-1, *args, **kwargs):
 
+        if layer_idx==0:
+            raise ValueError("Layer 0 does not exist.")
+        else:
+            if layer_idx<0:
+                layer_idx+=self.n_layers+1
+
         # change external attack libraries behavior #
         n_samples = self.n_samples if hasattr(self, "n_samples") else n_samples
         sample_idxs = self.sample_idxs if hasattr(self, "sample_idxs") else sample_idxs
@@ -233,9 +239,11 @@ class BNN(PyroModule):
 
                         basenet_copy = copy.deepcopy(self.basenet)
                         basenet_copy.load_state_dict(weights)
+
                         out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
                         if layer_idx==-1 or layer_idx==self.n_layers:
                             out = nnf.softmax(out, dim=-1)
+
                         preds.append(out)
 
         elif self.inference == "hmc":
@@ -388,4 +396,4 @@ class BNN(PyroModule):
             return accuracy
             
     def get_logits(self, *args, **kwargs):
-        return self.forward(*args, **kwargs)
+        return self.forward(layer_idx=-2, *args, **kwargs)

@@ -356,97 +356,127 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)    
 
-def plot_wasserstein_dist(det_successful_atks_wass_dist, det_failed_atks_wass_dist, 
-                          bay_successful_atks_wass_dist, bay_failed_atks_wass_dist,
-                          mode_successful_atks_wass_dist, mode_failed_atks_wass_dist,
-                          increasing_n_samples, filename, savedir):
-    """
-    :param deterministic_wasserstein_distance: 
-        pixel-wise wasserstein distances between original LRP heatmaps and LRP heatmaps on the attacks.
-        :shape: (n. selected pixels)
-    :param bayesian_wasserstein_distance: 
-        pixel-wise wasserstein distances between original LRP heatmaps and LRP heatmaps on the attacks. 
-        Each index corresponds to the selected number of samples in n_samples_list.
-        :shape: (len(n_samples_list), n. selected pixels)
-    :param deterministic_successful_idxs: image idxs for successful attacks in the deterministic case
-        :shape: (n. images)
-    :param bayesian_successful_idxs: image idxs for successful attacks in the bayesian case
-        :shape: (n. images)
-    :param increasing_n_samples: increasing number of samples from the posterior.
-    """
+def plot_wasserstein_dist(bay_wass_dist_layers, mode_wass_dist_layers, increasing_n_samples, filename, savedir):
 
     os.makedirs(savedir, exist_ok=True)
     sns.set_style("darkgrid")
-    matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
+    matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
 
-    fig, ax = plt.subplots(2, 1, figsize=(10, 6), sharex=True, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6), sharex=True, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
     alpha=0.5
 
-    ax[1].set_xlabel('Layer idx')
-    ax[0].set_ylabel('Wasserstein distance')
-    ax[1].set_ylabel('Wasserstein distance')
+    ax.set_xlabel('Layer idx')
+    ax.set_ylabel('Wass. dist.')
 
-    layers_range = np.arange(len(det_successful_atks_wass_dist))
+    layers_idxs = np.arange(len(bay_wass_dist_layers))+1
 
-    fig.text(0.5, 0.91, "Successful attacks", ha='center')
-
-    layers_idxs = []
-    wass_distances = []
-    for layer_idx in layers_range:
-        n_images = len(det_successful_atks_wass_dist[0])
-        layers_idxs.extend(np.repeat(layer_idx+1, n_images))
-        wass_distances.extend(det_successful_atks_wass_dist[layer_idx])
-    sns.lineplot(x=layers_idxs, y=wass_distances, ax=ax[0], label="deterministic")
-
-    layers_idxs = []
-    wass_distances = []
-    for layer_idx in layers_range:
-        n_images = len(mode_successful_atks_wass_dist[0])
-        layers_idxs.extend(np.repeat(layer_idx+1, n_images))
-        wass_distances.extend(mode_successful_atks_wass_dist[layer_idx])
-    sns.lineplot(x=layers_idxs, y=wass_distances, ax=ax[0], label="bayesian mode")
+    print(layers_idxs)
+    print(bay_wass_dist_layers[:,0].flatten().shape)
 
     for sample_idx, n_samples in enumerate(increasing_n_samples):
 
-        layers_idxs = []
-        wass_distances = []
-        for layer_idx in layers_range:
-            n_images = len(bay_successful_atks_wass_dist[0][0])
-            layers_idxs.extend(np.repeat(layer_idx+1, n_images))
-            wass_distances.extend(bay_successful_atks_wass_dist[layer_idx][sample_idx])
-        sns.lineplot(x=layers_idxs, y=wass_distances, ax=ax[0], label="bayesian samp="+str(n_samples))
+        sns.lineplot(x=layers_idxs, y=bay_wass_dist_layers[:,sample_idx].flatten(), ax=ax, 
+                    label="bayesian samp="+str(n_samples))
+        sns.lineplot(x=layers_idxs, y=mode_wass_dist_layers[:,sample_idx].flatten(), ax=ax, 
+                    label="mode samp="+str(n_samples))
 
-    fig.text(0.5, 0.48, "Failed attacks", ha='center')
+    sns.lineplot(x=layers_idxs, y=mode_wass_dist_layers, ax=ax, label="mode vs mode")
 
-    layers_idxs = []
-    wass_distances = []
-    for layer_idx in layers_range:
-        n_images = len(det_failed_atks_wass_dist[0])
-        layers_idxs.extend(np.repeat(layer_idx+1, n_images))
-        wass_distances.extend(det_failed_atks_wass_dist[layer_idx])
-    sns.lineplot(x=layers_idxs, y=wass_distances, ax=ax[1], label="deterministic")
-
-    layers_idxs = []
-    wass_distances = []
-    for layer_idx in layers_range:
-        n_images = len(mode_failed_atks_wass_dist[0])
-        layers_idxs.extend(np.repeat(layer_idx+1, n_images))
-        wass_distances.extend(mode_failed_atks_wass_dist[layer_idx])
-    sns.lineplot(x=layers_idxs, y=wass_distances, ax=ax[1], label="bayesian mode")
-
-    for sample_idx, n_samples in enumerate(increasing_n_samples):
-
-        layers_idxs = []
-        wass_distances = []
-        for layer_idx in layers_range:
-            n_images = len(bay_failed_atks_wass_dist[0][0])
-            layers_idxs.extend(np.repeat(layer_idx+1, n_images))
-            wass_distances.extend(bay_failed_atks_wass_dist[layer_idx][sample_idx])
-        sns.lineplot(x=layers_idxs, y=wass_distances, ax=ax[1], label="bayesian samp="+str(n_samples))
-
-    ax[0].legend()
+    ax.legend()
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)
+
+# def plot_wasserstein_dist(det_successful_atks_wass_dist, det_failed_atks_wass_dist, 
+#                           bay_successful_atks_wass_dist, bay_failed_atks_wass_dist,
+#                           mode_successful_atks_wass_dist, mode_failed_atks_wass_dist,
+#                           increasing_n_samples, filename, savedir):
+#     """
+#     :param deterministic_wasserstein_distance: 
+#         pixel-wise wasserstein distances between original LRP heatmaps and LRP heatmaps on the attacks.
+#         :shape: (n. selected pixels)
+#     :param bayesian_wasserstein_distance: 
+#         pixel-wise wasserstein distances between original LRP heatmaps and LRP heatmaps on the attacks. 
+#         Each index corresponds to the selected number of samples in n_samples_list.
+#         :shape: (len(n_samples_list), n. selected pixels)
+#     :param deterministic_successful_idxs: image idxs for successful attacks in the deterministic case
+#         :shape: (n. images)
+#     :param bayesian_successful_idxs: image idxs for successful attacks in the bayesian case
+#         :shape: (n. images)
+#     :param increasing_n_samples: increasing number of samples from the posterior.
+#     """
+
+#     os.makedirs(savedir, exist_ok=True)
+#     sns.set_style("darkgrid")
+#     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
+
+#     fig, ax = plt.subplots(2, 1, figsize=(10, 6), sharex=True, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
+#     alpha=0.5
+
+#     ax[1].set_xlabel('Layer idx')
+#     ax[0].set_ylabel('Wasserstein distance')
+#     ax[1].set_ylabel('Wasserstein distance')
+
+#     layers_range = np.arange(len(det_successful_atks_wass_dist))
+
+#     fig.text(0.5, 0.91, "Successful attacks", ha='center')
+
+#     layers_idxs = []
+#     wass_distances = []
+#     for layer_idx in layers_range:
+#         n_images = len(det_successful_atks_wass_dist[0])
+#         layers_idxs.extend(np.repeat(layer_idx+1, n_images))
+#         wass_distances.extend(det_successful_atks_wass_dist[layer_idx])
+#     sns.lineplot(x=layers_idxs, y=wass_distances, ax=ax[0], label="deterministic")
+
+#     layers_idxs = []
+#     wass_distances = []
+#     for layer_idx in layers_range:
+#         n_images = len(mode_successful_atks_wass_dist[0])
+#         layers_idxs.extend(np.repeat(layer_idx+1, n_images))
+#         wass_distances.extend(mode_successful_atks_wass_dist[layer_idx])
+#     sns.lineplot(x=layers_idxs, y=wass_distances, ax=ax[0], label="bayesian mode")
+
+#     for sample_idx, n_samples in enumerate(increasing_n_samples):
+
+#         layers_idxs = []
+#         wass_distances = []
+#         for layer_idx in layers_range:
+#             n_images = len(bay_successful_atks_wass_dist[0][0])
+#             layers_idxs.extend(np.repeat(layer_idx+1, n_images))
+#             wass_distances.extend(bay_successful_atks_wass_dist[layer_idx][sample_idx])
+#         sns.lineplot(x=layers_idxs, y=wass_distances, ax=ax[0], label="bayesian samp="+str(n_samples))
+
+#     fig.text(0.5, 0.48, "Failed attacks", ha='center')
+
+#     layers_idxs = []
+#     wass_distances = []
+#     for layer_idx in layers_range:
+#         n_images = len(det_failed_atks_wass_dist[0])
+#         layers_idxs.extend(np.repeat(layer_idx+1, n_images))
+#         wass_distances.extend(det_failed_atks_wass_dist[layer_idx])
+#     sns.lineplot(x=layers_idxs, y=wass_distances, ax=ax[1], label="deterministic")
+
+#     layers_idxs = []
+#     wass_distances = []
+#     for layer_idx in layers_range:
+#         n_images = len(mode_failed_atks_wass_dist[0])
+#         layers_idxs.extend(np.repeat(layer_idx+1, n_images))
+#         wass_distances.extend(mode_failed_atks_wass_dist[layer_idx])
+#     sns.lineplot(x=layers_idxs, y=wass_distances, ax=ax[1], label="bayesian mode")
+
+#     for sample_idx, n_samples in enumerate(increasing_n_samples):
+
+#         layers_idxs = []
+#         wass_distances = []
+#         for layer_idx in layers_range:
+#             n_images = len(bay_failed_atks_wass_dist[0][0])
+#             layers_idxs.extend(np.repeat(layer_idx+1, n_images))
+#             wass_distances.extend(bay_failed_atks_wass_dist[layer_idx][sample_idx])
+#         sns.lineplot(x=layers_idxs, y=wass_distances, ax=ax[1], label="bayesian samp="+str(n_samples))
+
+#     ax[0].legend()
+#     fig.savefig(os.path.join(savedir, filename+".png"))
+#     plt.close(fig)
 
 
 def lrp_layers_robustness_distributions(det_successful_lrp_robustness, det_failed_lrp_robustness,
@@ -457,7 +487,7 @@ def lrp_layers_robustness_distributions(det_successful_lrp_robustness, det_faile
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
-    fig, ax = plt.subplots(n_layers, 4, figsize=(10, 8), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(n_layers, 2, figsize=(10, 8), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
     fig.tight_layout()
     
     fig.subplots_adjust(top=0.98)
@@ -469,22 +499,21 @@ def lrp_layers_robustness_distributions(det_successful_lrp_robustness, det_faile
         sns.distplot(det_successful_lrp_robustness[layer_idx], ax=ax[layer_idx,0], label="deterministic",  kde=True)
         
         for samp_idx, n_samples in enumerate(n_samples_list):
-            sns.distplot(bay_successful_lrp_robustness[layer_idx][samp_idx], ax=ax[layer_idx,1], 
+            sns.distplot(bay_successful_lrp_robustness[layer_idx][samp_idx], ax=ax[layer_idx,0], 
                         label="bayesian samp="+str(n_samples), kde=True)
 
-        sns.distplot(det_failed_lrp_robustness[layer_idx], ax=ax[layer_idx,2], label="deterministic", kde=True)
+        sns.distplot(det_failed_lrp_robustness[layer_idx], ax=ax[layer_idx,1], kde=True)
         
         for samp_idx, n_samples in enumerate(n_samples_list):
-            sns.distplot(bay_failed_lrp_robustness[layer_idx][samp_idx], ax=ax[layer_idx,3], 
-                        label="bayesian samp="+str(n_samples),  kde=True)
+            sns.distplot(bay_failed_lrp_robustness[layer_idx][samp_idx], ax=ax[layer_idx,1], kde=True)
     
-        ax[layer_idx,3].yaxis.set_label_position("right")
-        ax[layer_idx,3].set_ylabel("idx="+str(layer_idx+1), rotation=270, labelpad=15)
+        ax[layer_idx,1].yaxis.set_label_position("right")
+        ax[layer_idx,1].set_ylabel("idx="+str(layer_idx+1), rotation=270, labelpad=15)
 
     ax[n_layers-1,0].set_xlabel("LRP robustness")
     ax[n_layers-1,1].set_xlabel("LRP robustness")
-    ax[n_layers-1,2].set_xlabel("LRP robustness")
-    ax[n_layers-1,3].set_xlabel("LRP robustness")
+    # ax[n_layers-1,2].set_xlabel("LRP robustness")
+    # ax[n_layers-1,3].set_xlabel("LRP robustness")
 
     ax[n_layers-1,0].set_xlim(-0.01,1.01)
     ax[n_layers-1,1].set_xlim(-0.01,1.01)
@@ -507,7 +536,7 @@ def lrp_layers_robustness_scatterplot(det_successful_lrp_robustness, det_failed_
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
-    fig, ax = plt.subplots(n_layers, 4, figsize=(10, 8), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(n_layers, 2, figsize=(10, 8), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
     fig.tight_layout()
     
     # cmap = cm.get_cmap('Blues', n_layers+3)
@@ -525,28 +554,28 @@ def lrp_layers_robustness_scatterplot(det_successful_lrp_robustness, det_failed_
 
         sns.scatterplot(det_successful_lrp_robustness[layer_idx], 
                         det_successful_lrp_norm[layer_idx],
-                        ax=ax[layer_idx,0], label="deterministic", alpha=alpha, legend=legend)#, color=color)
+                        ax=ax[layer_idx,0], label="deterministic", alpha=alpha, legend=legend)
         
         for samp_idx, n_samples in enumerate(n_samples_list):
 
             sns.scatterplot(bay_successful_lrp_robustness[layer_idx][samp_idx], 
                             bay_successful_lrp_norm[layer_idx][samp_idx], 
-                            ax=ax[layer_idx,1], label="bayesian samp="+str(n_samples), 
-                            alpha=alpha, legend=legend)#, color=color)
+                            ax=ax[layer_idx,0], label="bayesian samp="+str(n_samples), 
+                            alpha=alpha, legend=legend)
 
         sns.scatterplot(det_failed_lrp_robustness[layer_idx], 
                         det_failed_lrp_norm[layer_idx], 
-                        ax=ax[layer_idx,2], alpha=alpha, legend=False)#, color=color)
+                        ax=ax[layer_idx,1], alpha=alpha, legend=False)
         
         for samp_idx, n_samples in enumerate(n_samples_list):
             sns.scatterplot(bay_failed_lrp_robustness[layer_idx][samp_idx], 
                             bay_failed_lrp_norm[layer_idx][samp_idx], 
-                            ax=ax[layer_idx,3], alpha=alpha, legend=False)#, color=color)
+                            ax=ax[layer_idx,1], alpha=alpha, legend=False)
     
-        ax[layer_idx,3].yaxis.set_label_position("right")
-        ax[layer_idx,3].set_ylabel("idx="+str(layer_idx+1), rotation=270, labelpad=15)
+        ax[layer_idx,1].yaxis.set_label_position("right")
+        ax[layer_idx,1].set_ylabel("idx="+str(layer_idx+1), rotation=270, labelpad=15)
 
-    for col_idx in range(4):
+    for col_idx in range(2):
         ax[n_layers-1,col_idx].set_xlabel("LRP robustness")
         ax[n_layers-1,col_idx].set_xlim(-0.01,1.01)
 
@@ -555,7 +584,7 @@ def lrp_layers_robustness_scatterplot(det_successful_lrp_robustness, det_failed_
 
     plt.legend(frameon=False)
     plt.setp(ax[0,0].get_legend().get_texts(), fontsize='8')
-    plt.setp(ax[0,1].get_legend().get_texts(), fontsize='8')
+    # plt.setp(ax[0,1].get_legend().get_texts(), fontsize='8')
     plt.subplots_adjust(hspace=0.1)
     # fig.subplots_adjust(left=0.3)
     # ax[0,0].legend(bbox_to_anchor=(-0.5, 0.5))

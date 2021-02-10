@@ -30,7 +30,7 @@ parser.add_argument("--topk", default=300, type=int, help="Top k most relevant p
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
+parser.add_argument("--lrp_method", default="avg_prediction", type=str, help="avg_prediction, avg_heatmap")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--layer_idx", default=-1, type=int, help="Layer idx for LRP computation.")
 parser.add_argument("--redBNN_layer_idx", default=-1, type=int, help="Bayesian layer idx in redBNN.")
@@ -199,7 +199,6 @@ for samp_idx, n_samples in enumerate(n_samples_list):
 	succ_bay_lrp_robustness.append(bay_lrp_rob)
 	succ_bay_lrp_pxl_idxs.append(succ_lrp_pxl_idxs)
 
-	failed_idxs = np.setdiff1d(np.arange(len(images)), successf_idxs)
 	bay_lrp_rob, fail_lrp_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx][failed_idxs], 
 											   adversarial_heatmaps=bay_attack_lrp[samp_idx][failed_idxs], 
 											   topk=topk, method=lrp_robustness_method)

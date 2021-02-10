@@ -170,7 +170,7 @@ class baseNN(nn.Module):
         return preds
 
     def get_logits(self, *args, **kwargs):
-        return self.forward(*args, **kwargs)
+        return self.forward(layer_idx=-2, *args, **kwargs)
 
     def save(self, savedir):
 

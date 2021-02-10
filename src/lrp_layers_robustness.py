@@ -98,7 +98,7 @@ for layer_idx in range(n_layers):
 	layer_idx+=1
 
 	savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                          	  layer_idx=layer_idx, method=args.lrp_method)
+                          	  layer_idx=layer_idx, lrp_method=args.lrp_method)
 
 	### Load explanations
 
@@ -183,7 +183,6 @@ for layer_idx in range(n_layers):
 			succ_bay_lrp_robustness.append(bay_lrp_rob)
 			succ_bay_lrp_pxl_idxs.append(succ_lrp_pxl_idxs)
 
-			failed_idxs = np.setdiff1d(np.arange(len(images)), successf_idxs)
 			bay_lrp_rob, fail_lrp_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx][failed_idxs], 
 														 adversarial_heatmaps=bay_attack_lrp[samp_idx][failed_idxs], 
 														 topk=topk, method=lrp_robustness_method)
@@ -211,7 +210,7 @@ for layer_idx in range(n_layers):
 ### Plots
 
 savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                      	  method=args.lrp_method)
+                      	  lrp_method=args.lrp_method)
 
 filename=args.rule+"_lrp_robustness_"+m["dataset"]+"_images="+str(n_inputs)+\
 		  "_samples="+str(n_samples)+"_pxls="+str(topk)+"_atk="+str(args.attack_method)

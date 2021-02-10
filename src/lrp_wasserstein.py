@@ -1,8 +1,11 @@
+### TODO
+
 import os
 import torch
 import argparse
 import numpy as np
 import torchvision
+from scipy.stats import wasserstein_distance
 
 from utils.data import *
 from utils.networks import *
@@ -33,7 +36,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
-n_samples_list=[50]
+n_samples_list=[10, 50]
 n_inputs=100 if args.debug else args.n_inputs
 topk=200 if args.debug else args.topk
 
@@ -101,18 +104,14 @@ mode_attack = load_attack(method=args.attack_method, model_savedir=model_savedir
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
 
-succ_wass_dist_layers=[]
-fail_wass_dist_layers=[]
-succ_bay_wass_dist_layers=[]
-fail_bay_wass_dist_layers=[]
-succ_mode_dist_layers=[]
-fail_mode_dist_layers=[]
+bay_wass_dist_layers=[]
+mode_wass_dist_layers=[]
 
 for layer_idx in range(detnet.n_layers):
 
 	layer_idx+=1
 	savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-	                          layer_idx=layer_idx, method=args.lrp_method)
+	                          layer_idx=layer_idx, lrp_method=args.lrp_method)
 
 	### Load explanations
 
@@ -148,104 +147,75 @@ for layer_idx in range(detnet.n_layers):
 
 			mode_attack_lrp[samp_idx+1][im_idx] = normalize(mode_attack_lrp[samp_idx+1][im_idx])
 
-	### Evaluate explanations
+	### Explanations robustness
 
-	det_preds, det_atk_preds, det_softmax_robustness, det_successful_idxs, det_failed_idxs = evaluate_attack(net=detnet, 
-				x_test=images, x_attack=det_attack, y_test=y_test, device=args.device, return_classification_idxs=True)
 	det_lrp_robustness, det_lrp_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp, 
-												adversarial_heatmaps=det_attack_lrp, 
-												  topk=topk, method=lrp_robustness_method)
+														  adversarial_heatmaps=det_attack_lrp, 
+														  topk=topk, method=lrp_robustness_method)
 
-	succ_wass_dist = lrp_wasserstein_distance(det_lrp[det_successful_idxs], det_attack_lrp[det_successful_idxs], 
-											  det_lrp_pxl_idxs)
-
-	fail_wass_dist = lrp_wasserstein_distance(det_lrp[det_failed_idxs], det_attack_lrp[det_failed_idxs], 
-											  det_lrp_pxl_idxs)
-
-	bay_softmax_robustness=[]
-	bay_successful_idxs=[]
-	bay_failed_idxs=[]
 	bay_lrp_robustness=[]
 	bay_lrp_pxl_idxs=[]
-	bay_preds=[]
-	bay_atk_preds=[]
 
 	for samp_idx, n_samples in enumerate(n_samples_list):
 
-		preds, atk_preds, softmax_rob, successf_idxs, failed_idxs = evaluate_attack(net=bayesnet, x_test=images, 
-								x_attack=bay_attack[samp_idx],
-							   y_test=y_test, device=args.device, n_samples=n_samples, return_classification_idxs=True)
-		bay_softmax_robustness.append(softmax_rob.detach().cpu().numpy())
-		bay_successful_idxs.append(successf_idxs)
-		bay_failed_idxs.append(failed_idxs)
-		bay_preds.append(preds)
-		bay_atk_preds.append(atk_preds)
+		lrp_rob, pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx], 
+												   adversarial_heatmaps=bay_attack_lrp[samp_idx], 
+												   topk=topk, method=lrp_robustness_method)
+		bay_lrp_robustness.append(lrp_rob)
+		bay_lrp_pxl_idxs.append(pxl_idxs)
 
-		bay_lrp_rob, lrp_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx], 
-													  adversarial_heatmaps=bay_attack_lrp[samp_idx], 
+	mode_lrp_robustness=[]
+	mode_lrp_pxl_idxs=[]
+
+	for samp_idx, n_samples in enumerate(n_samples_list):
+
+		lrp_rob, pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
+														  adversarial_heatmaps=mode_attack_lrp[samp_idx], 
+														  topk=topk, method=lrp_robustness_method)
+
+		mode_lrp_robustness.append(lrp_rob)
+		mode_lrp_pxl_idxs.append(pxl_idxs)
+
+
+	lrp_rob, pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp,
+													  adversarial_heatmaps=mode_attack_lrp[samp_idx+1], 
 													  topk=topk, method=lrp_robustness_method)
-		bay_lrp_robustness.append(bay_lrp_rob)
-		bay_lrp_pxl_idxs.append(lrp_pxl_idxs)
 
-	succ_bay_wass_dist=[]
-	fail_bay_wass_dist=[]
+	mode_lrp_robustness.append(lrp_rob)
+	mode_lrp_pxl_idxs.append(pxl_idxs)
+
+
+	### Compute Wass distances 
+
+	bay_wass_dist = []
+	mode_wass_dist = []
+
 	for samp_idx, n_samples in enumerate(n_samples_list):
 
-		succ_im_idxs = bay_successful_idxs[samp_idx]
-		succ_bay_wass_dist.append(lrp_wasserstein_distance(bay_lrp[samp_idx][succ_im_idxs],
-														   bay_attack_lrp[samp_idx][succ_im_idxs], 
-														   bay_lrp_pxl_idxs[samp_idx]))
+		bay_wass_dist.append(wasserstein_distance(det_lrp_robustness, bay_lrp_robustness[samp_idx]))
 
-		failed_im_idxs = bay_failed_idxs[samp_idx]
-		fail_bay_wass_dist.append(lrp_wasserstein_distance(bay_lrp[samp_idx][failed_im_idxs], 
-														   bay_attack_lrp[samp_idx][failed_im_idxs], 
-														   bay_lrp_pxl_idxs[samp_idx]))
+		mode_wass_dist.append(wasserstein_distance(det_lrp_robustness, mode_lrp_robustness[samp_idx]))
 
-	succ_wass_dist=np.array(succ_wass_dist)
-	fail_wass_dist=np.array(fail_wass_dist)
-	succ_bay_wass_dist=np.array(succ_bay_wass_dist)
-	fail_bay_wass_dist=np.array(fail_bay_wass_dist)
+	mode_wass_dist.append(wasserstein_distance(det_lrp_robustness, mode_lrp_robustness[samp_idx]))
 
-	mode_preds, mode_atk_preds, mode_softmax_robustness, mode_successful_idxs, mode_failed_idxs = evaluate_attack(net=bayesnet, 
-															   x_test=images, x_attack=mode_attack, avg_posterior=True,
-															   y_test=y_test, device=args.device, n_samples=n_samples, 
-															   return_classification_idxs=True)
+	bay_wass_dist_layers.append(np.array(bay_wass_dist))
+	mode_wass_dist_layers.append(np.array(mode_wass_dist))
 
-	mode_attack_lrp = mode_attack_lrp[-1] # posterior mode eval
 
-	mode_lrp_robustness, mode_lrp_pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
-													adversarial_heatmaps=mode_attack_lrp, 
-													topk=topk, method=lrp_robustness_method)
-	mode_softmax_robustness = mode_softmax_robustness.detach().cpu().numpy()
-
-	succ_mode_dist = lrp_wasserstein_distance(mode_lrp[mode_successful_idxs], mode_attack_lrp[mode_successful_idxs], 
-											  mode_lrp_pxl_idxs)
-
-	fail_mode_dist = lrp_wasserstein_distance(mode_lrp[mode_failed_idxs], mode_attack_lrp[mode_failed_idxs], 
-											  mode_lrp_pxl_idxs)
-
-	succ_wass_dist_layers.append(succ_wass_dist)
-	fail_wass_dist_layers.append(fail_wass_dist)
-	succ_bay_wass_dist_layers.append(succ_bay_wass_dist)
-	fail_bay_wass_dist_layers.append(fail_bay_wass_dist)
-	succ_mode_dist_layers.append(succ_mode_dist)
-	fail_mode_dist_layers.append(fail_mode_dist)
+bay_wass_dist_layers = np.array(bay_wass_dist_layers)
+mode_wass_dist_layers = np.array(mode_wass_dist_layers)
 
 ### Plots
 
-savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, method=args.lrp_method)
+savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, lrp_method=args.lrp_method)
 
 filename=args.rule+"_lrp_wasserstein_"+m["dataset"]+"_images="+str(n_inputs)+\
 		 "_pxls="+str(topk)+"_atk="+str(args.attack_method)+"_layeridx="+str(layer_idx)
 if args.normalize:
 	filename=filename+"_norm"
 
-plot_lrp.plot_wasserstein_dist(det_successful_atks_wass_dist=succ_wass_dist_layers, 
-							   det_failed_atks_wass_dist=fail_wass_dist_layers, 
-							   bay_successful_atks_wass_dist=succ_bay_wass_dist_layers, 
-							   bay_failed_atks_wass_dist=fail_bay_wass_dist_layers,
-							   mode_successful_atks_wass_dist=succ_mode_dist_layers,
-							   mode_failed_atks_wass_dist=fail_mode_dist_layers,
+plot_lrp.plot_wasserstein_dist(bay_wass_dist_layers=bay_wass_dist_layers, 
+							   mode_wass_dist_layers=mode_wass_dist_layers,
 							   increasing_n_samples=n_samples_list, 
 							   filename="wass_"+filename, 
 							   savedir=savedir)

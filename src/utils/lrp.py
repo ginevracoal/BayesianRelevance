@@ -3,6 +3,7 @@ import lrp
 import copy
 import torch
 import numpy as np
+from torch import nn
 from tqdm import tqdm
 import torch.nn.functional as nnf
 from torchvision import transforms
@@ -67,6 +68,15 @@ def compute_explanations(x_test, network, rule, method, n_samples=None, layer_id
 
 	print("\nLRP layer idx =", layer_idx)
 
+	if layer_idx==-1 or layer_idx==network.n_layers:
+		print("Softmax layer")
+	else:
+		import itertools
+		if hasattr(network, "basenet"):
+			print(nn.Sequential(*list(network.basenet.model.children())[:layer_idx]))
+		else:
+			print(nn.Sequential(*list(network.model.children())[:layer_idx]))
+
 	if n_samples is None or avg_posterior is True:
 
 		explanations = []
@@ -78,7 +88,7 @@ def compute_explanations(x_test, network, rule, method, n_samples=None, layer_id
 			y_hat = network.forward(x.unsqueeze(0), explain=True, rule=rule, layer_idx=layer_idx,
 									avg_posterior=avg_posterior)
 
-			if n_samples is None: # deterministic case
+			if n_samples is None: # deterministic out
 				if layer_idx==-1 or layer_idx==network.n_layers:
 					y_hat = nnf.softmax(y_hat, dim=-1)
 
@@ -110,10 +120,6 @@ def compute_explanations(x_test, network, rule, method, n_samples=None, layer_id
 				# Backward pass (compute explanation)
 				y_hat.backward()
 				lrp = x_copy.grad.squeeze(1)
-
-				# if normalize:
-				# 	lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
-
 				explanations.append(lrp)
 
 		elif method=="avg_heatmap":
@@ -137,13 +143,8 @@ def compute_explanations(x_test, network, rule, method, n_samples=None, layer_id
 					# Backward pass (compute explanation)
 					y_hat.backward()
 					lrp = x_copy.grad.squeeze(1)
-
-					# if normalize:
-					# 	lrp = 2*(lrp-lrp.min())/(lrp.max()-lrp.min())-1
-
 					post_explanations.append(lrp)
 
-				# print(torch.stack(post_explanations).mean(0).min(),torch.stack(post_explanations).mean(0).max())
 				explanations.append(torch.stack(post_explanations).mean(0))
 
 	explanations = torch.stack(explanations) 
@@ -265,15 +266,19 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method):
 	return np.array(robustness), np.array(chosen_pxl_idxs)
 
 
-def lrp_wasserstein_distance(original_heatmaps, adversarial_heatmaps, pxl_idxs=None):
+# def lrp_wasserstein_distance(rob_distr1, rob_distr2, pxl_idxs):
 
-	flat_lrp = np.array(original_heatmaps.reshape(*original_heatmaps.shape[:1], -1).detach().cpu().numpy())
-	flat_attack_lrp = np.array(adversarial_heatmaps.reshape(*adversarial_heatmaps.shape[:1], -1).detach().cpu().numpy())
+# 	print(original_heatmaps.shape, adversarial_heatmaps.shape)
 
-	wass_dist = []
+# 	flat_lrp = np.array(original_heatmaps.reshape(*original_heatmaps.shape[:1], -1))
+# 	flat_attack_lrp = np.array(adversarial_heatmaps.reshape(*adversarial_heatmaps.shape[:1], -1))
 
-	for im_idx in range(len(original_heatmaps)):
-		im_pxl_idxs = pxl_idxs[im_idx]
-		wass_dist.append(wasserstein_distance(flat_lrp[im_idx, im_pxl_idxs], flat_attack_lrp[im_idx, im_pxl_idxs]))
+# 	wass_dist = []
+
+# 	for im_idx in range(len(original_heatmaps)):
+# 		im_pxl_idxs = pxl_idxs[im_idx]
+# 		print(flat_lrp.shape, im_pxl_idxs)
+# 		exit()
+# 		wass_dist.append(wasserstein_distance(flat_lrp[im_idx, im_pxl_idxs], flat_attack_lrp[im_idx, im_pxl_idxs]))
 	
-	return np.array(wass_dist)
+# 	return np.array(wass_dist)

@@ -52,19 +52,19 @@ def plot_explanations(images, explanations, rule, savedir, filename, layer_idx=-
 
 def relevant_subset(images, pxl_idxs, lrp_method):
 
-    flat_images = images.reshape(*images.shape[:2], -1)
+    flat_images = images.reshape(*images.shape[:1], -1)
     images_rel = np.zeros(flat_images.shape)
 
     if lrp_method=="imagewise":
         # different selection of pixels for each image
 
         for image_idx, im_pxl_idxs in enumerate(pxl_idxs):
-            images_rel[image_idx,:,im_pxl_idxs] = flat_images[image_idx,:,im_pxl_idxs]
+            images_rel[image_idx,im_pxl_idxs] = flat_images[image_idx,im_pxl_idxs]
 
     elif lrp_method=="pixelwise":
         # same pxls for all the images
         
-        images_rel[:,:,pxl_idxs] = flat_images[:,:,pxl_idxs]
+        images_rel[:,pxl_idxs] = flat_images[:,pxl_idxs]
 
     else:
         raise NotImplementedError
