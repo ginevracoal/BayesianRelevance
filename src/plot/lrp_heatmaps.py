@@ -50,18 +50,18 @@ def plot_explanations(images, explanations, rule, savedir, filename, layer_idx=-
     os.makedirs(savedir, exist_ok=True)
     plt.savefig(os.path.join(savedir,filename+".png"))
 
-def relevant_subset(images, pxl_idxs, lrp_method):
+def relevant_subset(images, pxl_idxs, lrp_rob_method):
 
     flat_images = images.reshape(*images.shape[:1], -1)
     images_rel = np.zeros(flat_images.shape)
 
-    if lrp_method=="imagewise":
+    if lrp_rob_method=="imagewise":
         # different selection of pixels for each image
 
         for image_idx, im_pxl_idxs in enumerate(pxl_idxs):
             images_rel[image_idx,im_pxl_idxs] = flat_images[image_idx,im_pxl_idxs]
 
-    elif lrp_method=="pixelwise":
+    elif lrp_rob_method=="pixelwise":
         # same pxls for all the images
         
         images_rel[:,pxl_idxs] = flat_images[:,pxl_idxs]
@@ -74,7 +74,7 @@ def relevant_subset(images, pxl_idxs, lrp_method):
 
 def plot_attacks_explanations(images, explanations, attacks, attacks_explanations, 
                               predictions, attacks_predictions, successful_attacks_idxs, failed_attacks_idxs,
-                              labels, pxl_idxs, lrp_method, rule, savedir, filename, layer_idx=-1):
+                              labels, pxl_idxs, lrp_rob_method, rule, savedir, filename, layer_idx=-1):
 
     if len(successful_attacks_idxs)<3 or len(failed_attacks_idxs)<3:
         return None
@@ -85,6 +85,7 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     chosen_successful_idxs = np.random.choice(successful_attacks_idxs, 3)
     chosen_failed_idxs =  np.random.choice(failed_attacks_idxs, 3)
     im_idxs = np.concatenate([chosen_successful_idxs, chosen_failed_idxs])
+    print("im_idxs =", im_idxs)
 
     if DEBUG:
         print("successful_attacks_idxs", successful_attacks_idxs)
@@ -105,12 +106,12 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
         print(images.shape, "!=", explanations.shape)
         raise ValueError
 
-    selected_pxl_idxs = pxl_idxs if lrp_method=="pixelwise" else pxl_idxs[im_idxs]
+    selected_pxl_idxs = pxl_idxs if lrp_rob_method=="pixelwise" else pxl_idxs[im_idxs]
 
-    images_rel = relevant_subset(images, selected_pxl_idxs, lrp_method)
-    attacks_rel = relevant_subset(attacks, selected_pxl_idxs, lrp_method)
-    explanations = relevant_subset(explanations, selected_pxl_idxs, lrp_method)
-    attacks_explanations = relevant_subset(attacks_explanations, selected_pxl_idxs, lrp_method)
+    images_rel = relevant_subset(images, selected_pxl_idxs, lrp_rob_method)
+    attacks_rel = relevant_subset(attacks, selected_pxl_idxs, lrp_rob_method)
+    explanations = relevant_subset(explanations, selected_pxl_idxs, lrp_rob_method)
+    attacks_explanations = relevant_subset(attacks_explanations, selected_pxl_idxs, lrp_rob_method)
 
     images_rel = np.ma.masked_where(images_rel == 0., images_rel)
     attacks_rel = np.ma.masked_where(attacks_rel == 0., attacks_rel)

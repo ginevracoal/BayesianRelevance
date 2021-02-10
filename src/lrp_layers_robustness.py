@@ -26,7 +26,7 @@ from attacks.run_attacks import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
-parser.add_argument("--topk", default=300, type=int, help="Top k most relevant pixels.")
+parser.add_argument("--topk", default=100, type=int, help="Top k most relevant pixels.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
@@ -82,13 +82,17 @@ else:
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
 
+det_lrp_robustness_layers=[]
 det_successful_lrp_robustness_layers=[]
 det_failed_lrp_robustness_layers=[]
+bay_lrp_robustness_layers=[]
 bay_successful_lrp_robustness_layers=[]
 bay_failed_lrp_robustness_layers=[]
 
+det_norm_layers=[]
 det_successful_norm_layers=[]
 det_failed_norm_layers=[]
+bay_norm_layers=[]
 bay_successful_norm_layers=[]
 bay_failed_norm_layers=[]
 
@@ -136,6 +140,7 @@ for layer_idx in detnet.learnable_layers_idxs:
 																	adversarial_heatmaps=det_attack_lrp[det_failed_idxs], 
 																	topk=topk, method=lrp_robustness_method)
 	
+	det_norm = lrp_distances(det_lrp, det_attack_lrp, axis_norm=1).detach().cpu().numpy()
 	det_successful_norm = lrp_distances(det_lrp[det_successful_idxs], det_attack_lrp[det_successful_idxs], 
 										axis_norm=1).detach().cpu().numpy()
 	det_failed_norm = lrp_distances(det_lrp[det_failed_idxs], det_attack_lrp[det_failed_idxs], 
@@ -154,6 +159,7 @@ for layer_idx in detnet.learnable_layers_idxs:
 	fail_bay_lrp_robustness=[]
 	fail_bay_lrp_pxl_idxs=[]
 
+	bay_norm=[]
 	bay_successful_norm=[]
 	bay_failed_norm=[]
 
@@ -162,30 +168,33 @@ for layer_idx in detnet.learnable_layers_idxs:
 			preds, atk_preds, softmax_rob, successf_idxs, failed_idxs = evaluate_attack(net=bayesnet, x_test=images, 
 														 x_attack=bay_attack[samp_idx], y_test=y_test, device=args.device, 
 														 n_samples=n_samples, return_classification_idxs=True)
+			bay_preds.append(preds)
+			bay_atk_preds.append(atk_preds)
 			bay_softmax_robustness.append(softmax_rob.detach().cpu().numpy())
 			bay_successful_idxs.append(successf_idxs)
 			bay_failed_idxs.append(failed_idxs)
-			bay_preds.append(preds)
-			bay_atk_preds.append(atk_preds)
 
-			bay_lrp_rob, lrp_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx], 
-													 adversarial_heatmaps=bay_attack_lrp[samp_idx], 
-													 topk=topk, method=lrp_robustness_method)
-			bay_lrp_robustness.append(bay_lrp_rob)
-			bay_lrp_pxl_idxs.append(lrp_pxl_idxs)
+			robustness, pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx], 
+												 adversarial_heatmaps=bay_attack_lrp[samp_idx], 
+												 topk=topk, method=lrp_robustness_method)
+			bay_lrp_robustness.append(robustness)
+			bay_lrp_pxl_idxs.append(pxl_idxs)
 
-			bay_lrp_rob, succ_lrp_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx][successf_idxs], 
-														 adversarial_heatmaps=bay_attack_lrp[samp_idx][successf_idxs], 
-														 topk=topk, method=lrp_robustness_method)
-			succ_bay_lrp_robustness.append(bay_lrp_rob)
-			succ_bay_lrp_pxl_idxs.append(succ_lrp_pxl_idxs)
+			robustness, pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx][successf_idxs], 
+												 adversarial_heatmaps=bay_attack_lrp[samp_idx][successf_idxs], 
+												 topk=topk, method=lrp_robustness_method)
+			succ_bay_lrp_robustness.append(robustness)
+			succ_bay_lrp_pxl_idxs.append(pxl_idxs)
 
-			bay_lrp_rob, fail_lrp_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx][failed_idxs], 
-														 adversarial_heatmaps=bay_attack_lrp[samp_idx][failed_idxs], 
-														 topk=topk, method=lrp_robustness_method)
-			fail_bay_lrp_robustness.append(bay_lrp_rob)
-			fail_bay_lrp_pxl_idxs.append(fail_lrp_pxl_idxs)
+			robustness, pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx][failed_idxs], 
+												 adversarial_heatmaps=bay_attack_lrp[samp_idx][failed_idxs], 
+												 topk=topk, method=lrp_robustness_method)
+			fail_bay_lrp_robustness.append(robustness)
+			fail_bay_lrp_pxl_idxs.append(pxl_idxs)
 
+			bay_norm.append(lrp_distances(bay_lrp[samp_idx], 
+											bay_attack_lrp[samp_idx], 
+											axis_norm=1).detach().cpu().numpy())
 			bay_successful_norm.append(lrp_distances(bay_lrp[samp_idx][successf_idxs], 
 													bay_attack_lrp[samp_idx][successf_idxs], 
 													axis_norm=1).detach().cpu().numpy())
@@ -193,11 +202,15 @@ for layer_idx in detnet.learnable_layers_idxs:
 												bay_attack_lrp[samp_idx][failed_idxs], 
 												axis_norm=1).detach().cpu().numpy())
 
+	det_lrp_robustness_layers.append(det_lrp_robustness)
+	bay_lrp_robustness_layers.append(bay_lrp_robustness)
 	det_successful_lrp_robustness_layers.append(succ_det_lrp_robustness)
 	det_failed_lrp_robustness_layers.append(fail_det_lrp_robustness)
 	bay_successful_lrp_robustness_layers.append(succ_bay_lrp_robustness)
 	bay_failed_lrp_robustness_layers.append(fail_bay_lrp_robustness)
 
+	det_norm_layers.append(det_norm)
+	bay_norm_layers.append(bay_norm)
 	det_successful_norm_layers.append(det_successful_norm)
 	det_failed_norm_layers.append(det_failed_norm)
 	bay_successful_norm_layers.append(bay_successful_norm)
@@ -216,27 +229,29 @@ if args.normalize:
 	filename+="_norm"
 
 plot_lrp.lrp_layers_robustness_distributions(
-										det_successful_lrp_robustness=det_successful_lrp_robustness_layers,
-										det_failed_lrp_robustness=det_failed_lrp_robustness_layers,
-										bay_successful_lrp_robustness=bay_successful_lrp_robustness_layers,
-										bay_failed_lrp_robustness=bay_failed_lrp_robustness_layers,
-										n_samples_list=n_samples_list,
-										n_original_images=len(images),
-										n_learnable_layers=detnet.n_learnable_layers,
-										savedir=savedir, 
-										filename="dist_"+filename+"_layers")
+						det_lrp_robustness=det_lrp_robustness_layers,
+						det_successful_lrp_robustness=det_successful_lrp_robustness_layers,
+						det_failed_lrp_robustness=det_failed_lrp_robustness_layers,
+						bay_lrp_robustness=bay_lrp_robustness_layers,
+						bay_successful_lrp_robustness=bay_successful_lrp_robustness_layers,
+						bay_failed_lrp_robustness=bay_failed_lrp_robustness_layers,
+						n_samples_list=n_samples_list,
+						n_original_images=len(images),
+						learnable_layers_idxs=detnet.learnable_layers_idxs,
+						savedir=savedir, 
+						filename="dist_"+filename+"_layers")
 
 plot_lrp.lrp_layers_robustness_scatterplot(
-											det_successful_lrp_robustness=det_successful_lrp_robustness_layers,
-											det_failed_lrp_robustness=det_failed_lrp_robustness_layers,
-											bay_successful_lrp_robustness=bay_successful_lrp_robustness_layers,
-											bay_failed_lrp_robustness=bay_failed_lrp_robustness_layers,
-											det_successful_lrp_norm=det_successful_norm_layers,
-											det_failed_lrp_norm=det_failed_norm_layers,
-											bay_successful_lrp_norm=bay_successful_norm_layers,
-											bay_failed_lrp_norm=bay_failed_norm_layers,
-											n_samples_list=n_samples_list,
-											n_original_images=len(images),
-											n_learnable_layers=detnet.n_learnable_layers,
-											savedir=savedir, 
-											filename="scatterplot_"+filename+"_layers")
+						det_successful_lrp_robustness=det_successful_lrp_robustness_layers,
+						det_failed_lrp_robustness=det_failed_lrp_robustness_layers,
+						bay_successful_lrp_robustness=bay_successful_lrp_robustness_layers,
+						bay_failed_lrp_robustness=bay_failed_lrp_robustness_layers,
+						det_successful_lrp_norm=det_successful_norm_layers,
+						det_failed_lrp_norm=det_failed_norm_layers,
+						bay_successful_lrp_norm=bay_successful_norm_layers,
+						bay_failed_lrp_norm=bay_failed_norm_layers,
+						n_samples_list=n_samples_list,
+						n_original_images=len(images),
+						n_learnable_layers=detnet.n_learnable_layers,
+						savedir=savedir, 
+						filename="scatterplot_"+filename+"_layers")

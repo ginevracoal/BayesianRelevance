@@ -287,6 +287,7 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
     ax[2,0].set_ylabel('LRP robustness')
 
     tot_num_images = len(adversarial_robustness)
+
     sns.scatterplot(x=adversarial_robustness, y=lrp_robustness, ax=ax[1,1], label='deterministic', alpha=alpha)
     sns.scatterplot(x=mode_adversarial_robustness, y=mode_lrp_robustness, label='posterior mode', 
                     ax=ax[1,1], alpha=alpha)
@@ -479,50 +480,83 @@ def plot_wasserstein_dist(bay_wass_dist_layers, mode_wass_dist_layers, increasin
 #     plt.close(fig)
 
 
-def lrp_layers_robustness_distributions(det_successful_lrp_robustness, det_failed_lrp_robustness,
-                                       bay_successful_lrp_robustness, bay_failed_lrp_robustness,
-                                       n_samples_list, n_original_images, n_learnable_layers, savedir, filename):
+def lrp_layers_robustness_distributions(
+        det_lrp_robustness, det_successful_lrp_robustness, det_failed_lrp_robustness,
+        bay_lrp_robustness, bay_successful_lrp_robustness, bay_failed_lrp_robustness,
+        n_samples_list, n_original_images, learnable_layers_idxs, savedir, filename):
 
+    ### Successful vs failed
+    
     os.makedirs(savedir, exist_ok=True) 
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
-    fig, ax = plt.subplots(n_learnable_layers, 2, figsize=(10, 8), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(len(learnable_layers_idxs), 2, figsize=(10, 6), sharex=True, dpi=150, 
+                            facecolor='w', edgecolor='k') 
     fig.tight_layout()
     
     fig.subplots_adjust(top=0.98)
     fig.text(0.3, 0.98, "Successful attacks", ha='center')
     fig.text(0.75, 0.98, "Failed attacks", ha='center')
 
-    for layer_idx in range(n_learnable_layers):
+    for row_idx, layer_idx in enumerate(learnable_layers_idxs):
 
-        sns.distplot(det_successful_lrp_robustness[layer_idx], ax=ax[layer_idx,0], label="deterministic",  kde=True)
+        sns.distplot(det_successful_lrp_robustness[row_idx], ax=ax[row_idx,0], 
+                    label="deterministic",  kde=True)
         
         for samp_idx, n_samples in enumerate(n_samples_list):
-            sns.distplot(bay_successful_lrp_robustness[layer_idx][samp_idx], ax=ax[layer_idx,0], 
-                        label="bayesian samp="+str(n_samples), kde=True)
+            sns.distplot(bay_successful_lrp_robustness[row_idx][samp_idx], ax=ax[row_idx,0], 
+                        label=f"bayesian {n_samples} samples", kde=True)
 
-        sns.distplot(det_failed_lrp_robustness[layer_idx], ax=ax[layer_idx,1], kde=True)
+        sns.distplot(det_failed_lrp_robustness[row_idx], ax=ax[row_idx,1], kde=True)
         
         for samp_idx, n_samples in enumerate(n_samples_list):
-            sns.distplot(bay_failed_lrp_robustness[layer_idx][samp_idx], ax=ax[layer_idx,1], kde=True)
+            sns.distplot(bay_failed_lrp_robustness[row_idx][samp_idx], ax=ax[row_idx,1], kde=True)
     
-        ax[layer_idx,1].yaxis.set_label_position("right")
-        ax[layer_idx,1].set_ylabel("idx="+str(layer_idx+1), rotation=270, labelpad=15)
+        ax[row_idx,1].yaxis.set_label_position("right")
+        ax[row_idx,1].set_ylabel("idx="+str(layer_idx), rotation=270, labelpad=15)
 
-    ax[n_learnable_layers-1,0].set_xlabel("LRP robustness")
-    ax[n_learnable_layers-1,1].set_xlabel("LRP robustness")
-    # ax[n_learnable_layers-1,2].set_xlabel("LRP robustness")
-    # ax[n_learnable_layers-1,3].set_xlabel("LRP robustness")
-
-    # ax[n_learnable_layers-1,0].set_xlim(-0.01,1.01)
-    # ax[n_learnable_layers-1,1].set_xlim(-0.01,1.01)
+    ax[len(learnable_layers_idxs)-1,0].set_xlabel("LRP robustness")
+    ax[len(learnable_layers_idxs)-1,1].set_xlabel("LRP robustness")
 
     ax[0,0].legend(loc="upper left")
-    plt.setp(ax[0,0].get_legend().get_texts(), fontsize='8')
+    # plt.setp(ax[0,0].get_legend().get_texts(), fontsize='8')
     plt.legend(frameon=False)
     plt.subplots_adjust(hspace=0.1)
-    fig.savefig(os.path.join(savedir, filename+".png"))
+    fig.savefig(os.path.join(savedir, filename+"_succ_vs_failed.png"))
+    plt.close(fig)
+
+    ### All images
+
+    os.makedirs(savedir, exist_ok=True) 
+
+    sns.set_style("darkgrid")
+    matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
+    fig, ax = plt.subplots(len(learnable_layers_idxs), 1, figsize=(5, 5), sharex=True, dpi=150, 
+                            facecolor='w', edgecolor='k') 
+    fig.tight_layout()
+    
+    fig.subplots_adjust(bottom=0.1)
+
+    for row_idx, layer_idx in enumerate(learnable_layers_idxs):
+
+        sns.distplot(det_lrp_robustness[row_idx], ax=ax[row_idx], label="deterministic",  kde=True)
+        
+        for samp_idx, n_samples in enumerate(n_samples_list):
+            sns.distplot(bay_lrp_robustness[row_idx][samp_idx], ax=ax[row_idx], 
+                        label=f"bayesian {n_samples} samples", kde=True)
+        
+        ax[row_idx].yaxis.set_label_position("right")
+        ax[row_idx].set_ylabel("layer idx="+str(layer_idx), rotation=270, labelpad=15, weight='bold')
+
+    ax[len(learnable_layers_idxs)-1].set_xlabel("LRP robustness")
+    ax[len(learnable_layers_idxs)-1].set_xlabel("LRP robustness")
+
+    ax[0].legend(loc="upper left")
+    # plt.setp(ax[0].get_legend().get_texts(), fontsize='8')
+    # plt.legend(frameon=False)
+    # plt.subplots_adjust(hspace=0.1)
+    fig.savefig(os.path.join(savedir, filename+"_all_images.png"))
     plt.close(fig)
 
 
@@ -531,6 +565,8 @@ def lrp_layers_robustness_scatterplot(det_successful_lrp_robustness, det_failed_
                                        det_successful_lrp_norm, det_failed_lrp_norm,
                                        bay_successful_lrp_norm, bay_failed_lrp_norm,
                                        n_samples_list, n_original_images, n_learnable_layers, savedir, filename):
+
+    ### Successful vs failed
 
     os.makedirs(savedir, exist_ok=True) 
 
@@ -560,7 +596,7 @@ def lrp_layers_robustness_scatterplot(det_successful_lrp_robustness, det_failed_
 
             sns.scatterplot(bay_successful_lrp_robustness[layer_idx][samp_idx], 
                             bay_successful_lrp_norm[layer_idx][samp_idx], 
-                            ax=ax[layer_idx,0], label="bayesian samp="+str(n_samples), 
+                            ax=ax[layer_idx,0], label=f"bayesian {n_samples} samples", 
                             alpha=alpha, legend=legend)
 
         sns.scatterplot(det_failed_lrp_robustness[layer_idx], 
@@ -591,3 +627,4 @@ def lrp_layers_robustness_scatterplot(det_successful_lrp_robustness, det_failed_
 
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)
+

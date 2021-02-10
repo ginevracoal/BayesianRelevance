@@ -39,7 +39,7 @@ def get_lrp_savedir(model_savedir, attack_method, lrp_method, layer_idx=None):#,
     savedir = str(attack_method)+"/"+str(lrp_method)+"_lrp/"
     # savedir += "/lrp_norm/" if normalize else "/lrp/"
 
-    if layer_idx:
+    if layer_idx is not None:
         savedir += "pkl_layer_idx="+str(layer_idx)
 
     return os.path.join(model_savedir, savedir)

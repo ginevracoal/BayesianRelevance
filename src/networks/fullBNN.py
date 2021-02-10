@@ -40,10 +40,10 @@ fullBNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation
                              "lr":0.001, "hmc_samples":None, "warmup":None},
                     "model_2":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
-                             "lr":None, "hmc_samples":50, "warmup":100}, 
+                             "lr":None, "hmc_samples":100, "warmup":100}, 
                     "model_3":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
                              "architecture":"fc2", "inference":"hmc", "epochs":None,
-                             "lr":None, "hmc_samples":50, "warmup":100},
+                             "lr":None, "hmc_samples":100, "warmup":100},
                     }  
 
 
