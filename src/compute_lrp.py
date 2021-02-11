@@ -34,7 +34,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 n_inputs=100 if args.debug else args.n_inputs
-n_samples_list=[10, 50]
+n_samples_list=[10,50]
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
@@ -62,7 +62,6 @@ if args.model=="fullBNN":
 
     bayesnet = BNN(m["dataset"], *list(m.values())[1:], inp_shape, num_classes)
     bayesnet.load(savedir=model_savedir, device=args.device)
-
 
 elif args.model=="redBNN":
 
@@ -108,13 +107,14 @@ for layer_idx in detnet.learnable_layers_idxs:
     ### Deterministic explanations
 
     if args.load:
-        det_lrp = load_from_pickle(path=savedir, layer_idx=layer_idx, filename="det_lrp")
-        det_attack_lrp = load_from_pickle(path=savedir, layer_idx=layer_idx, filename="det_attack_lrp")
+        det_lrp = load_from_pickle(path=savedir, filename="det_lrp")
+        det_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
 
     else:
 
         det_lrp = compute_explanations(images, detnet, layer_idx=layer_idx, rule=args.rule, method=args.lrp_method)
-        det_attack_lrp = compute_explanations(det_attack, detnet, layer_idx=layer_idx, rule=args.rule, method=args.lrp_method)
+        det_attack_lrp = compute_explanations(det_attack, detnet, layer_idx=layer_idx, rule=args.rule, 
+                                                method=args.lrp_method)
 
         save_to_pickle(det_lrp, path=savedir, filename="det_lrp")
         save_to_pickle(det_attack_lrp, path=savedir, filename="det_attack_lrp")
@@ -162,6 +162,14 @@ for layer_idx in detnet.learnable_layers_idxs:
         mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx,
                                                     n_samples=n_samples, avg_posterior=True, method=args.lrp_method))
         save_to_pickle(mode_attack_lrp[samp_idx+1], path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples))
+
+    n_images = det_lrp.shape[0]
+    if det_attack_lrp.shape[0]!=n_images or bay_lrp[0].shape[0]!=n_inputs or bay_attack_lrp[0].shape[0]!=n_inputs:
+        print("det_lrp.shape[0] =", det_lrp.shape[0])
+        print("det_attack_lrp.shape[0] =", det_attack_lrp.shape[0])
+        print("bay_lrp[0].shape[0] =", bay_lrp[0].shape[0])
+        print("bay_attack_lrp[0].shape[0] =", bay_attack_lrp[0].shape[0])
+        raise ValueError("Inconsistent n_inputs")
 
 ### Plots
 

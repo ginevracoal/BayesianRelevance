@@ -39,7 +39,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
-n_samples_list=[10,50]
+n_samples_list=[100]
 n_inputs=100 if args.debug else args.n_inputs
 topk=args.topk
 
@@ -330,6 +330,7 @@ for layer_idx in detnet.learnable_layers_idxs:
 				savedir=savedir, 
 				filename="dist_"+filename)
 
+	# if layer_idx == detnet.learnable_layers_idxs[-1]:
 	plot_lrp.lrp_robustness_scatterplot(
 				adversarial_robustness=det_softmax_robustness, 
 				bayesian_adversarial_robustness=bay_softmax_robustness,
