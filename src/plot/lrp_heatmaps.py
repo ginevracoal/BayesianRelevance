@@ -16,6 +16,7 @@ from utils.seeding import set_seed
 from utils.lrp import *
 
 relevance_cmap = "RdBu_r"
+DEBUG=False
 
 def plot_explanations(images, explanations, rule, savedir, filename, layer_idx=-1):
 
@@ -75,6 +76,11 @@ def relevant_subset(images, pxl_idxs, lrp_rob_method):
 def plot_attacks_explanations(images, explanations, attacks, attacks_explanations, 
                               predictions, attacks_predictions, successful_attacks_idxs, failed_attacks_idxs,
                               labels, pxl_idxs, lrp_rob_method, rule, savedir, filename, layer_idx=-1):
+
+    if DEBUG:
+        print(images.shape, explanations.shape, attacks.shape, attacks_explanations.shape)
+        print(predictions.shape, attacks_predictions.shape)
+        print(successful_attacks_idxs.shape, failed_attacks_idxs.shape)
 
     if len(successful_attacks_idxs)<3 or len(failed_attacks_idxs)<3:
         return None

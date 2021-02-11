@@ -181,7 +181,7 @@ class baseNN(nn.Module):
         -1 = n_learnable_layers-1 = last learnable layer idx
         0 = -n_learnable_layers = firsy learnable layer idx  
         """
-
+        # if layer_idx is not None:
         if abs(layer_idx)>self.n_layers:
             raise ValueError(f"Max number of available layers is {self.n_layers}")
 

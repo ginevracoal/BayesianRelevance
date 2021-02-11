@@ -23,7 +23,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 n_inputs=100 if args.debug else args.n_inputs
-bayesian_attack_samples=[100]
+bayesian_attack_samples=[10, 50]
 
 print("PyTorch Version: ", torch.__version__)
 
@@ -124,4 +124,3 @@ else:
                          model_savedir=savedir, n_samples=n_samples, atk_mode=True)
         evaluate_attack(net=net, x_test=x_test, x_attack=mode_attack, y_test=y_test, 
                           device=args.device, n_samples=n_samples, avg_posterior=True)
-

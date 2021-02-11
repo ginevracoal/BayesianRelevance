@@ -26,7 +26,6 @@ from attacks.run_attacks import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
-# parser.add_argument("--topk", default=100, type=int, help="Top k most relevant pixels.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
@@ -39,9 +38,8 @@ args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
 n_samples_list=[10,50]
-topk_list = [30]
+topk_list = [10,30]
 n_inputs=100 if args.debug else args.n_inputs
-# topk=args.topk
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
