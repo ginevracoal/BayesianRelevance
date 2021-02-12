@@ -195,11 +195,15 @@ class baseNN(nn.Module):
 
         return layer_idx
 
-    def forward(self, inputs, layer_idx=-1, *args, **kwargs):
+    def forward(self, inputs, layer_idx=-1, softmax=False, *args, **kwargs):
 
         layer_idx = self._set_correct_layer_idx(layer_idx)
 
         preds = nn.Sequential(*list(self.model.children())[:layer_idx])(inputs)
+
+        if softmax:
+            preds = nnf.softmax(preds, dim=-1)
+
         return preds
 
     def get_logits(self, *args, **kwargs):

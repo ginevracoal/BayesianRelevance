@@ -45,9 +45,13 @@ def get_lrp_savedir(model_savedir, attack_method, lrp_method, layer_idx=None):
 
 def get_atk_filename_savedir(attack_method, model_savedir, atk_mode=False, n_samples=None):
 
-    filename = str(attack_method)+"_attackSamp="+str(n_samples)+"_attack" if n_samples else str(attack_method)+"_attack"
     if atk_mode:
-        filename+="_mode"
+        filename = str(attack_method)+"_mode_attack"
+    else:
+        if n_samples:
+            filename = str(attack_method)+"_attackSamp="+str(n_samples)+"_attack" 
+        else:
+            filename = str(attack_method)+"_attack"
 
     savedir = os.path.join(model_savedir, str(attack_method)+"/"+ATK_DIR)
 

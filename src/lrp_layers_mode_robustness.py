@@ -64,6 +64,9 @@ if args.model=="fullBNN":
 
 		m = fullBNN_settings["model_"+str(args.model_idx)]
 
+		if m["inference"]!="svi":
+			raise NotImplementedError
+
 		model_savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
 																model_idx=args.model_idx, debug=args.debug)
 
@@ -107,11 +110,11 @@ for topk in topk_list:
 			bay_lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
 			bay_attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
 
-		mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
+		mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post")
 		mode_attack_lrp=[]
 		for samp_idx, n_samples in enumerate(n_samples_list):
 		    mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
-		mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples)))
+		mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post"))
 
 		n_images = det_lrp.shape[0]
 		if det_attack_lrp.shape[0]!=n_images or bay_lrp[0].shape[0]!=n_inputs or bay_attack_lrp[0].shape[0]!=n_inputs:

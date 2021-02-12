@@ -168,7 +168,8 @@ def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sampl
 
 		for batch_idx, (images, labels) in enumerate(test_loader):
 
-			out = net.forward(images, n_samples=n_samples, sample_idxs=sample_idxs, avg_posterior=avg_posterior)
+			out = net.forward(images, n_samples=n_samples, sample_idxs=sample_idxs, avg_posterior=avg_posterior,
+								softmax=True)
 			original_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
 			original_outputs.append(out)
 
@@ -188,7 +189,8 @@ def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sampl
 		batch_size=0
 
 		for batch_idx, (attacks, labels) in enumerate(attack_loader):
-			out = net.forward(attacks, n_samples=n_samples, sample_idxs=sample_idxs, avg_posterior=avg_posterior)
+			out = net.forward(attacks, n_samples=n_samples, sample_idxs=sample_idxs, avg_posterior=avg_posterior,
+								softmax=True)
 			adversarial_correct += ((out.argmax(-1) == labels.argmax(-1)).sum().item())
 			adversarial_outputs.append(out)
 

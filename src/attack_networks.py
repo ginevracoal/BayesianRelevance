@@ -23,7 +23,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 n_inputs=100 if args.debug else args.n_inputs
-bayesian_attack_samples=[10, 50]
+bayesian_attack_samples=[10, 50]#, 100]
 
 print("PyTorch Version: ", torch.__version__)
 
@@ -40,7 +40,7 @@ if args.model=="baseNN":
     x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], n_inputs=n_inputs)[2:]
 
     savedir = get_model_savedir(model=args.model, dataset=model["dataset"], architecture=model["architecture"], 
-                         baseiters=None, debug=args.debug, model_idx=args.model_idx)
+                                debug=args.debug, model_idx=args.model_idx)
     
     net = baseNN(inp_shape, out_size, *list(model.values()))
     net.load(savedir=savedir, device=args.device)
@@ -101,10 +101,11 @@ else:
             evaluate_attack(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
                               device=args.device, n_samples=n_samples)
 
-        mode_attack = load_attack(method=args.attack_method, model_savedir=savedir, 
-                                  n_samples=n_samples, atk_mode=True)
-        evaluate_attack(net=net, x_test=x_test, x_attack=mode_attack, y_test=y_test, 
-                          device=args.device, n_samples=n_samples, avg_posterior=True)
+        if m["inference"]=="svi":
+            mode_attack = load_attack(method=args.attack_method, model_savedir=savedir, 
+                                      n_samples=n_samples, atk_mode=True)
+            evaluate_attack(net=net, x_test=x_test, x_attack=mode_attack, y_test=y_test, 
+                              device=args.device, n_samples=n_samples, avg_posterior=True)
 
     else:
         batch_size = 4000 if m["inference"] == "hmc" else 128 
@@ -118,9 +119,10 @@ else:
             evaluate_attack(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
                               device=args.device, n_samples=n_samples)
 
-        mode_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device,
-                          method=args.attack_method, n_samples=n_samples, avg_posterior=True)
-        save_attack(x_test, mode_attack, method=args.attack_method,   
-                         model_savedir=savedir, n_samples=n_samples, atk_mode=True)
-        evaluate_attack(net=net, x_test=x_test, x_attack=mode_attack, y_test=y_test, 
-                          device=args.device, n_samples=n_samples, avg_posterior=True)
+        if m["inference"]=="svi":
+            mode_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device,
+                              method=args.attack_method, n_samples=n_samples, avg_posterior=True)
+            save_attack(x_test, mode_attack, method=args.attack_method,   
+                             model_savedir=savedir, n_samples=n_samples, atk_mode=True)
+            evaluate_attack(net=net, x_test=x_test, x_attack=mode_attack, y_test=y_test, 
+                              device=args.device, n_samples=n_samples, avg_posterior=True)

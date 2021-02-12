@@ -31,14 +31,14 @@ parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBN
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
-parser.add_argument("--normalize", default=True, type=eval, help="Normalize lrp heatmaps.")
+parser.add_argument("--normalize", default=False, type=eval, help="Normalize lrp heatmaps.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
-n_samples_list=[10,50]
-topk_list = [10,30]
+n_samples_list=[10,50,100]
+topk_list = [10,30,100]
 n_inputs=100 if args.debug else args.n_inputs
 
 print("PyTorch Version: ", torch.__version__)
@@ -95,6 +95,9 @@ bay_norm_topk=[]
 bay_successful_norm_topk=[]
 bay_failed_norm_topk=[]
 
+det_softmax_robustness_topk=[]
+bay_softmax_robustness_topk=[]
+
 for topk in topk_list:
 
 	det_lrp_robustness_layers=[]
@@ -110,6 +113,9 @@ for topk in topk_list:
 	bay_norm_layers=[]
 	bay_successful_norm_layers=[]
 	bay_failed_norm_layers=[]
+
+	det_softmax_robustness_layers=[]
+	bay_softmax_robustness_layers=[]
 
 	for layer_idx in detnet.learnable_layers_idxs:
 
@@ -239,6 +245,8 @@ for topk in topk_list:
 		bay_successful_norm_layers.append(bay_successful_norm)
 		bay_failed_norm_layers.append(bay_failed_norm)
 
+		det_softmax_robustness_layers.append(det_softmax_robustness)
+		bay_softmax_robustness_layers.append(bay_softmax_robustness)
 
 	det_lrp_robustness_topk.append(det_lrp_robustness_layers)
 	det_successful_lrp_robustness_topk.append(det_successful_lrp_robustness_layers)
@@ -253,6 +261,9 @@ for topk in topk_list:
 	bay_norm_topk.append(bay_norm_layers)
 	bay_successful_norm_topk.append(bay_successful_norm_layers)
 	bay_failed_norm_topk.append(bay_failed_norm_layers)
+
+	det_softmax_robustness_topk.append(det_softmax_robustness_layers)
+	bay_softmax_robustness_topk.append(bay_softmax_robustness_layers)
 
 ### Plots
 
@@ -280,14 +291,12 @@ plot_lrp.lrp_layers_robustness_distributions(
 						filename="dist_"+filename+"_layers")
 
 plot_lrp.lrp_layers_robustness_scatterplot(
-						det_successful_lrp_robustness=det_successful_lrp_robustness_topk,
-						det_failed_lrp_robustness=det_failed_lrp_robustness_topk,
-						bay_successful_lrp_robustness=bay_successful_lrp_robustness_topk,
-						bay_failed_lrp_robustness=bay_failed_lrp_robustness_topk,
-						det_successful_lrp_norm=det_successful_norm_topk,
-						det_failed_lrp_norm=det_failed_norm_topk,
-						bay_successful_lrp_norm=bay_successful_norm_topk,
-						bay_failed_lrp_norm=bay_failed_norm_topk,
+						det_lrp_robustness=det_lrp_robustness_topk,
+						bay_lrp_robustness=bay_lrp_robustness_topk,
+                      	det_lrp_norm=det_norm_topk, 
+                      	bay_lrp_norm=bay_norm_topk,
+                      	det_softmax_robustness=det_softmax_robustness_topk,
+                      	bay_softmax_robustness=bay_softmax_robustness_topk,
 						n_samples_list=n_samples_list,
 						topk_list=topk_list,
 						n_original_images=len(images),

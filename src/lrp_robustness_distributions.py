@@ -39,7 +39,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
-n_samples_list=[10,50]
+n_samples_list=[10,50,100]
 n_inputs=100 if args.debug else args.n_inputs
 topk=args.topk
 
@@ -55,6 +55,7 @@ model = baseNN_settings["model_"+str(args.model_idx)]
 
 _, _, x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], 
 															shuffle=False, n_inputs=n_inputs)
+    
 model_savedir = get_model_savedir(model="baseNN", dataset=model["dataset"], architecture=model["architecture"], 
 					  debug=args.debug, model_idx=args.model_idx)
 detnet = baseNN(inp_shape, num_classes, *list(model.values()))
@@ -100,14 +101,15 @@ for n_samples in n_samples_list:
 	bay_attack.append(load_attack(method=args.attack_method, model_savedir=model_savedir, 
 					  n_samples=n_samples))
 
-mode_attack = load_attack(method=args.attack_method, model_savedir=model_savedir, 
-						  n_samples=n_samples, atk_mode=True)
+if m["inference"]=="svi":
+	mode_attack = load_attack(method=args.attack_method, model_savedir=model_savedir, 
+							  n_samples=n_samples, atk_mode=True)
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
 
-for layer_idx in detnet.learnable_layers_idxs:
-# for layer_idx in [detnet.learnable_layers_idxs[-1]]:
+# for layer_idx in detnet.learnable_layers_idxs:
+for layer_idx in [detnet.learnable_layers_idxs[-1]]:
 
 	savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
 							  layer_idx=layer_idx, lrp_method=args.lrp_method)
@@ -123,23 +125,26 @@ for layer_idx in detnet.learnable_layers_idxs:
 		bay_lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
 		bay_attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
 
-	mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
-
-	mode_attack_lrp=[]
-	for samp_idx, n_samples in enumerate(n_samples_list):
-		mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
-	mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples)))
-
 	n_images = det_lrp.shape[0]
-	if det_attack_lrp.shape[0]!=n_images or bay_lrp[0].shape[0]!=n_inputs or bay_attack_lrp[0].shape[0]!=n_inputs \
-		or mode_lrp.shape[0]!=n_inputs or mode_attack_lrp[0].shape[0]!=n_inputs:
+	if det_attack_lrp.shape[0]!=n_images or bay_lrp[0].shape[0]!=n_inputs or bay_attack_lrp[0].shape[0]!=n_inputs:
 		print("det_lrp.shape[0] =", det_lrp.shape[0])
 		print("det_attack_lrp.shape[0] =", det_attack_lrp.shape[0])
 		print("bay_lrp[0].shape[0] =", bay_lrp[0].shape[0])
 		print("bay_attack_lrp[0].shape[0] =", bay_attack_lrp[0].shape[0])
-		print("mode_lrp.shape[0] =", mode_lrp.shape[0])
-		print("mode_attack_lrp[0].shape[0] =", mode_attack_lrp[0].shape[0])
 		raise ValueError("Inconsistent n_inputs")
+
+	if m["inference"]=="svi":
+		mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post")
+
+		mode_attack_lrp=[]
+		for samp_idx, n_samples in enumerate(n_samples_list):
+			mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
+		mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post"))
+
+		if mode_lrp.shape[0]!=n_inputs or mode_attack_lrp[0].shape[0]!=n_inputs:
+			print("mode_lrp.shape[0] =", mode_lrp.shape[0])
+			print("mode_attack_lrp[0].shape[0] =", mode_attack_lrp[0].shape[0])
+			raise ValueError("Inconsistent n_inputs")
 
 	### Normalize heatmaps
 
@@ -147,14 +152,17 @@ for layer_idx in detnet.learnable_layers_idxs:
 		for im_idx in range(det_lrp.shape[0]):
 			det_lrp[im_idx] = normalize(det_lrp[im_idx])
 			det_attack_lrp[im_idx] = normalize(det_attack_lrp[im_idx])
-			mode_lrp[im_idx] = normalize(mode_lrp[im_idx])
 
 			for samp_idx in range(len(n_samples_list)):
 				bay_lrp[samp_idx][im_idx] = normalize(bay_lrp[samp_idx][im_idx])
 				bay_attack_lrp[samp_idx][im_idx] = normalize(bay_attack_lrp[samp_idx][im_idx])
-				mode_attack_lrp[samp_idx][im_idx] = normalize(mode_attack_lrp[samp_idx][im_idx])
 
-			mode_attack_lrp[samp_idx+1][im_idx] = normalize(mode_attack_lrp[samp_idx+1][im_idx])
+			if m["inference"]=="svi":
+				mode_lrp[im_idx] = normalize(mode_lrp[im_idx])
+
+				for samp_idx in range(len(n_samples_list)):
+					mode_attack_lrp[samp_idx][im_idx] = normalize(mode_attack_lrp[samp_idx][im_idx])
+				mode_attack_lrp[samp_idx+1][im_idx] = normalize(mode_attack_lrp[samp_idx+1][im_idx])
 
 	### Evaluate explanations
 
@@ -216,25 +224,55 @@ for layer_idx in detnet.learnable_layers_idxs:
 		fail_bay_lrp_robustness.append(robustness)
 		fail_bay_lrp_pxl_idxs.append(pxl_idxs)
 
-	mode_preds=[]
-	mode_atk_preds=[]
-	mode_softmax_robustness=[]
-	mode_successful_idxs=[]
-	mode_failed_idxs=[]
-	mode_lrp_robustness=[]
-	mode_lrp_pxl_idxs=[]
-	succ_mode_lrp_robustness=[]
-	succ_mode_lrp_pxl_idxs=[]
-	fail_mode_lrp_robustness=[]
-	fail_mode_lrp_pxl_idxs=[]
+	if m["inference"]=="svi":
 
-	for samp_idx, n_samples in enumerate(n_samples_list):
+		mode_preds=[]
+		mode_atk_preds=[]
+		mode_softmax_robustness=[]
+		mode_successful_idxs=[]
+		mode_failed_idxs=[]
+		mode_lrp_robustness=[]
+		mode_lrp_pxl_idxs=[]
+		succ_mode_lrp_robustness=[]
+		succ_mode_lrp_pxl_idxs=[]
+		fail_mode_lrp_robustness=[]
+		fail_mode_lrp_pxl_idxs=[]
+
+		for samp_idx, n_samples in enumerate(n_samples_list):
+
+			preds, atk_preds, softmax_rob, succ_idxs, fail_idxs = evaluate_attack(net=bayesnet, 
+															   x_test=images, x_attack=mode_attack,
+															   y_test=y_test, device=args.device, n_samples=n_samples, 
+															   return_classification_idxs=True)
+
+			mode_preds.append(preds) 
+			mode_atk_preds.append(atk_preds)
+			mode_softmax_robustness.append(softmax_rob.detach().cpu().numpy()) 
+			mode_successful_idxs.append(succ_idxs)
+			mode_failed_idxs.append(failed_idxs)
+
+			robustness, pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
+												  adversarial_heatmaps=mode_attack_lrp[samp_idx], 
+												  topk=topk, method=lrp_robustness_method)
+			mode_lrp_robustness.append(robustness)
+			mode_lrp_pxl_idxs.append(pxl_idxs)
+
+			robustness, pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[succ_idxs], 
+												  adversarial_heatmaps=mode_attack_lrp[samp_idx][succ_idxs], 
+												  topk=topk, method=lrp_robustness_method)
+			succ_mode_lrp_robustness.append(robustness)
+			succ_mode_lrp_pxl_idxs.append(pxl_idxs)
+
+			robustness, pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[fail_idxs], 
+												  adversarial_heatmaps=mode_attack_lrp[samp_idx][fail_idxs], 
+												  topk=topk, method=lrp_robustness_method)
+			fail_mode_lrp_robustness.append(robustness) 
+			fail_mode_lrp_pxl_idxs.append(pxl_idxs)
 
 		preds, atk_preds, softmax_rob, succ_idxs, fail_idxs = evaluate_attack(net=bayesnet, 
-														   x_test=images, x_attack=mode_attack,
+														   x_test=images, x_attack=mode_attack, avg_posterior=True,
 														   y_test=y_test, device=args.device, n_samples=n_samples, 
 														   return_classification_idxs=True)
-
 		mode_preds.append(preds) 
 		mode_atk_preds.append(atk_preds)
 		mode_softmax_robustness.append(softmax_rob.detach().cpu().numpy()) 
@@ -242,51 +280,22 @@ for layer_idx in detnet.learnable_layers_idxs:
 		mode_failed_idxs.append(failed_idxs)
 
 		robustness, pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
-											  adversarial_heatmaps=mode_attack_lrp[samp_idx], 
+											  adversarial_heatmaps=mode_attack_lrp[samp_idx+1], 
 											  topk=topk, method=lrp_robustness_method)
 		mode_lrp_robustness.append(robustness)
 		mode_lrp_pxl_idxs.append(pxl_idxs)
 
 		robustness, pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[succ_idxs], 
-											  adversarial_heatmaps=mode_attack_lrp[samp_idx][succ_idxs], 
+											  adversarial_heatmaps=mode_attack_lrp[samp_idx+1][succ_idxs], 
 											  topk=topk, method=lrp_robustness_method)
 		succ_mode_lrp_robustness.append(robustness)
 		succ_mode_lrp_pxl_idxs.append(pxl_idxs)
 
 		robustness, pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[fail_idxs], 
-											  adversarial_heatmaps=mode_attack_lrp[samp_idx][fail_idxs], 
+											  adversarial_heatmaps=mode_attack_lrp[samp_idx+1][fail_idxs], 
 											  topk=topk, method=lrp_robustness_method)
 		fail_mode_lrp_robustness.append(robustness) 
 		fail_mode_lrp_pxl_idxs.append(pxl_idxs)
-
-	preds, atk_preds, softmax_rob, succ_idxs, fail_idxs = evaluate_attack(net=bayesnet, 
-													   x_test=images, x_attack=mode_attack, avg_posterior=True,
-													   y_test=y_test, device=args.device, n_samples=n_samples, 
-													   return_classification_idxs=True)
-	mode_preds.append(preds) 
-	mode_atk_preds.append(atk_preds)
-	mode_softmax_robustness.append(softmax_rob.detach().cpu().numpy()) 
-	mode_successful_idxs.append(succ_idxs)
-	mode_failed_idxs.append(failed_idxs)
-
-	robustness, pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
-										  adversarial_heatmaps=mode_attack_lrp[samp_idx+1], 
-										  topk=topk, method=lrp_robustness_method)
-	mode_lrp_robustness.append(robustness)
-	mode_lrp_pxl_idxs.append(pxl_idxs)
-
-	robustness, pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[succ_idxs], 
-										  adversarial_heatmaps=mode_attack_lrp[samp_idx+1][succ_idxs], 
-										  topk=topk, method=lrp_robustness_method)
-	succ_mode_lrp_robustness.append(robustness)
-	succ_mode_lrp_pxl_idxs.append(pxl_idxs)
-
-	robustness, pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp[fail_idxs], 
-										  adversarial_heatmaps=mode_attack_lrp[samp_idx+1][fail_idxs], 
-										  topk=topk, method=lrp_robustness_method)
-	fail_mode_lrp_robustness.append(robustness) 
-	fail_mode_lrp_pxl_idxs.append(pxl_idxs)
-
 
 	### Plots
 
@@ -322,56 +331,60 @@ for layer_idx in detnet.learnable_layers_idxs:
 								  filename="bay_lrp_attacks_samp="+str(n_samples)+"_"+filename, 
 								  layer_idx=layer_idx)
 
-	plot_attacks_explanations(images=images, 
-						  explanations=mode_lrp, 
-						  attacks=mode_attack, 
-						  attacks_explanations=mode_attack_lrp[-1],
-						  predictions=mode_preds[-1].argmax(-1),
-						  attacks_predictions=mode_atk_preds[-1].argmax(-1),
-						  successful_attacks_idxs=mode_successful_idxs[-1],
-						  failed_attacks_idxs=mode_failed_idxs[-1],
-						  labels=labels, lrp_rob_method=lrp_robustness_method,
-						  rule=args.rule, savedir=savedir, pxl_idxs=mode_lrp_pxl_idxs[-1],
-						  filename="mode_lrp_attacks", 
-						  layer_idx=layer_idx)	
+	if m["inference"]=="svi": # mode vs mode only
 
-	filename=args.rule+"_lrp_robustness"+m["dataset"]+"_images="+str(n_inputs)+\
-			 "_samples="+str(n_samples)+"_pxls="+str(topk)+"_atk="+str(args.attack_method)+"_layeridx="+str(layer_idx)
-	if args.normalize:
-		filename+="_norm"
-			 
-	plot_lrp.lrp_imagewise_robustness_distributions(
-				det_lrp_robustness=det_lrp_robustness,
-				det_successful_lrp_robustness=succ_det_lrp_robustness,
-				det_failed_lrp_robustness=fail_det_lrp_robustness,
-				bay_lrp_robustness=bay_lrp_robustness,
-				bay_successful_lrp_robustness=succ_bay_lrp_robustness,
-				bay_failed_lrp_robustness=fail_bay_lrp_robustness,
-				mode_lrp_robustness=mode_lrp_robustness,
-				mode_successful_lrp_robustness=succ_mode_lrp_robustness,
-				mode_failed_lrp_robustness=fail_mode_lrp_robustness,
-				n_samples_list=n_samples_list,
-				n_original_images=len(images),
-				savedir=savedir, 
-				filename="dist_"+filename)
+		plot_attacks_explanations(images=images, 
+							  explanations=mode_lrp, 
+							  attacks=mode_attack, 
+							  attacks_explanations=mode_attack_lrp[-1],
+							  predictions=mode_preds[-1].argmax(-1),
+							  attacks_predictions=mode_atk_preds[-1].argmax(-1),
+							  successful_attacks_idxs=mode_successful_idxs[-1],
+							  failed_attacks_idxs=mode_failed_idxs[-1],
+							  labels=labels, lrp_rob_method=lrp_robustness_method,
+							  rule=args.rule, savedir=savedir, pxl_idxs=mode_lrp_pxl_idxs[-1],
+							  filename="mode_lrp_attacks", 
+							  layer_idx=layer_idx)	
 
-	plot_lrp.lrp_catplot_robustness_distributions(
-				det_lrp_robustness=det_lrp_robustness,
-				bay_lrp_robustness=bay_lrp_robustness,
-				mode_lrp_robustness=mode_lrp_robustness,
-				n_samples_list=n_samples_list,
-				n_original_images=len(images),
-				savedir=savedir, 
-				filename="dist_"+filename)
+		filename=args.rule+"_lrp_robustness"+m["dataset"]+"_images="+str(n_inputs)+\
+				 "_samples="+str(n_samples)+"_pxls="+str(topk)+"_atk="+str(args.attack_method)+"_layeridx="+str(layer_idx)
+		if args.normalize:
+			filename+="_norm"
+				 
+		plot_lrp.lrp_imagewise_robustness_distributions(
+					det_lrp_robustness=det_lrp_robustness,
+					det_successful_lrp_robustness=succ_det_lrp_robustness,
+					det_failed_lrp_robustness=fail_det_lrp_robustness,
+					bay_lrp_robustness=bay_lrp_robustness,
+					bay_successful_lrp_robustness=succ_bay_lrp_robustness,
+					bay_failed_lrp_robustness=fail_bay_lrp_robustness,
+					mode_lrp_robustness=mode_lrp_robustness,
+					mode_successful_lrp_robustness=succ_mode_lrp_robustness,
+					mode_failed_lrp_robustness=fail_mode_lrp_robustness,
+					n_samples_list=n_samples_list,
+					n_original_images=len(images),
+					savedir=savedir, 
+					filename="dist_"+filename)
 
-	# if layer_idx == detnet.learnable_layers_idxs[-1]:
+		# plot_lrp.lrp_catplot_robustness_distributions(
+		# 			det_lrp_robustness=det_lrp_robustness,
+		# 			bay_lrp_robustness=bay_lrp_robustness,
+		# 			mode_lrp_robustness=mode_lrp_robustness,
+		# 			n_samples_list=n_samples_list,
+		# 			n_original_images=len(images),
+		# 			savedir=savedir, 
+		# 			filename="dist_"+filename)
+
+		# if layer_idx == detnet.learnable_layers_idxs[-1]:
+
 	plot_lrp.lrp_robustness_scatterplot(
 				adversarial_robustness=det_softmax_robustness, 
 				bayesian_adversarial_robustness=bay_softmax_robustness,
-				mode_adversarial_robustness=mode_softmax_robustness[-1],
+				mode_adversarial_robustness=mode_softmax_robustness[-1] if m["inference"]=="svi" else None,
 				lrp_robustness=det_lrp_robustness, 
 				bayesian_lrp_robustness=bay_lrp_robustness,
-				mode_lrp_robustness=mode_lrp_robustness[-1],
+				mode_lrp_robustness=mode_lrp_robustness[-1] if m["inference"]=="svi" else None,
 				n_samples_list=n_samples_list,
 				savedir=savedir, 
 				filename="scatterplot_"+filename)
+

@@ -9,11 +9,14 @@ def softmax_difference(original_predictions, adversarial_predictions):
     predictions.
     """
 
-    original_predictions = nnf.softmax(original_predictions, dim=-1)
-    adversarial_predictions = nnf.softmax(adversarial_predictions, dim=-1)
+    # original_predictions = nnf.softmax(original_predictions, dim=-1)
+    # adversarial_predictions = nnf.softmax(adversarial_predictions, dim=-1)
+
+    if original_predictions.abs().max()>1 or original_predictions.abs().max()>1:
+        raise ValueError("Pass softmax outputs")
 
     if len(original_predictions) != len(adversarial_predictions):
-        raise ValueError("\nInput arrays should have the same length.")
+        raise ValueError("Input arrays should have the same length.")
 
     if DEBUG:
         print("\n\n", original_predictions[0], "\t", adversarial_predictions[0], end="\n\n")

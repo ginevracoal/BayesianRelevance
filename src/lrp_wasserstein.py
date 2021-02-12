@@ -124,12 +124,12 @@ for layer_idx in range(detnet.n_layers):
 		bay_lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
 		bay_attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
 
-	mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post_samp="+str(n_samples))
+	mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post")
 
 	mode_attack_lrp=[]
 	for samp_idx, n_samples in enumerate(n_samples_list):
 	    mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
-	mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post_samp="+str(n_samples)))
+	mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post"))
 	mode_attack_lrp = np.array(mode_attack_lrp)
 
 	### Normalize heatmaps
