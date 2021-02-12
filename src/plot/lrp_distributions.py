@@ -217,29 +217,40 @@ def lrp_imagewise_robustness_distributions(det_lrp_robustness, bay_lrp_robustnes
     print("\n=== Percentage of successful/failed attacks ===")
 
     print("\ndeterministic attack:")
-    print(f"det. eval\t {len(det_successful_lrp_robustness)/n_original_images} successful \t{len(det_failed_lrp_robustness)/n_original_images} failed")
+    perc_det_successful = 100*len(det_successful_lrp_robustness)/n_original_images
+    perc_det_failed = 100*len(det_failed_lrp_robustness)/n_original_images
+    print(f"det. eval\t {perc_det_successful} successful \t{perc_det_failed} failed")
     
     print("\nbayesian attack:")
+    perc_bay_successful = []
+    perc_bay_failed = []
     for idx, n_samples in enumerate(n_samples_list):
-        print(f"bay. eval samp={n_samples}\t {len(bay_successful_lrp_robustness[idx])/n_original_images} successful \t{len(bay_failed_lrp_robustness[idx])/n_original_images} failed")
+        perc_bay_successful.append(100*len(bay_successful_lrp_robustness[idx])/n_original_images)
+        perc_bay_failed.append(100*len(bay_failed_lrp_robustness[idx])/n_original_images)
+        print(f"bay. eval samp={n_samples}\t {perc_bay_successful[idx]} successful \t{perc_bay_failed[idx]} failed")
 
     print("\nmode attack:")
+    perc_mode_successful = []
+    perc_mode_failed = []
     for idx, n_samples in enumerate(n_samples_list):
-        print(f"bay. eval samp={n_samples} \t {len(mode_successful_lrp_robustness[idx])/n_original_images} successful \t{len(mode_failed_lrp_robustness[idx])/n_original_images} failed")
-    print(f"mode eval \t{len(mode_successful_lrp_robustness[-1])/n_original_images} successful \t{len(mode_failed_lrp_robustness[-1])/n_original_images} failed")
+        perc_mode_successful.append(100*len(mode_successful_lrp_robustness[idx])/n_original_images)
+        perc_mode_failed.append(100*len(mode_failed_lrp_robustness[idx])/n_original_images)
+        print(f"bay. eval samp={n_samples} \t {perc_mode_successful[idx]} successful \t{perc_mode_failed[idx]} failed")
+
+    perc_mode_successful.append(100*len(mode_successful_lrp_robustness[-1])/n_original_images)
+    perc_mode_failed.append(100*len(mode_failed_lrp_robustness[-1])/n_original_images)
+    print(f"mode eval \t{perc_mode_successful[-1]} successful \t{perc_mode_failed[-1]} failed")
 
     os.makedirs(savedir, exist_ok=True) 
 
     ## Successful vs failed
 
-    # det_col =  plt.cm.get_cmap('rocket', 100)(np.linspace(0, 1, 10))
-    # bay_col = plt.cm.get_cmap('crest', 100)(np.linspace(0, 1, len(n_samples_list)+1))[1:]
     cmap = cm.get_cmap('rocket', 10)
     det_col = [matplotlib.colors.rgb2hex(cmap(i)) for i in range(cmap.N)]
     cmap = cm.get_cmap('crest', 10)
     bay_col = [matplotlib.colors.rgb2hex(cmap(i)) for i in range(cmap.N)]
 
-    alpha=0.8
+    alpha=0.7
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
@@ -250,28 +261,32 @@ def lrp_imagewise_robustness_distributions(det_lrp_robustness, bay_lrp_robustnes
     ax[0,0].xaxis.set_label_position("top")
     ax[0,0].set_xlabel("Successful attacks", weight='bold', size=10)
 
-    sns.distplot(det_successful_lrp_robustness, ax=ax[0,0], label="det atk", bins=10, kde=False, color=det_col[7],
-                hist_kws=dict(alpha=alpha))
-    sns.distplot(mode_successful_lrp_robustness[-1], bins=10, ax=ax[1,0], label="mode atk", kde=False, color=bay_col[1],
-                hist_kws=dict(alpha=alpha))
+    sns.distplot(det_successful_lrp_robustness, ax=ax[0,0], label=f"det atk {perc_det_successful:.1f}%", 
+                bins=10, kde=False, color=det_col[7], hist_kws=dict(alpha=alpha))
+    sns.distplot(mode_successful_lrp_robustness[-1], bins=10, ax=ax[1,0], label=f"mode atk {perc_mode_successful[-1]:.1f}%", 
+                kde=False, color=bay_col[1],  hist_kws=dict(alpha=alpha))
     for samp_idx, n_samples in enumerate(n_samples_list):
-        sns.distplot(mode_successful_lrp_robustness[samp_idx], ax=ax[2+samp_idx,0], 
-                     label="mode atk", bins=10, kde=False,color=bay_col[1], hist_kws=dict(alpha=alpha))
         sns.distplot(bay_successful_lrp_robustness[samp_idx], ax=ax[2+samp_idx,0], 
-                     label="bay atk", bins=10, kde=False,color=bay_col[7], hist_kws=dict(alpha=alpha))
+                     label=f"bay atk {perc_bay_successful[samp_idx]:.1f}%", bins=10, kde=False,color=bay_col[7], 
+                     hist_kws=dict(alpha=alpha))
+        sns.distplot(mode_successful_lrp_robustness[samp_idx], ax=ax[2+samp_idx,0], 
+                     label=f"mode atk {perc_mode_successful[samp_idx]:.1f}%", bins=10, kde=False,color=bay_col[1], 
+                    hist_kws=dict(alpha=alpha))
 
     ax[0,1].xaxis.set_label_position("top")
     ax[0,1].set_xlabel("Failed attacks", weight='bold', size=10)
 
-    sns.distplot(det_failed_lrp_robustness, ax=ax[0,1], label="det atk", bins=10, kde=False, color=det_col[7],
-        hist_kws=dict(alpha=alpha))
-    sns.distplot(mode_failed_lrp_robustness[-1], ax=ax[1,1], label="mode atk", bins=10, kde=False, color=bay_col[1],
-        hist_kws=dict(alpha=alpha))
+    sns.distplot(det_failed_lrp_robustness, ax=ax[0,1], label=f"det atk {perc_det_failed:.1f}%", 
+                bins=10, kde=False, color=det_col[7], hist_kws=dict(alpha=alpha))
+    sns.distplot(mode_failed_lrp_robustness[-1], ax=ax[1,1], label=f"mode atk {perc_mode_failed[-1]:.1f}%", 
+                bins=10, kde=False, color=bay_col[1], hist_kws=dict(alpha=alpha))
     for samp_idx, n_samples in enumerate(n_samples_list):
-        sns.distplot(mode_failed_lrp_robustness[samp_idx], ax=ax[2+samp_idx,1], 
-                     label="mode atk", bins=10, kde=False, color=bay_col[1],hist_kws=dict(alpha=alpha))
         sns.distplot(bay_failed_lrp_robustness[samp_idx], ax=ax[2+samp_idx,1], 
-                     label="bay atk", bins=10, kde=False, color=bay_col[7],hist_kws=dict(alpha=alpha))
+                     label=f"bay atk {perc_bay_failed[samp_idx]:.1f}%", bins=10, kde=False, color=bay_col[7],
+                     hist_kws=dict(alpha=alpha))
+        sns.distplot(mode_failed_lrp_robustness[samp_idx], ax=ax[2+samp_idx,1], 
+                     label=f"mode atk {perc_mode_failed[samp_idx]:.1f}%", bins=10, kde=False, 
+                     color=bay_col[1],hist_kws=dict(alpha=alpha))
 
         ax[2+samp_idx,1].set_ylabel("Bay. Net.\nsamp="+str(n_samples), rotation=270, labelpad=10, weight='bold', size=10)
         ax[2+samp_idx,1].yaxis.set_label_position("right")
@@ -286,9 +301,11 @@ def lrp_imagewise_robustness_distributions(det_lrp_robustness, bay_lrp_robustnes
     ax[1,1].set_ylabel("Mode Net.", rotation=270, labelpad=10, weight='bold', size=10)
     ax[1,1].yaxis.set_label_position("right")
 
-    ax[0,0].legend()
-    ax[1,0].legend()
-    ax[2,0].legend()
+    for row_idx in range(2+len(n_samples_list)):
+        ax[row_idx,0].legend()
+        ax[row_idx,1].legend()
+        ax[row_idx,0].legend(prop={'size': 8})
+        ax[row_idx,1].legend(prop={'size': 8})
 
     fig.savefig(os.path.join(savedir, filename+"_succ_vs_failed.png"))
     plt.close(fig)
