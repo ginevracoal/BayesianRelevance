@@ -235,3 +235,107 @@ def plot_vanishing_explanations(images, samples_explanations, n_samples_list, ru
 
     os.makedirs(savedir, exist_ok=True)
     plt.savefig(os.path.join(savedir, filename+".png"))
+
+
+def plot_attacks_explanations_layers(images, explanations, attacks, attacks_explanations, 
+                                      predictions, attacks_predictions, successful_attacks_idxs, failed_attacks_idxs,
+                                      labels, pxl_idxs, learnable_layers_idxs, lrp_rob_method, rule, 
+                                      savedir, filename, layer_idx=-1):
+
+    n_layers = len(pxl_idxs)
+
+    images_cmap='Greys'
+    cmap = plt.cm.get_cmap(relevance_cmap)
+
+    set_seed(0)
+    im_idx = np.random.choice(successful_attacks_idxs, 1)
+    print("im_idx =", im_idx)
+
+    image = images[im_idx].detach().cpu().numpy()
+    attack = attacks[im_idx].detach().cpu().numpy()
+    prediction = predictions[im_idx].argmax().detach().cpu().numpy()
+    attack_prediction = attacks_predictions[im_idx].argmax().detach().cpu().numpy()
+    label = labels[im_idx].item()
+
+    explanations = explanations[:,im_idx]
+    attack_explanations = attacks_explanations[:,im_idx]
+
+    for layer_idx in range(len(learnable_layers_idxs)):
+        layer_pxl_idxs = pxl_idxs[layer_idx]
+        selected_pxl_idxs = layer_pxl_idxs if lrp_rob_method=="pixelwise" else layer_pxl_idxs[im_idx]
+
+        explanations[layer_idx] = relevant_subset(explanations[layer_idx], selected_pxl_idxs, lrp_rob_method)
+        attack_explanations[layer_idx] = relevant_subset(attack_explanations[layer_idx], selected_pxl_idxs, lrp_rob_method)
+       
+    vmax_expl = max([max(explanations.flatten()), 0.000001])
+    vmin_expl = min([min(explanations.flatten()), -0.000001])
+    norm_expl = colors.TwoSlopeNorm(vcenter=0., vmax=vmax_expl, vmin=vmin_expl)
+
+    vmax_atk_expl = max([max(attack_explanations.flatten()), 0.000001])
+    vmin_atk_expl = min([min(attack_explanations.flatten()), -0.000001])
+    norm_atk_expl = colors.TwoSlopeNorm(vcenter=0., vmax=vmax_atk_expl, vmin=vmin_atk_expl)
+
+    for layer_idx in range(len(learnable_layers_idxs)):
+        layer_pxl_idxs = pxl_idxs[layer_idx]
+        selected_pxl_idxs = layer_pxl_idxs if lrp_rob_method=="pixelwise" else layer_pxl_idxs[im_idx]
+
+        image_rel = relevant_subset(image, selected_pxl_idxs, lrp_rob_method)
+        attack_rel = relevant_subset(attack, selected_pxl_idxs, lrp_rob_method)
+        image_rel = np.ma.masked_where(image_rel == 0., image_rel)
+        attack_rel = np.ma.masked_where(attack_rel == 0., attack_rel)
+
+    rows = 2
+    cols = n_layers+1
+    fig, axes = plt.subplots(rows, cols, figsize=(8, 4), dpi=150)
+    fig.tight_layout()
+
+    # axes[0,0].set_ylabel("Image")
+    # axes[1,0].set_ylabel("Attack")
+    fig.text(0.035, 0.63, f"Image", ha='center', rotation=90, weight='bold')
+    fig.text(0.035, 0.25, f"Attack", ha='center', rotation=90, weight='bold')
+
+    axes[0, 0].imshow(np.squeeze(image), cmap=images_cmap)
+    axes[0, 0].imshow(np.squeeze(image_rel))
+    # axes[0, 0].set_xlabel(f"Label={label}\nPrediction={prediction}")
+    fig.text(0.13, 0.5, f"Label={label}\nPrediction={prediction}", ha='center')
+
+    axes[1, 0].imshow(np.squeeze(attack), cmap=images_cmap)
+    axes[1, 0].imshow(np.squeeze(attack_rel))
+    # axes[1, 0].set_xlabel(f"Prediction={attack_prediction}")
+    fig.text(0.13, 0.05, f"Prediction={attack_prediction}", ha='center')
+
+    x_positions=[0.365, 0.58, 0.81]
+
+    for col_idx, layer_idx in enumerate(learnable_layers_idxs):
+
+        # axes[1,col_idx+1].set_xlabel("Layer idx="+str(layer_idx))
+        fig.text(x_positions[col_idx], 0.05, "Layer idx="+str(layer_idx), ha='center', weight='bold')
+
+        expl = np.squeeze(explanations[col_idx])
+        attack_expl = np.squeeze(attack_explanations[col_idx])
+        expl = axes[0, col_idx+1].imshow(expl, cmap=cmap, norm=norm_expl)
+        atk_expl = axes[1, col_idx+1].imshow(attack_expl, cmap=cmap, norm=norm_atk_expl)
+
+    for col_idx in range(len(learnable_layers_idxs)+1):
+        axes[0,col_idx].set_axis_off()
+        axes[1,col_idx].set_axis_off()
+
+    # plt.tick_params(
+    # axis='x',          # changes apply to the x-axis
+    # which='both',      # both major and minor ticks are affected
+    # bottom=False,      # ticks along the bottom edge are off
+    # top=False,         # ticks along the top edge are off
+    # labelbottom=True) #
+
+    fig.subplots_adjust(right=0.88)
+
+    cbar_ax = fig.add_axes([0.91, 0.61, 0.01, 0.32])
+    cbar = fig.colorbar(expl, ax=axes[0, :].ravel().tolist(), cax=cbar_ax)
+    cbar.set_label('LRP', labelpad=-50)
+
+    cbar_ax = fig.add_axes([0.91, 0.12, 0.01, 0.32])
+    cbar = fig.colorbar(atk_expl, ax=axes[1, :].ravel().tolist(), cax=cbar_ax)
+    cbar.set_label('LRP', labelpad=-40)
+
+    os.makedirs(savedir, exist_ok=True)
+    plt.savefig(os.path.join(savedir,filename+"_layeridx="+str(layer_idx)+".png"))

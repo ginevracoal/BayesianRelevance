@@ -151,7 +151,6 @@ for layer_idx in detnet.learnable_layers_idxs:
             save_to_pickle(bay_lrp[samp_idx], path=savedir, filename="bay_lrp_samp="+str(n_samples))
             save_to_pickle(bay_attack_lrp[samp_idx], path=savedir, filename="bay_attack_lrp_samp="+str(n_samples))
         
-
         if m["inference"]=="svi":
 
             mode_lrp = compute_explanations(images, bayesnet, rule=args.rule, layer_idx=layer_idx, 

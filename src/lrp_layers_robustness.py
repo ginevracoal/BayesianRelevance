@@ -293,8 +293,8 @@ plot_lrp.lrp_layers_robustness_distributions(
 plot_lrp.lrp_layers_robustness_scatterplot(
 						det_lrp_robustness=det_lrp_robustness_topk,
 						bay_lrp_robustness=bay_lrp_robustness_topk,
-                      	det_lrp_norm=det_norm_topk, 
-                      	bay_lrp_norm=bay_norm_topk,
+                      	# det_lrp_norm=det_norm_topk, 
+                      	# bay_lrp_norm=bay_norm_topk,
                       	det_softmax_robustness=det_softmax_robustness_topk,
                       	bay_softmax_robustness=bay_softmax_robustness_topk,
 						n_samples_list=n_samples_list,
@@ -302,4 +302,4 @@ plot_lrp.lrp_layers_robustness_scatterplot(
 						n_original_images=len(images),
 						n_learnable_layers=detnet.n_learnable_layers,
 						savedir=savedir, 
-						filename="scatterplot_"+filename+"_layers")
+						filename="scatterplot_"+filename+"_layers_topk="+str(topk_list[-1]))
