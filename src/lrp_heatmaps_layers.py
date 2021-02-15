@@ -26,7 +26,7 @@ from attacks.run_attacks import *
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
-parser.add_argument("--topk", default=150, type=int, help="Choose model idx from pre defined settings")
+parser.add_argument("--topk", default=200, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--n_samples", default=50, type=int)
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
@@ -135,7 +135,7 @@ lrp_method=None if args.model=="baseNN" else args.lrp_method
 savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, lrp_method=lrp_method)
 
 filename=args.rule+"_layers_heatmaps_"+m["dataset"]+"_images="+str(n_inputs)+\
-         "_samples="+str(args.n_samples)+"_atk="+str(args.attack_method)
+                "_atk="+str(args.attack_method)
 if args.normalize:
     filename+="_norm"
 

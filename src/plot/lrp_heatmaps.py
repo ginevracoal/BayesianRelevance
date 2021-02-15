@@ -247,7 +247,7 @@ def plot_attacks_explanations_layers(images, explanations, attacks, attacks_expl
     images_cmap='Greys'
     cmap = plt.cm.get_cmap(relevance_cmap)
 
-    set_seed(0)
+    set_seed(1)
     im_idx = np.random.choice(successful_attacks_idxs, 1)
     print("im_idx =", im_idx)
 
@@ -331,11 +331,11 @@ def plot_attacks_explanations_layers(images, explanations, attacks, attacks_expl
 
     cbar_ax = fig.add_axes([0.91, 0.61, 0.01, 0.32])
     cbar = fig.colorbar(expl, ax=axes[0, :].ravel().tolist(), cax=cbar_ax)
-    cbar.set_label('LRP', labelpad=-40)
+    cbar.set_label('LRP', labelpad=-50)
 
     cbar_ax = fig.add_axes([0.91, 0.12, 0.01, 0.32])
     cbar = fig.colorbar(atk_expl, ax=axes[1, :].ravel().tolist(), cax=cbar_ax)
-    cbar.set_label('LRP', labelpad=-40)
+    cbar.set_label('LRP', labelpad=-50)
 
     os.makedirs(savedir, exist_ok=True)
     plt.savefig(os.path.join(savedir,filename+"_layeridx="+str(layer_idx)+".png"))

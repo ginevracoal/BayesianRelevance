@@ -24,7 +24,7 @@ def is_rule_specific_layer(module):
     return isinstance(module, MaxPool2d)
 
 class Sequential(torch.nn.Sequential):
-    def forward(self, input, explain=False, rule="epsilon", pattern=None):
+    def forward(self, input, explain=False, rule="epsilon", pattern=None, *args, **kwargs):
         if not explain: return super(Sequential, self).forward(input)
 
         first = True

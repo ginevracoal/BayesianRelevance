@@ -201,7 +201,10 @@ class baseNN(nn.Module):
 
         layer_idx = self._set_correct_layer_idx(layer_idx)
 
-        preds = nn.Sequential(*list(self.model.children())[:layer_idx])(inputs)
+        # preds = nn.Sequential(*list(self.model.children())[:layer_idx])(inputs)
+
+        model = lrp.Sequential(*list(self.model.children())[:layer_idx])
+        preds = model.forward(inputs, *args, **kwargs)
 
         if softmax:
             preds = nnf.softmax(preds, dim=-1)
