@@ -331,7 +331,7 @@ def plot_attacks_explanations_layers(images, explanations, attacks, attacks_expl
 
     cbar_ax = fig.add_axes([0.91, 0.61, 0.01, 0.32])
     cbar = fig.colorbar(expl, ax=axes[0, :].ravel().tolist(), cax=cbar_ax)
-    cbar.set_label('LRP', labelpad=-50)
+    cbar.set_label('LRP', labelpad=-40)
 
     cbar_ax = fig.add_axes([0.91, 0.12, 0.01, 0.32])
     cbar = fig.colorbar(atk_expl, ax=axes[1, :].ravel().tolist(), cax=cbar_ax)
