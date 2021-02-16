@@ -139,6 +139,8 @@ for layer_idx in detnet.learnable_layers_idxs:
                 mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
             mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post"))
 
+            # print(mode_lrp.shape, torch.stack(mode_attack_lrp).shape)
+
     else:
 
         for samp_idx, n_samples in enumerate(n_samples_list):
@@ -163,8 +165,16 @@ for layer_idx in detnet.learnable_layers_idxs:
                 save_to_pickle(mode_attack_lrp[samp_idx], path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
 
             mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx,
-                                                        n_samples=n_samples, avg_posterior=True, method=args.lrp_method))
+                                                            # n_samples=n_samples, 
+                                                        avg_posterior=True, method=args.lrp_method))
             save_to_pickle(mode_attack_lrp[samp_idx+1], path=savedir, filename="mode_attack_lrp_avg_post")
+
+
+            # mode_attack_lrp = compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx,
+            #                                                 # n_samples=n_samples, 
+            #                                             avg_posterior=True, method=args.lrp_method)
+            # save_to_pickle(mode_attack_lrp, path=savedir, filename="mode_attack_lrp_avg_post")
+
 
     n_images = det_lrp.shape[0]
     if det_attack_lrp.shape[0]!=n_images or bay_lrp[0].shape[0]!=n_inputs or bay_attack_lrp[0].shape[0]!=n_inputs:

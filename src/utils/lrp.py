@@ -27,7 +27,7 @@ def select_informative_pixels(lrp_heatmaps, topk):
 
 	if len(lrp_heatmaps.shape)==3:
 		if DEBUG:
-			print(f"(image shape) = {lrp_heatmaps.shape}")
+			print(f"(image shape) = {lrp_heatmaps.shape}", end="\t")
 		squeeze_dim=0
 
 	elif len(lrp_heatmaps.shape)==4:
@@ -58,8 +58,8 @@ def select_informative_pixels(lrp_heatmaps, topk):
 	chosen_pxls_lrp = flat_lrp_heatmaps[..., chosen_pxl_idxs] 
 
 	if DEBUG:
-		print("out shape =", chosen_pxls_lrp.shape, end="\t")
-		print("chosen pixels idxs =", chosen_pxl_idxs)
+		print("out shape =", chosen_pxls_lrp.shape)#, end="\t")
+		# print("chosen pixels idxs =", chosen_pxl_idxs)
 
 	return chosen_pxls_lrp, chosen_pxl_idxs
 
@@ -93,7 +93,6 @@ def compute_explanations(x_test, network, rule, method, n_samples=None, layer_id
 			# Backward pass (compute explanation)
 			y_hat.backward()
 			lrp = x.grad
-
 			explanations.append(lrp)
 
 	else:
@@ -234,11 +233,14 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method):
 	robustness = []
 	chosen_pxl_idxs=[]
 
+	# print(original_heatmaps.shape, adversarial_heatmaps.shape)
+
 	if method=="imagewise":
 
 		for im_idx in range(len(original_heatmaps)):
 			orig_pxl_idxs = select_informative_pixels(original_heatmaps[im_idx], topk=topk)[1]
 			adv_pxl_idxs = select_informative_pixels(adversarial_heatmaps[im_idx], topk=topk)[1]
+
 			pxl_idxs = np.intersect1d(orig_pxl_idxs.detach().cpu().numpy(), adv_pxl_idxs.detach().cpu().numpy())
 
 			robustness.append(len(pxl_idxs)/topk)
@@ -257,6 +259,9 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method):
 
 	else:
 		raise NotImplementedError
+
+	if DEBUG:
+		print("\n", pxl_idxs.shape, np.array(chosen_pxl_idxs).shape, np.array(robustness).shape)
 
 	return np.array(robustness), np.array(chosen_pxl_idxs)
 

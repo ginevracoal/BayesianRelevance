@@ -207,7 +207,7 @@ def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, saved
         plt.close(fig)
 
 def lrp_imagewise_robustness_distributions(det_lrp_robustness, bay_lrp_robustness, mode_lrp_robustness,
-                                            det_successful_lrp_robustness, det_failed_lrp_robustness,
+                                           det_successful_lrp_robustness, det_failed_lrp_robustness,
                                            bay_successful_lrp_robustness, bay_failed_lrp_robustness,
                                            mode_successful_lrp_robustness, mode_failed_lrp_robustness,
                                            n_samples_list, n_original_images, savedir, filename):
@@ -243,8 +243,6 @@ def lrp_imagewise_robustness_distributions(det_lrp_robustness, bay_lrp_robustnes
 
     os.makedirs(savedir, exist_ok=True) 
 
-    ## Successful vs failed
-
     cmap = cm.get_cmap('rocket', 10)
     det_col = [matplotlib.colors.rgb2hex(cmap(i)) for i in range(cmap.N)]
     cmap = cm.get_cmap('crest', 10)
@@ -254,6 +252,9 @@ def lrp_imagewise_robustness_distributions(det_lrp_robustness, bay_lrp_robustnes
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
+
+    ## Successful vs failed
+
     fig, ax = plt.subplots(2+len(n_samples_list), 2, figsize=(6, 6), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
     fig.tight_layout()
     fig.subplots_adjust(bottom=0.1)
@@ -261,10 +262,13 @@ def lrp_imagewise_robustness_distributions(det_lrp_robustness, bay_lrp_robustnes
     ax[0,0].xaxis.set_label_position("top")
     ax[0,0].set_xlabel("Successful attacks", weight='bold', size=10)
 
-    sns.distplot(det_successful_lrp_robustness, ax=ax[0,0], label=f"det atk {perc_det_successful:.1f}%", 
+    sns.distplot(det_successful_lrp_robustness, ax=ax[0,0], 
+                label=f"det atk {perc_det_successful:.1f}%", 
                 bins=10, kde=False, color=det_col[7], hist_kws=dict(alpha=alpha))
-    sns.distplot(mode_successful_lrp_robustness[-1], bins=10, ax=ax[1,0], label=f"mode atk {perc_mode_successful[-1]:.1f}%", 
+    sns.distplot(mode_successful_lrp_robustness[-1], bins=10, ax=ax[1,0], 
+                label=f"mode atk {perc_mode_successful[-1]:.1f}%", 
                 kde=False, color=bay_col[1],  hist_kws=dict(alpha=alpha))
+
     for samp_idx, n_samples in enumerate(n_samples_list):
         sns.distplot(bay_successful_lrp_robustness[samp_idx], ax=ax[2+samp_idx,0], 
                      label=f"bay atk {perc_bay_successful[samp_idx]:.1f}%", bins=10, kde=False,color=bay_col[7], 
@@ -275,6 +279,9 @@ def lrp_imagewise_robustness_distributions(det_lrp_robustness, bay_lrp_robustnes
 
     ax[0,1].xaxis.set_label_position("top")
     ax[0,1].set_xlabel("Failed attacks", weight='bold', size=10)
+
+    # print(mode_successful_lrp_robustness[-1])
+    # print(mode_failed_lrp_robustness[-1])
 
     sns.distplot(det_failed_lrp_robustness, ax=ax[0,1], label=f"det atk {perc_det_failed:.1f}%", 
                 bins=10, kde=False, color=det_col[7], hist_kws=dict(alpha=alpha))
@@ -314,31 +321,34 @@ def lrp_imagewise_robustness_distributions(det_lrp_robustness, bay_lrp_robustnes
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
-    fig, ax = plt.subplots(3, 1, figsize=(6, 6), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(3, 1, figsize=(5, 6), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
     fig.tight_layout()
 
-    ax[0].set_ylabel("det. attack\ndet. interpretation", rotation=270, labelpad=40)
-    ax[0].yaxis.set_label_position("right")
-    ax[1].set_ylabel("det. attack\nbay. interpretation", rotation=270, labelpad=40)
-    ax[1].yaxis.set_label_position("right")
-    ax[2].set_ylabel("bay. attack\nbay. interpretation", rotation=270, labelpad=40)
-    ax[2].yaxis.set_label_position("right")
-
-    sns.distplot(det_lrp_robustness, ax=ax[0], label="Det")
-    sns.distplot(mode_lrp_robustness[-1], ax=ax[0], label="Mode")
+    sns.distplot(det_lrp_robustness, ax=ax[0], label=f"det atk", 
+                 bins=10, kde=False, color=det_col[7], hist_kws=dict(alpha=alpha))
+    sns.distplot(mode_lrp_robustness[-1], ax=ax[1], label=f"mode atk", 
+                 bins=10, kde=False, color=bay_col[1], hist_kws=dict(alpha=alpha))
 
     for samp_idx, n_samples in enumerate(n_samples_list):
-        sns.distplot(mode_lrp_robustness[samp_idx], ax=ax[1], label="Bay samp="+str(n_samples))
-        sns.distplot(bay_lrp_robustness[samp_idx], ax=ax[2], label="Bay samp="+str(n_samples))
+        sns.distplot(mode_lrp_robustness[samp_idx], ax=ax[2],
+                     label=f"mode atk", bins=10, kde=False, color=bay_col[1],hist_kws=dict(alpha=alpha))
+        sns.distplot(bay_lrp_robustness[samp_idx], ax=ax[2], label="bay atk", 
+                     bins=10, kde=False, color=bay_col[7], hist_kws=dict(alpha=alpha))
 
-    ax[2].set_xlabel("LRP robustness")
-    ax[2].set_xlabel("LRP robustness")
+        ax[2+samp_idx].set_ylabel("Bay. Net.\nsamp="+str(n_samples), rotation=270, labelpad=10, weight='bold', size=10)
+        ax[2+samp_idx].yaxis.set_label_position("right")
 
+    ax[2].set_xlabel("LRP Robustness", weight='bold', size=9)
+    ax[2].set_xlim(-0.01,1.1)
 
-    ax[0].legend()
-    ax[1].legend()
-    ax[2].legend()
+    ax[0].set_ylabel("Det. Net.", rotation=270, labelpad=10, weight='bold', size=10)
+    ax[0].yaxis.set_label_position("right")
+    ax[1].set_ylabel("Mode Net.", rotation=270, labelpad=10, weight='bold', size=10)
+    ax[1].yaxis.set_label_position("right")
 
+    for row_idx in range(2+len(n_samples_list)):
+        ax[row_idx].legend()
+        ax[row_idx].legend(prop={'size': 8})
 
     fig.savefig(os.path.join(savedir, filename+"_all_images.png"))
     plt.close(fig)
@@ -645,13 +655,13 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, bay_lrp_robustness,
                                       # det_lrp_norm, bay_lrp_norm,
                                       det_softmax_robustness, bay_softmax_robustness,
                                        n_samples_list, topk_list,
-                                       n_original_images, n_learnable_layers, savedir, filename):
+                                       n_original_images, learnable_layers_idxs, savedir, filename):
 
     os.makedirs(savedir, exist_ok=True) 
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
-    fig, ax = plt.subplots(n_learnable_layers, 1, figsize=(5, 7), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(len(learnable_layers_idxs), 1, figsize=(5, 7), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
     fig.tight_layout()
 
     det_col =  plt.cm.get_cmap('rocket', 100)(np.linspace(0, 1, 10))[7]
@@ -661,7 +671,7 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, bay_lrp_robustness,
     topk_idx=len(topk_list)-1
     topk=topk_list[-1]
 
-    for layer_idx in range(n_learnable_layers):
+    for layer_idx, layer in enumerate(learnable_layers_idxs):
         # for topk_idx, topk in enumerate(topk_list):
 
         legend = 'brief' if layer_idx==0 else False
@@ -681,16 +691,16 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, bay_lrp_robustness,
                             legend=legend, color=bay_col[samp_idx])
 
         ax[layer_idx].yaxis.set_label_position("right")
-        ax[layer_idx].set_ylabel("Layer idx="+str(layer_idx+1), rotation=270, labelpad=15, size=9, weight='bold')
+        ax[layer_idx].set_ylabel("Layer idx="+str(layer), rotation=270, labelpad=15, size=9, weight='bold')
 
     fig.subplots_adjust(left=0.13)
     fig.subplots_adjust(bottom=0.1)
-    ax[n_learnable_layers-1].set_xlabel("LRP Robustness", weight='bold', size=10)
+    ax[len(learnable_layers_idxs)-1].set_xlabel("LRP Robustness", weight='bold', size=10)
 
     fig.text(0.04, 0.4, "Softmax Robustness", ha='center', rotation=90)
     ax[0].legend(prop={'size': 9})
 
-    # ax[int(n_learnable_layers/2)].set_ylabel("Softmax robustness")
+    # ax[int(len(learnable_layers_idxs)/2)].set_ylabel("Softmax robustness")
 
     # plt.legend(frameon=False)
     # plt.setp(ax[0].get_legend().get_texts(), fontsize='8')

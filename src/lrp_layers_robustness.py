@@ -300,6 +300,6 @@ plot_lrp.lrp_layers_robustness_scatterplot(
 						n_samples_list=n_samples_list,
 						topk_list=topk_list,
 						n_original_images=len(images),
-						n_learnable_layers=detnet.n_learnable_layers,
+						learnable_layers_idxs=detnet.learnable_layers_idxs,
 						savedir=savedir, 
 						filename="scatterplot_"+filename+"_layers_topk="+str(topk_list[-1]))

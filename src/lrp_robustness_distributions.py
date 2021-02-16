@@ -26,7 +26,7 @@ from attacks.run_attacks import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
-parser.add_argument("--topk", default=30, type=int, help="Top k most relevant pixels.")
+parser.add_argument("--topk", default=100, type=int, help="Top k most relevant pixels.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
@@ -39,7 +39,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
-n_samples_list=[10, 50,100] 
+n_samples_list=[10, 50, 100] 
 n_inputs=100 if args.debug else args.n_inputs
 topk=args.topk
 
@@ -146,6 +146,7 @@ for layer_idx in [detnet.learnable_layers_idxs[-1]]:
 			print("mode_attack_lrp[0].shape[0] =", mode_attack_lrp[0].shape[0])
 			raise ValueError("Inconsistent n_inputs")
 
+
 	### Normalize heatmaps
 
 	if args.normalize:
@@ -197,14 +198,14 @@ for layer_idx in [detnet.learnable_layers_idxs[-1]]:
 
 	for samp_idx, n_samples in enumerate(n_samples_list):
 
-		preds, atk_preds, softmax_rob, successf_idxs, failed_idxs = evaluate_attack(net=bayesnet, x_test=images, 
+		preds, atk_preds, softmax_rob, succ_idxs, fail_idxs = evaluate_attack(net=bayesnet, x_test=images, 
 													   x_attack=bay_attack[samp_idx], y_test=y_test, device=args.device, 
 													   n_samples=n_samples, return_classification_idxs=True)
-		bay_softmax_robustness.append(softmax_rob.detach().cpu().numpy())
-		bay_successful_idxs.append(successf_idxs)
-		bay_failed_idxs.append(failed_idxs)
 		bay_preds.append(preds)
 		bay_atk_preds.append(atk_preds)
+		bay_softmax_robustness.append(softmax_rob.detach().cpu().numpy())
+		bay_successful_idxs.append(succ_idxs)
+		bay_failed_idxs.append(fail_idxs)
 
 		robustness, pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx], 
 												   adversarial_heatmaps=bay_attack_lrp[samp_idx], 
@@ -212,14 +213,14 @@ for layer_idx in [detnet.learnable_layers_idxs[-1]]:
 		bay_lrp_robustness.append(robustness)
 		bay_lrp_pxl_idxs.append(pxl_idxs)
 
-		robustness, pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx][successf_idxs], 
-												   adversarial_heatmaps=bay_attack_lrp[samp_idx][successf_idxs], 
+		robustness, pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx][succ_idxs], 
+												   adversarial_heatmaps=bay_attack_lrp[samp_idx][succ_idxs], 
 												   topk=topk, method=lrp_robustness_method)
 		succ_bay_lrp_robustness.append(robustness)
 		succ_bay_lrp_pxl_idxs.append(pxl_idxs)
 
-		robustness, pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx][failed_idxs], 
-												   adversarial_heatmaps=bay_attack_lrp[samp_idx][failed_idxs], 
+		robustness, pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx][fail_idxs], 
+												   adversarial_heatmaps=bay_attack_lrp[samp_idx][fail_idxs], 
 												   topk=topk, method=lrp_robustness_method)
 		fail_bay_lrp_robustness.append(robustness)
 		fail_bay_lrp_pxl_idxs.append(pxl_idxs)
@@ -249,7 +250,7 @@ for layer_idx in [detnet.learnable_layers_idxs[-1]]:
 			mode_atk_preds.append(atk_preds)
 			mode_softmax_robustness.append(softmax_rob.detach().cpu().numpy()) 
 			mode_successful_idxs.append(succ_idxs)
-			mode_failed_idxs.append(failed_idxs)
+			mode_failed_idxs.append(fail_idxs)
 
 			robustness, pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
 												  adversarial_heatmaps=mode_attack_lrp[samp_idx], 
@@ -277,7 +278,7 @@ for layer_idx in [detnet.learnable_layers_idxs[-1]]:
 		mode_atk_preds.append(atk_preds)
 		mode_softmax_robustness.append(softmax_rob.detach().cpu().numpy()) 
 		mode_successful_idxs.append(succ_idxs)
-		mode_failed_idxs.append(failed_idxs)
+		mode_failed_idxs.append(fail_idxs)
 
 		robustness, pxl_idxs = lrp_robustness(original_heatmaps=mode_lrp, 
 											  adversarial_heatmaps=mode_attack_lrp[samp_idx+1], 
@@ -312,7 +313,8 @@ for layer_idx in [detnet.learnable_layers_idxs[-1]]:
 							  successful_attacks_idxs=det_successful_idxs,
 							  failed_attacks_idxs=det_failed_idxs,
 							  labels=labels, lrp_rob_method=lrp_robustness_method,
-							  rule=args.rule, savedir=savedir, pxl_idxs=det_lrp_pxl_idxs,
+							  rule=args.rule, savedir=savedir, 
+							  pxl_idxs=det_lrp_pxl_idxs,
 							  filename="det_lrp_attacks_"+filename, 
 							  layer_idx=layer_idx)
 
@@ -327,7 +329,8 @@ for layer_idx in [detnet.learnable_layers_idxs[-1]]:
 								  successful_attacks_idxs=bay_successful_idxs[samp_idx],
 								  failed_attacks_idxs=bay_failed_idxs[samp_idx],
 								  labels=labels, lrp_rob_method=lrp_robustness_method,
-								  rule=args.rule, savedir=savedir, pxl_idxs=bay_lrp_pxl_idxs[samp_idx],
+								  rule=args.rule, savedir=savedir, 
+								  pxl_idxs=bay_lrp_pxl_idxs[samp_idx],
 								  filename="bay_lrp_attacks_samp="+str(n_samples)+"_"+filename, 
 								  layer_idx=layer_idx)
 
@@ -342,7 +345,8 @@ for layer_idx in [detnet.learnable_layers_idxs[-1]]:
 							  successful_attacks_idxs=mode_successful_idxs[-1],
 							  failed_attacks_idxs=mode_failed_idxs[-1],
 							  labels=labels, lrp_rob_method=lrp_robustness_method,
-							  rule=args.rule, savedir=savedir, pxl_idxs=mode_lrp_pxl_idxs[-1],
+							  rule=args.rule, savedir=savedir, 
+							  pxl_idxs=mode_lrp_pxl_idxs[-1],
 							  filename="mode_lrp_attacks", 
 							  layer_idx=layer_idx)	
 

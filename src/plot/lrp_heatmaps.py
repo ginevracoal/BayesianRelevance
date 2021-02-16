@@ -93,13 +93,6 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     im_idxs = np.concatenate([chosen_successful_idxs, chosen_failed_idxs])
     print("im_idxs =", im_idxs)
 
-    if DEBUG:
-        print("successful_attacks_idxs", successful_attacks_idxs)
-        print("failed_attacks_idxs", failed_attacks_idxs)
-        print("chosen_successful_idxs", chosen_successful_idxs)
-        print("chosen_failed_idxs", chosen_failed_idxs)
-        print("idxs", im_idxs)
-
     images = images[im_idxs].detach().cpu().numpy()
     explanations = explanations[im_idxs].detach().cpu().numpy()
     attacks = attacks[im_idxs].detach().cpu().numpy()
@@ -141,6 +134,9 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     fig.text(0.74, 0.97, "Failed attacks")
 
     for im_idx, axis_idx in enumerate([0,1,2,4,5,6]):
+
+        # print(f"explanations min={explanations[im_idx].min()} max={explanations[im_idx].max()}", end="\t")
+        # print(f"attacks explanations min={attacks_explanations[im_idx].min()} max={attacks_explanations[im_idx].max()}")
 
         image = np.squeeze(images[im_idx])
         image_rel = np.squeeze(images_rel[im_idx])
@@ -247,7 +243,7 @@ def plot_attacks_explanations_layers(images, explanations, attacks, attacks_expl
     images_cmap='Greys'
     cmap = plt.cm.get_cmap(relevance_cmap)
 
-    set_seed(1)
+    set_seed(0)
     im_idx = np.random.choice(successful_attacks_idxs, 1)
     print("im_idx =", im_idx)
 
@@ -266,7 +262,11 @@ def plot_attacks_explanations_layers(images, explanations, attacks, attacks_expl
 
         explanations[layer_idx] = relevant_subset(explanations[layer_idx], selected_pxl_idxs, lrp_rob_method)
         attack_explanations[layer_idx] = relevant_subset(attack_explanations[layer_idx], selected_pxl_idxs, lrp_rob_method)
-       
+        
+        print("\nLayer idx=", layer_idx)
+        print(f"explanations min={explanations[layer_idx].min()} max={explanations[layer_idx].max()}")
+        print(f"attack_explanations min={attack_explanations[layer_idx].min()} max={attack_explanations[layer_idx].max()}")
+
     vmax_expl = max([max(explanations.flatten()), 0.000001])
     vmin_expl = min([min(explanations.flatten()), -0.000001])
     norm_expl = colors.TwoSlopeNorm(vcenter=0., vmax=vmax_expl, vmin=vmin_expl)
