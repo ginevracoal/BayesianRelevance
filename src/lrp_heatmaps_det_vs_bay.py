@@ -99,22 +99,23 @@ if args.normalize:
         bay_lrp[im_idx] = normalize(bay_lrp[im_idx])
         bay_attack_lrp[im_idx] = normalize(bay_attack_lrp[im_idx])
 
-det_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp, adversarial_heatmaps=det_attack_lrp, 
-                              topk=args.topk, method=lrp_robustness_method)[1]
-bay_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp, adversarial_heatmaps=bay_attack_lrp, 
-                              topk=args.topk, method=lrp_robustness_method)[1]
+det_robustness, det_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp, adversarial_heatmaps=det_attack_lrp, 
+                              topk=args.topk, method=lrp_robustness_method)
+bay_robustness, bay_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp, adversarial_heatmaps=bay_attack_lrp, 
+                              topk=args.topk, method=lrp_robustness_method)
 
 ### Select failed attack
 
-set_seed(10)
+set_seed(15)
 shared_failed_idxs = np.intersect1d(det_failed_idxs, bay_failed_idxs)
-im_idx = np.random.choice(shared_failed_idxs, 1)
+im_idx = shared_failed_idxs[np.argmin(det_robustness[shared_failed_idxs])]
+# im_idx = np.random.choice(shared_failed_idxs, 1)
 
 ### Plots
 
 savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, lrp_method=args.lrp_method)
 
-filename=args.rule+"_heatmaps_det_vs_bay_"+m["dataset"]+"_images="+str(n_inputs)+"_failed_atk="+str(args.attack_method)
+filename=args.rule+"_heatmaps_det_vs_bay_"+m["dataset"]+"_topk="+str(args.topk)+"_failed_atk="+str(args.attack_method)
 
 if args.normalize:
     filename+="_norm"
@@ -125,11 +126,11 @@ plot_heatmaps_det_vs_bay(image=images[im_idx].detach().cpu().numpy(),
                          det_prediction=det_predictions[im_idx],
                          bay_prediction=bay_predictions[im_idx],
                          label=labels[im_idx],
-                         det_explanation=det_lrp[im_idx].detach().cpu().numpy(),
-                         det_attack_explanation=det_attack_lrp[im_idx].detach().cpu().numpy(),
-                         bay_explanation=bay_lrp[im_idx].detach().cpu().numpy(),
-                         bay_attack_explanation=bay_attack_lrp[im_idx].detach().cpu().numpy(),
+                         det_explanation=det_lrp[im_idx],
+                         det_attack_explanation=det_attack_lrp[im_idx],
+                         bay_explanation=bay_lrp[im_idx],
+                         bay_attack_explanation=bay_attack_lrp[im_idx],
                          det_pxl_idxs=det_pxl_idxs[im_idx], 
                          bay_pxl_idxs=bay_pxl_idxs[im_idx], 
                          lrp_rob_method=lrp_robustness_method, 
-                         rule=args.rule, savedir=savedir, filename=filename)
+                         topk=args.topk, rule=args.rule, savedir=savedir, filename=filename)

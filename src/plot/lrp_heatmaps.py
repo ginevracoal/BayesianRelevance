@@ -56,6 +56,8 @@ def relevant_subset(images, pxl_idxs, lrp_rob_method):
     flat_images = images.reshape(*images.shape[:1], -1)
     images_rel = np.zeros(flat_images.shape)
 
+    print("relevant pixels=", pxl_idxs)
+
     if lrp_rob_method=="imagewise":
         # different selection of pixels for each image
 
@@ -332,10 +334,12 @@ def plot_attacks_explanations_layers(images, explanations, attacks, attacks_expl
     cbar_ax = fig.add_axes([0.91, 0.61, 0.01, 0.32])
     cbar = fig.colorbar(expl, ax=axes[0, :].ravel().tolist(), cax=cbar_ax)
     cbar.set_label('LRP', labelpad=-50)
+    cbar.outline.set_visible(False)
 
     cbar_ax = fig.add_axes([0.91, 0.12, 0.01, 0.32])
     cbar = fig.colorbar(atk_expl, ax=axes[1, :].ravel().tolist(), cax=cbar_ax)
     cbar.set_label('LRP', labelpad=-50)
+    cbar.outline.set_visible(False)
 
     os.makedirs(savedir, exist_ok=True)
     plt.savefig(os.path.join(savedir,filename+"_layeridx="+str(layer_idx)+".png"))
@@ -344,18 +348,22 @@ def plot_attacks_explanations_layers(images, explanations, attacks, attacks_expl
 
 def plot_heatmaps_det_vs_bay(image, det_attack, bay_attack, det_prediction, bay_prediction, label,
                              det_explanation, det_attack_explanation, bay_explanation, bay_attack_explanation,
-                             det_pxl_idxs, bay_pxl_idxs, lrp_rob_method, rule, savedir, filename):
+                             det_pxl_idxs, bay_pxl_idxs, lrp_rob_method, topk, rule, savedir, filename):
 
     images_cmap='Greys'
     cmap = plt.cm.get_cmap(relevance_cmap)
 
-    # print(type(det_explanation), type(det_pxl_idxs))
-    # exit()
-    det_explanation = relevant_subset(det_explanation, det_pxl_idxs, lrp_rob_method)
-    det_attack_explanation = relevant_subset(det_attack_explanation, det_pxl_idxs, lrp_rob_method)
+    pxl_idxs = select_informative_pixels(det_explanation, topk=topk)[1].detach().cpu().numpy()
+    det_explanation = relevant_subset(det_explanation.detach().cpu().numpy(), [pxl_idxs], lrp_rob_method)
 
-    bay_explanation = relevant_subset(bay_explanation, bay_pxl_idxs, lrp_rob_method)
-    bay_attack_explanation = relevant_subset(bay_attack_explanation, bay_pxl_idxs, lrp_rob_method)
+    pxl_idxs = select_informative_pixels(det_attack_explanation, topk=topk)[1].detach().cpu().numpy()
+    det_attack_explanation = relevant_subset(det_attack_explanation.detach().cpu().numpy(), [pxl_idxs], lrp_rob_method)
+
+    pxl_idxs = select_informative_pixels(bay_explanation, topk=topk)[1].detach().cpu().numpy()
+    bay_explanation = relevant_subset(bay_explanation.detach().cpu().numpy(), [pxl_idxs], lrp_rob_method)
+
+    pxl_idxs = select_informative_pixels(bay_attack_explanation, topk=topk)[1].detach().cpu().numpy()
+    bay_attack_explanation = relevant_subset(bay_attack_explanation.detach().cpu().numpy(), [pxl_idxs], lrp_rob_method)
 
     vmax = max([max(det_explanation.flatten()), max(bay_explanation.flatten()),
                 max(det_attack_explanation.flatten()), max(bay_attack_explanation.flatten()), 0.000001])
@@ -365,7 +373,7 @@ def plot_heatmaps_det_vs_bay(image, det_attack, bay_attack, det_prediction, bay_
 
     fig, axes = plt.subplots(2, 3, figsize=(7, 4), dpi=150, sharex=True, sharey=True)
     fig.tight_layout()
-    size=10
+    size=12
 
     # axes[0, 0].imshow(np.squeeze(image), cmap=images_cmap)
     # axes[1, 0].imshow(np.squeeze(image), cmap=images_cmap)
