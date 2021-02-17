@@ -108,10 +108,12 @@ for layer_idx in detnet.learnable_layers_idxs:
 
     else:
 
-        savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                                  layer_idx=layer_idx, lrp_method=args.lrp_method)
-        lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
-        attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
+        raise NotImplementedError
+
+        # savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
+        #                           layer_idx=layer_idx, lrp_method=args.lrp_method)
+        # lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
+        # attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
 
     if args.normalize:  
         for im_idx in range(lrp.shape[0]):

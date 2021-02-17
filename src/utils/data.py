@@ -29,7 +29,7 @@ def execution_time(start, end):
 # data loaders #
 ################
 
-def data_loaders(dataset_name, batch_size, n_inputs=None, channels="first", shuffle=True):
+def data_loaders(dataset_name, batch_size, n_inputs=None, channels="first", shuffle=False):
     random.seed(0)
     x_train, y_train, x_test, y_test, input_shape, num_classes = \
         load_dataset(dataset_name=dataset_name, n_inputs=n_inputs, channels=channels)
@@ -76,7 +76,7 @@ def classwise_data_loaders(dataset_name, batch_size, n_inputs=None, shuffle=Fals
 
 
 def load_half_moons(channels="first", n_samples=30000):
-    x, y = make_moons(n_samples=n_samples, shuffle=True, noise=0.1, random_state=0)
+    x, y = make_moons(n_samples=n_samples, shuffle=False, noise=0.1, random_state=0)
     x, y = (x.astype('float32'), y.astype('float32'))
     x = (x-np.min(x))/(np.max(x)-np.min(x))
 
