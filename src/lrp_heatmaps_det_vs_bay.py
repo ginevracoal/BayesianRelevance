@@ -25,8 +25,8 @@ from attacks.run_attacks import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
-parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
-parser.add_argument("--topk", default=30, type=int, help="Choose model idx from pre defined settings")
+parser.add_argument("--model_idx", default=2, type=int, help="Choose model idx from pre defined settings")
+parser.add_argument("--topk", default=100, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--n_samples", default=100, type=int)
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
@@ -108,8 +108,14 @@ bay_robustness, bay_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp, adversa
 
 set_seed(15)
 shared_failed_idxs = np.intersect1d(det_failed_idxs, bay_failed_idxs)
+shared_failed_idxs = shared_failed_idxs[np.where(bay_robustness[shared_failed_idxs]!=1.)]
+
 im_idx = shared_failed_idxs[np.argmin(det_robustness[shared_failed_idxs])]
+# im_idx = shared_failed_idxs[np.argmax(bay_robustness[shared_failed_idxs])]
 # im_idx = np.random.choice(shared_failed_idxs, 1)
+
+print("det LRP robustness =", det_robustness[im_idx])
+print("bay LRP robustness =", bay_robustness[im_idx])
 
 ### Plots
 
@@ -130,7 +136,7 @@ plot_heatmaps_det_vs_bay(image=images[im_idx].detach().cpu().numpy(),
                          det_attack_explanation=det_attack_lrp[im_idx],
                          bay_explanation=bay_lrp[im_idx],
                          bay_attack_explanation=bay_attack_lrp[im_idx],
-                         det_pxl_idxs=det_pxl_idxs[im_idx], 
-                         bay_pxl_idxs=bay_pxl_idxs[im_idx], 
+                         # det_pxl_idxs=det_pxl_idxs[im_idx], 
+                         # bay_pxl_idxs=bay_pxl_idxs[im_idx], 
                          lrp_rob_method=lrp_robustness_method, 
                          topk=args.topk, rule=args.rule, savedir=savedir, filename=filename)
