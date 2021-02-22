@@ -353,44 +353,6 @@ def lrp_imagewise_robustness_distributions(det_lrp_robustness, bay_lrp_robustnes
     fig.savefig(os.path.join(savedir, filename+"_all_images.png"))
     plt.close(fig)
 
-# def lrp_catplot_robustness_distributions(det_lrp_robustness, bay_lrp_robustness, mode_lrp_robustness,
-#                                            n_samples_list, n_original_images, savedir, filename):
-
-#     sns.set_style("darkgrid")
-#     matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
-#     fig, ax = plt.subplots(1, 1, figsize=(10, 6), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
-#     fig.tight_layout()
-
-#     lrp_robustness=[]
-#     net_type=[]
-#     atk_type=[]
-
-#     lrp_robustness.extend(det_lrp_robustness)
-#     net_type.extend(np.repeat("deterministic", len(det_lrp_robustness)))
-#     atk_type.extend(np.repeat("deterministic", len(det_lrp_robustness)))
-
-#     lrp_robustness.extend(mode_lrp_robustness[-1])
-#     net_type.extend(np.repeat("mode", len(mode_lrp_robustness[-1])))
-#     atk_type.extend(np.repeat("mode", len(mode_lrp_robustness[-1])))
-
-#     for samp_idx, n_samples in enumerate(n_samples_list):
-#         lrp_robustness.extend(bay_lrp_robustness[samp_idx])
-#         net_type.extend(np.repeat("bayesian", len(bay_lrp_robustness[samp_idx])))
-#         atk_type.extend(np.repeat("bayesian", len(bay_lrp_robustness[samp_idx])))
-
-#         lrp_robustness.extend(mode_lrp_robustness[samp_idx])
-#         net_type.extend(np.repeat("bayesian", len(mode_lrp_robustness[samp_idx])))
-#         atk_type.extend(np.repeat("mode", len(mode_lrp_robustness[samp_idx])))
-
-#     df = pd.DataFrame({"lrp_robustness":lrp_robustness, "net_type":net_type, "atk_type":atk_type})
-
-#     print(df)
-
-#     sns.stripplot(data=df, x="lrp_robustness", y="net_type", hue="atk_type", ax=ax)
-
-#     fig.savefig(os.path.join(savedir, filename+"_catplot.png"))
-#     plt.close(fig)
-
 
 def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robustness,
                                lrp_robustness, bayesian_lrp_robustness, 
@@ -480,44 +442,9 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
     ax[1,2].legend()
     ax[2,2].legend()
 
-    # for idx in [0,1,2]:
-    #     ax[0,idx].set_axis_off()
-    #     ax[3,idx].set_axis_off()
-    # ax[0,0].set_axis_off()
-    # ax[0,2].set_axis_off()
-
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)    
 
-# def plot_wasserstein_dist(bay_wass_dist_layers, mode_wass_dist_layers, increasing_n_samples, filename, savedir):
-
-#     os.makedirs(savedir, exist_ok=True)
-#     sns.set_style("darkgrid")
-#     matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
-
-#     fig, ax = plt.subplots(1, 1, figsize=(10, 6), sharex=True, sharey=True, dpi=150, facecolor='w', edgecolor='k') 
-#     alpha=0.5
-
-#     ax.set_xlabel('Layer idx')
-#     ax.set_ylabel('Wass. dist.')
-
-#     layers_idxs = np.arange(len(bay_wass_dist_layers))+1
-
-#     print(layers_idxs)
-#     print(bay_wass_dist_layers[:,0].flatten().shape)
-
-#     for sample_idx, n_samples in enumerate(increasing_n_samples):
-
-#         sns.lineplot(x=layers_idxs, y=bay_wass_dist_layers[:,sample_idx].flatten(), ax=ax, 
-#                     label="bayesian samp="+str(n_samples))
-#         sns.lineplot(x=layers_idxs, y=mode_wass_dist_layers[:,sample_idx].flatten(), ax=ax, 
-#                     label="mode samp="+str(n_samples))
-
-#     sns.lineplot(x=layers_idxs, y=mode_wass_dist_layers, ax=ax, label="mode vs mode")
-
-#     ax.legend()
-#     fig.savefig(os.path.join(savedir, filename+".png"))
-#     plt.close(fig)
 
 def lrp_layers_robustness_distributions(
         det_lrp_robustness, det_successful_lrp_robustness, det_failed_lrp_robustness,
@@ -545,8 +472,6 @@ def lrp_layers_robustness_distributions(
     fig.subplots_adjust(bottom=0.1)
     ax[len(learnable_layers_idxs)-1,0].set_xlabel("LRP robustness", weight='bold')
     ax[len(learnable_layers_idxs)-1,1].set_xlabel("LRP robustness", weight='bold')
-    # ax[len(learnable_layers_idxs)-1,0].set_xlim(-0.1,1.1)
-    # ax[len(learnable_layers_idxs)-1,1].set_xlim(-0.1,1.1)
 
     for row_idx, layer_idx in enumerate(learnable_layers_idxs):
         for topk_idx, topk in enumerate(topk_list):
@@ -573,8 +498,6 @@ def lrp_layers_robustness_distributions(
         ax[row_idx,1].set_ylabel("layer idx="+str(layer_idx), rotation=270, labelpad=15, weight='bold', size=8)
 
     fig.subplots_adjust(top=0.98)
-    # ax[0,0].legend(loc="upper left")
-    # plt.setp(ax[0,0].get_legend().get_texts(), fontsize='8')
     fig.savefig(os.path.join(savedir, filename+"_succ_vs_failed.png"))
     plt.close(fig)
 
@@ -612,8 +535,6 @@ def lrp_layers_robustness_distributions(
 
         plt.subplots_adjust(hspace=0.05)
         plt.subplots_adjust(wspace=0.05)
-        # fig.subplots_adjust(top=0.9)
-        # ax[0,0].legend(bbox_to_anchor=(2, 1.5))
         ax[0,0].legend(prop={'size': 8})
 
         fig.savefig(os.path.join(savedir, filename+"_all_images.png"))
@@ -817,118 +738,7 @@ def lrp_layers_mode_robustness(det_lrp_robustness, bay_lrp_robustness, mode_lrp_
         g.set_xticklabels(topk_list)
 
     fig.subplots_adjust(top=0.9)
-    # ax[0,1].legend(bbox_to_anchor=(0.3, 1.45))
-
     fig.savefig(os.path.join(savedir, filename+"_all_images.png"))
     plt.close(fig)
 
 
-# def lrp_mode_wasserstein_robustness(det_lrp_robustness, bay_lrp_robustness, mode_lrp_robustness,
-#                                     n_samples_list, topk_list, learnable_layers_idxs, savedir, filename):
-#     from scipy.stats import wasserstein_distance
-
-#     ### dataframe
-
-#     df_lrp_robustness_dist= []
-#     df_layer_idx = []
-#     df_model_type = []
-#     df_atk_type = []
-#     df_n_samples = []
-#     df_topk = []
-
-#     for topk_idx, topk in enumerate(topk_list):
-#         for layer_idx, layer in enumerate(learnable_layers_idxs):
-
-#             # subset_det_lrp_rob = det_lrp_robustness[topk_idx, layer_idx]
-#             # df_lrp_robustness.extend(subset_lrp_rob)
-#             # df_layer_idx.extend(np.repeat(layer, len(subset_lrp_rob)))
-#             # df_model_type.extend(np.repeat("deterministic", len(subset_lrp_rob)))
-#             # df_atk_type.extend(np.repeat("deterministic", len(subset_lrp_rob)))
-#             # df_n_samples.extend(np.repeat(None, len(subset_lrp_rob)))
-#             # df_topk.extend(np.repeat(topk, len(subset_lrp_rob)))
-
-#             subset_lrp_rob = mode_lrp_robustness[topk_idx, layer_idx, -1]
-#             df_lrp_robustness_dist.extend(wasserstein_distance(subset_lrp_rob, subset_det_lrp_rob))
-#             df_layer_idx.extend(np.repeat(layer, len(subset_lrp_rob)))
-#             df_model_type.extend(np.repeat("mode", len(subset_lrp_rob)))
-#             df_atk_type.extend(np.repeat("mode", len(subset_lrp_rob)))
-#             df_n_samples.extend(np.repeat(None, len(subset_lrp_rob)))
-#             df_topk.extend(np.repeat(topk, len(subset_lrp_rob)))
-
-#             for samp_idx, n_samples in enumerate(n_samples_list):
-
-#                 subset_lrp_rob = bay_lrp_robustness[topk_idx, layer_idx, samp_idx]
-#                 df_lrp_robustness_dist.extend(wasserstein_distance(subset_lrp_rob, subset_det_lrp_rob))
-#                 df_layer_idx.extend(np.repeat(layer, len(subset_lrp_rob)))
-#                 df_model_type.extend(np.repeat("bayesian", len(subset_lrp_rob)))
-#                 df_atk_type.extend(np.repeat("bayesian", len(subset_lrp_rob)))
-#                 df_n_samples.extend(np.repeat(None, len(subset_lrp_rob)))
-#                 df_topk.extend(np.repeat(topk, len(subset_lrp_rob)))
-
-#                 subset_lrp_rob = mode_lrp_robustness[topk_idx, layer_idx, samp_idx]
-#                 df_lrp_robustness_dist.extend(wasserstein_distance(subset_lrp_rob, subset_det_lrp_rob))
-#                 df_layer_idx.extend(np.repeat(layer, len(subset_lrp_rob)))
-#                 df_model_type.extend(np.repeat("bayesian", len(subset_lrp_rob)))
-#                 df_atk_type.extend(np.repeat("mode", len(subset_lrp_rob)))
-#                 df_n_samples.extend(np.repeat(None, len(subset_lrp_rob)))
-#                 df_topk.extend(np.repeat(topk, len(subset_lrp_rob)))
-
-
-#     df = pd.DataFrame(data={"LRP Rob. Wass. dist":df_lrp_robustness, "Layer idx":df_layer_idx,
-#                             "Net.":df_model_type, "Atk.":df_atk_type, "Samp.":df_n_samples, "topk":df_topk})
-
-#     ### plot
-
-#     os.makedirs(savedir, exist_ok=True) 
-#     sns.set_style("darkgrid")
-#     matplotlib.rc('font', **{'size': 10}) #'weight': 'bold', 
-
-#     det_col =  plt.cm.get_cmap('rocket', 100)(np.linspace(0, 1, 10))
-#     bay_col = plt.cm.get_cmap('crest', 100)(np.linspace(0, 1, len(n_samples_list)+1))[1:]
-
-#     fig, ax = plt.subplots(len(learnable_layers_idxs), 2, figsize=(8, 6), sharex=True, dpi=150, 
-#                             facecolor='w', edgecolor='k', sharey=True) 
-#     fig.tight_layout()
-#     fig.subplots_adjust(bottom=0.1) 
-
-#     ax[0, 0].set_title('Deterministic Nets', fontdict={'fontsize':10, 'fontweight':'bold'})
-#     ax[0, 1].set_title('Bayesian Nets', fontdict={'fontsize':10, 'fontweight':'bold'})
-
-#     x="topk"
-#     y="LRP Rob. Wass. dist"
-
-#     for row_idx, layer_idx in enumerate(learnable_layers_idxs):
-
-#         ax[row_idx,0].set_ylabel("LRP robustness")
-
-#         ax[row_idx,1].yaxis.set_label_position("right")
-#         ax[row_idx,1].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=10, weight='bold', size=8)
-
-#         subset_df = df.loc[(df['Net.'] == "deterministic") & (df['Atk.'] == "deterministic")]
-#         sns.lineplot(data=subset_df, x=x, y=y, ax=ax[row_idx, 0], style="Atk.",
-#                     color=det_col[7], ci=100)
-
-#         subset_df = df.loc[(df['Net.'] == "mode") & (df['Atk.'] == "mode")]
-#         g = sns.lineplot(data=subset_df, x=x, y=y, dashes=[(2,2)], style="Atk.",
-#                         ax=ax[row_idx, 0], color=det_col[4], ci=100)
-
-#         for samp_idx, n_samples in enumerate(n_samples_list):
-
-#             subset_df = df.loc[(df['Net.'] == "bayesian") & (df['Atk.'] == "bayesian")]
-#             sns.lineplot(data=subset_df, x=x, y=y, style="Atk.",
-#                         ax=ax[row_idx, 1], 
-#                         color=bay_col[samp_idx], ci=100)
-
-#             subset_df = df.loc[(df['Net.'] == "bayesian") & (df['Atk.'] == "mode")]
-#             g = sns.lineplot(data=subset_df, x=x, y=y,  dashes=[(2,2)],
-#                         ax=ax[row_idx, 1], style="Atk.",
-#                         color=bay_col[samp_idx], ci=100)
-
-#         g.set_xticks(topk_list)
-#         g.set_xticklabels(topk_list)
-
-#     fig.subplots_adjust(top=0.9)
-#     # ax[0,1].legend(bbox_to_anchor=(0.3, 1.45))
-
-#     fig.savefig(os.path.join(savedir, filename+"_all_images.png"))
-#     plt.close(fig)

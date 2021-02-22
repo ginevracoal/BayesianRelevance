@@ -55,7 +55,7 @@ attack_evaluation(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, devi
 
 if args.model=="fullBNN":
 
-    m = fullBNN_settings["model_"+str(args.model_idx)]
+    m = fullBNN_settings["model_"+str(args.model_idx)] 
 
     x_train, y_train, _, _, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], n_inputs=n_inputs)
     x_test, y_test = load_dataset(dataset_name=m["dataset"], n_inputs=atk_inputs)[2:4]

@@ -47,21 +47,21 @@ if args.device=="cuda":
 model = baseNN_settings["model_"+str(args.model_idx)]
 
 x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], shuffle=False, n_inputs=n_inputs)[2:]
-model_savedir = get_model_savedir(model="baseNN", dataset=model["dataset"], architecture=model["architecture"], 
+det_model_savedir = get_model_savedir(model="baseNN", dataset=model["dataset"], architecture=model["architecture"], 
                                   debug=args.debug, model_idx=args.model_idx)
 detnet = baseNN(inp_shape, num_classes, *list(model.values()))
-detnet.load(savedir=model_savedir, device=args.device)
-det_attack = load_attack(method=args.attack_method, model_savedir=model_savedir)
+detnet.load(savedir=det_model_savedir, device=args.device)
+det_attack = load_attack(method=args.attack_method, model_savedir=det_model_savedir)
 
 if args.model=="fullBNN":
 
     m = fullBNN_settings["model_"+str(args.model_idx)]
 
-    model_savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
+    bay_model_savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
                                 model_idx=args.model_idx, debug=args.debug)
 
     bayesnet = BNN(m["dataset"], *list(m.values())[1:], inp_shape, num_classes)
-    bayesnet.load(savedir=model_savedir, device=args.device)
+    bayesnet.load(savedir=bay_model_savedir, device=args.device)
 
 elif args.model=="redBNN":
 
@@ -80,9 +80,9 @@ elif args.model=="redBNN":
     layer_idx=args.redBNN_layer_idx+basenet.n_learnable_layers+1 if args.redBNN_layer_idx<0 else args.redBNN_layer_idx
     bayesnet = redBNN(dataset_name=m["dataset"], inference=m["inference"], base_net=basenet, hyperparams=hyp,
                       layer_idx=layer_idx)
-    model_savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
+    bay_model_savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
                           debug=args.debug, model_idx=args.model_idx, layer_idx=layer_idx)
-    bayesnet.load(savedir=model_savedir, device=args.device)
+    bayesnet.load(savedir=bay_model_savedir, device=args.device)
 
 else:
     raise NotImplementedError
@@ -90,11 +90,11 @@ else:
 bay_attack=[]
 for n_samples in n_samples_list:
 
-    bay_attack.append(load_attack(method=args.attack_method, model_savedir=model_savedir, 
+    bay_attack.append(load_attack(method=args.attack_method, model_savedir=bay_model_savedir, 
                                   n_samples=n_samples))
 
 if m["inference"]=="svi":
-    mode_attack = load_attack(method=args.attack_method, model_savedir=model_savedir, 
+    mode_attack = load_attack(method=args.attack_method, model_savedir=bay_model_savedir, 
                               n_samples=n_samples, atk_mode=True)
 
 images = x_test.to(args.device)
@@ -102,8 +102,7 @@ labels = y_test.argmax(-1).to(args.device)
 
 for layer_idx in detnet.learnable_layers_idxs:
 
-    savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                              layer_idx=layer_idx, lrp_method=args.lrp_method)
+    savedir = get_lrp_savedir(model_savedir=det_model_savedir, attack_method=args.attack_method, layer_idx=layer_idx)
 
     ### Deterministic explanations
 
@@ -121,6 +120,9 @@ for layer_idx in detnet.learnable_layers_idxs:
         save_to_pickle(det_attack_lrp, path=savedir, filename="det_attack_lrp")
 
     ### Bayesian explanations
+
+    savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
+                              layer_idx=layer_idx, lrp_method=args.lrp_method)
 
     bay_lrp=[]
     bay_attack_lrp=[]

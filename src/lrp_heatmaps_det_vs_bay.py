@@ -83,12 +83,12 @@ labels = y_test.argmax(-1).to(args.device)
 
 layer_idx = detnet.learnable_layers_idxs[-1]
 
-savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
-                          layer_idx=layer_idx, lrp_method=args.lrp_method)
-
+savedir = get_lrp_savedir(model_savedir=det_model_savedir, attack_method=args.attack_method, layer_idx=layer_idx)
 det_lrp = load_from_pickle(path=savedir, filename="det_lrp")
 det_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
 
+savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
+                          layer_idx=layer_idx, lrp_method=args.lrp_method)
 bay_lrp = load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(args.n_samples))
 bay_attack_lrp = load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(args.n_samples))
 
@@ -112,7 +112,6 @@ shared_failed_idxs = shared_failed_idxs[np.where(bay_robustness[shared_failed_id
 
 im_idx = shared_failed_idxs[np.argmin(det_robustness[shared_failed_idxs])]
 # im_idx = shared_failed_idxs[np.argmax(bay_robustness[shared_failed_idxs])]
-# im_idx = np.random.choice(shared_failed_idxs, 1)
 
 print("det LRP robustness =", det_robustness[im_idx])
 print("bay LRP robustness =", bay_robustness[im_idx])
@@ -136,7 +135,5 @@ plot_heatmaps_det_vs_bay(image=images[im_idx].detach().cpu().numpy(),
                          det_attack_explanation=det_attack_lrp[im_idx],
                          bay_explanation=bay_lrp[im_idx],
                          bay_attack_explanation=bay_attack_lrp[im_idx],
-                         # det_pxl_idxs=det_pxl_idxs[im_idx], 
-                         # bay_pxl_idxs=bay_pxl_idxs[im_idx], 
                          lrp_rob_method=lrp_robustness_method, 
                          topk=args.topk, rule=args.rule, savedir=savedir, filename=filename)

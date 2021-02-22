@@ -1,5 +1,5 @@
 """
-Plot softmax distributions from different classes and posterior predictive networks
+Plot softmax distributions from different classes and networks
 """
 
 import sys

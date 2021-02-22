@@ -53,12 +53,12 @@ model = baseNN_settings["model_"+str(args.model_idx)]
 
 _, _, x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], 
 															shuffle=False, n_inputs=n_inputs)
-model_savedir = get_model_savedir(model="baseNN", dataset=model["dataset"], architecture=model["architecture"], 
+det_model_savedir = get_model_savedir(model="baseNN", dataset=model["dataset"], architecture=model["architecture"], 
 											debug=args.debug, model_idx=args.model_idx)
 detnet = baseNN(inp_shape, num_classes, *list(model.values()))
-detnet.load(savedir=model_savedir, device=args.device)
+detnet.load(savedir=det_model_savedir, device=args.device)
 
-det_attack = load_attack(method=args.attack_method, model_savedir=model_savedir)
+det_attack = load_attack(method=args.attack_method, model_savedir=det_model_savedir)
 
 if args.model=="fullBNN":
 
@@ -67,15 +67,15 @@ if args.model=="fullBNN":
 		if m["inference"]!="svi":
 			raise NotImplementedError
 
-		model_savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
+		bay_model_savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
 																model_idx=args.model_idx, debug=args.debug)
 
 		bayesnet = BNN(m["dataset"], *list(m.values())[1:], inp_shape, num_classes)
-		bayesnet.load(savedir=model_savedir, device=args.device)
+		bayesnet.load(savedir=bay_model_savedir, device=args.device)
 
 		bay_attack=[]
 		for n_samples in n_samples_list:
-				bay_attack.append(load_attack(method=args.attack_method, model_savedir=model_savedir, 
+				bay_attack.append(load_attack(method=args.attack_method, model_savedir=bay_model_savedir, 
 													n_samples=n_samples))
 
 else:
@@ -96,14 +96,14 @@ for topk in topk_list:
 
 	for layer_idx in detnet.learnable_layers_idxs:
 
-		savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-	                          	  layer_idx=layer_idx, lrp_method=args.lrp_method)
-
 		### Load explanations
+		savedir = get_lrp_savedir(model_savedir=det_model_savedir, attack_method=args.attack_method, layer_idx=layer_idx)
 
 		det_lrp = load_from_pickle(path=savedir, filename="det_lrp")
 		det_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
 
+		savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
+	                          	  layer_idx=layer_idx, lrp_method=args.lrp_method)
 		bay_lrp=[]
 		bay_attack_lrp=[]
 		for n_samples in n_samples_list:
@@ -183,7 +183,7 @@ mode_lrp_robustness_topk = np.array(mode_lrp_robustness_topk)
 
 ### Plots
 
-savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
+savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
                       	  lrp_method=args.lrp_method)
 
 filename=args.rule+"_lrp_robustness_"+m["dataset"]+"_images="+str(n_inputs)+\
@@ -202,12 +202,3 @@ plot_lrp.lrp_layers_mode_robustness(
 						savedir=savedir, 
 						filename="dist_"+filename+"_layers")
 
-# plot_lrp.lrp_mode_dist_robustness(
-# 						det_lrp_robustness=det_lrp_robustness_topk,
-# 						bay_lrp_robustness=bay_lrp_robustness_topk,
-# 						mode_lrp_robustness=mode_lrp_robustness_topk,
-# 						n_samples_list=n_samples_list,
-# 						topk_list=topk_list,
-# 						learnable_layers_idxs=detnet.learnable_layers_idxs,
-# 						savedir=savedir, 
-# 						filename="dist_"+filename+"_layers")

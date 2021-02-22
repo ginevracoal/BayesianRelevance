@@ -59,14 +59,14 @@ def relevant_subset(images, pxl_idxs, lrp_rob_method):
     print("relevant pixels=", pxl_idxs)
 
     if lrp_rob_method=="imagewise":
-        # different selection of pixels for each image
 
+        # different selection of pixels for each image
         for image_idx, im_pxl_idxs in enumerate(pxl_idxs):
             images_rel[image_idx,im_pxl_idxs] = flat_images[image_idx,im_pxl_idxs]
 
     elif lrp_rob_method=="pixelwise":
+
         # same pxls for all the images
-        
         images_rel[:,pxl_idxs] = flat_images[:,pxl_idxs]
 
     else:
@@ -291,26 +291,21 @@ def plot_attacks_explanations_layers(images, explanations, attacks, attacks_expl
     fig, axes = plt.subplots(rows, cols, figsize=(8, 4), dpi=150)
     fig.tight_layout()
 
-    # axes[0,0].set_ylabel("Image")
-    # axes[1,0].set_ylabel("Attack")
     fig.text(0.035, 0.63, f"Image", ha='center', rotation=90, weight='bold')
     fig.text(0.035, 0.25, f"Attack", ha='center', rotation=90, weight='bold')
 
     axes[0, 0].imshow(np.squeeze(image), cmap=images_cmap)
     axes[0, 0].imshow(np.squeeze(image_rel))
-    # axes[0, 0].set_xlabel(f"Label={label}\nPrediction={prediction}")
     fig.text(0.13, 0.5, f"Label={label}\nPrediction={prediction}", ha='center')
 
     axes[1, 0].imshow(np.squeeze(attack), cmap=images_cmap)
     axes[1, 0].imshow(np.squeeze(attack_rel))
-    # axes[1, 0].set_xlabel(f"Prediction={attack_prediction}")
     fig.text(0.13, 0.05, f"Prediction={attack_prediction}", ha='center')
 
     x_positions=[0.365, 0.58, 0.81]
 
     for col_idx, layer_idx in enumerate(learnable_layers_idxs):
 
-        # axes[1,col_idx+1].set_xlabel("Layer idx="+str(layer_idx))
         fig.text(x_positions[col_idx], 0.05, "Layer idx="+str(layer_idx), ha='center', weight='bold')
 
         expl = np.squeeze(explanations[col_idx])
@@ -321,13 +316,6 @@ def plot_attacks_explanations_layers(images, explanations, attacks, attacks_expl
     for col_idx in range(len(learnable_layers_idxs)+1):
         axes[0,col_idx].set_axis_off()
         axes[1,col_idx].set_axis_off()
-
-    # plt.tick_params(
-    # axis='x',          # changes apply to the x-axis
-    # which='both',      # both major and minor ticks are affected
-    # bottom=False,      # ticks along the bottom edge are off
-    # top=False,         # ticks along the top edge are off
-    # labelbottom=True) #
 
     fig.subplots_adjust(right=0.88)
 
@@ -370,14 +358,6 @@ def plot_heatmaps_det_vs_bay(image, det_attack, bay_attack, det_prediction, bay_
     vmin = min([min(det_explanation.flatten()), min(bay_explanation.flatten()),
                 min(det_attack_explanation.flatten()), min(bay_attack_explanation.flatten()), -0.000001])
     norm = colors.TwoSlopeNorm(vcenter=0., vmax=vmax, vmin=vmin)
-
-    # vmax = max([max(det_explanation.flatten()), max(det_attack_explanation.flatten()), 0.000001])
-    # vmin = min([min(det_explanation.flatten()),min(det_attack_explanation.flatten()), -0.000001])
-    # det_norm = colors.TwoSlopeNorm(vcenter=0., vmax=vmax, vmin=vmin)
-    
-    # vmax = max([max(bay_explanation.flatten()), max(bay_attack_explanation.flatten()), 0.000001])
-    # vmin = min([min(bay_explanation.flatten()), min(bay_attack_explanation.flatten()), -0.000001])
-    # bay_norm = colors.TwoSlopeNorm(vcenter=0., vmax=vmax, vmin=vmin)
 
     fig, axes = plt.subplots(2, 3, figsize=(7, 4), dpi=150, sharex=True, sharey=True)
     fig.tight_layout()
