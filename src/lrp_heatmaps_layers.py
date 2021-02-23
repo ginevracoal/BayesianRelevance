@@ -69,7 +69,7 @@ if args.model=="baseNN":
 elif args.model=="fullBNN":
 
     m = fullBNN_settings["model_"+str(args.model_idx)]
-    x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], shuffle=False, n_inputs=n_inputs)[2:]
+    x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=m["dataset"], shuffle=False, n_inputs=n_inputs)[2:]
 
     model_savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
                                                             model_idx=args.model_idx, debug=args.debug)

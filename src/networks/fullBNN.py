@@ -26,26 +26,11 @@ from pyro.nn import PyroModule
 
 from utils.data import *
 from utils.savedir import *
+from utils.model_settings import fullBNN_settings
 from networks.baseNN import baseNN
 
 
 DEBUG=False
-
-
-fullBNN_settings = {"model_0":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
-                             "architecture":"conv", "inference":"svi", "epochs":5, 
-                             "lr":0.01, "hmc_samples":None, "warmup":None},
-                    "model_1":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
-                             "architecture":"conv", "inference":"svi", "epochs":15,
-                             "lr":0.001, "hmc_samples":None, "warmup":None},
-                    "model_2":{"dataset":"mnist", "hidden_size":512, "activation":"leaky",
-                             "architecture":"fc2", "inference":"hmc", "epochs":None,
-                             "lr":None, "hmc_samples":100, "warmup":100}, 
-                    "model_3":{"dataset":"fashion_mnist", "hidden_size":1024, "activation":"leaky",
-                             "architecture":"fc2", "inference":"hmc", "epochs":None,
-                             "lr":None, "hmc_samples":100, "warmup":100},
-                    }  
-
 
 class BNN(PyroModule):
 
