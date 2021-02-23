@@ -70,5 +70,6 @@ python lrp_layers_robustness.py --n_inputs=500 --model_idx=0 \
 		--model=fullBNN --attack_method=fgsm --rule=epsilon
 ```
 (*This takes a while!*)
+
 <img src="images/dist_epsilon_lrp_robustness_mnist_images=500_samples=100_atk=fgsm_layers_all_images.png" width="500">
 <img src="images/scatterplot_epsilon_lrp_robustness_mnist_images=500_samples=100_atk=fgsm_layers_topk=100.png" width="500">
