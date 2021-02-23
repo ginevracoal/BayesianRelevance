@@ -1,4 +1,4 @@
-# Resilience of Bayesian Layer-Wise Explanations under Adversarial Attacks
+## Resilience of Bayesian Layer-Wise Explanations under Adversarial Attacks
 
 Ginevra Carbone, Guido Sanguinetti, Luca Bortolussi, 2021
 
@@ -6,7 +6,7 @@ Ginevra Carbone, Guido Sanguinetti, Luca Bortolussi, 2021
 We consider the problem of the stability of saliency-based explanations of Neural Network predictions under adversarial attacks in a classification task. We empirically show that, for deterministic Neural Networks, saliency interpretations are remarkably brittle even when the attacks fail, i.e. for attacks that do not change the classification label. By leveraging recent results, we provide a theoretical explanation of this result in terms of the geometry of adversarial attacks. Based on these theoretical considerations, we suggest and demonstrate empirically that saliency explanations provided by Bayesian Neural Networks are considerably more stable under adversarial perturbations. Our results not only confirm that Bayesian Neural Networks are more robust to adversarial attacks, but also demonstrate that Bayesian methods have the potential to provide more stable and interpretable assessments of Neural Network predictions. 
 
 
-# Experiments
+## Experiments
 
 ### Install
 
