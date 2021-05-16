@@ -15,6 +15,10 @@ from sklearn.datasets import make_moons
 from pandas import DataFrame
 from torch.utils.data import DataLoader
 
+import torchvision
+import torchvision.transforms as transforms
+import torch.nn.functional as F
+
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -31,13 +35,48 @@ def execution_time(start, end):
 
 def data_loaders(dataset_name, batch_size, n_inputs=None, channels="first", shuffle=False):
     random.seed(0)
-    x_train, y_train, x_test, y_test, input_shape, num_classes = \
-        load_dataset(dataset_name=dataset_name, n_inputs=n_inputs, channels=channels)
 
-    train_loader = DataLoader(dataset=list(zip(x_train, y_train)), batch_size=batch_size, 
-                              shuffle=shuffle)
-    test_loader = DataLoader(dataset=list(zip(x_test, y_test)), batch_size=batch_size, 
-                             shuffle=shuffle)
+    if dataset_name == "cifar":
+
+        data_dir="../../cifar-10/"
+
+        transform_train = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
+
+        transform_test = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
+
+        target_transform = torchvision.transforms.Compose([lambda x:torch.tensor([x]), 
+                                                           lambda x:F.one_hot(x,10),
+                                                           lambda x:x.squeeze()])
+
+        trainset = torchvision.datasets.CIFAR10(root=data_dir, train=True, download=True, transform=transform_train,
+                                                target_transform=target_transform)
+        train_loader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True)
+
+        testset = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform_test,
+                                                    target_transform=target_transform)
+        test_loader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False)
+
+        input_shape = next(iter(train_loader))[0].shape[1:]
+        # print(next(iter(train_loader))[0].shape)
+        # print(next(iter(train_loader))[1].shape)
+        num_classes = 10
+    else:
+
+        x_train, y_train, x_test, y_test, input_shape, num_classes = \
+            load_dataset(dataset_name=dataset_name, n_inputs=n_inputs, channels=channels)
+
+        train_loader = DataLoader(dataset=list(zip(x_train, y_train)), batch_size=batch_size, 
+                                  shuffle=shuffle)
+        test_loader = DataLoader(dataset=list(zip(x_test, y_test)), batch_size=batch_size, 
+                                 shuffle=shuffle)
 
     return train_loader, test_loader, input_shape, num_classes
 
@@ -211,8 +250,8 @@ def load_cifar(channels, img_rows=32, img_cols=32):
         x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 3)
         x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 3)
 
-    y_train = labels_to_onehot(y_train)
-    y_test = labels_to_onehot(y_test)
+    y_train = keras.utils.to_categorical(y_train, 10)
+    y_test = keras.utils.to_categorical(y_test, 10)
 
     input_shape = x_train.shape[1:]
     num_classes = 10

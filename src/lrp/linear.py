@@ -1,5 +1,5 @@
 import torch
-from .functional import linear
+from lrp.functional import linear
 
 class Linear(torch.nn.Linear):
     def forward(self, input, explain=False, rule="epsilon", **kwargs):

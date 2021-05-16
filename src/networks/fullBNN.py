@@ -88,8 +88,8 @@ class BNN(PyroModule):
 
         dists = {}
         for key, value in self.basenet.state_dict().items():
-            loc = pyro.param(str(f"{key}_loc"), torch.randn_like(value)) 
-            scale = pyro.param(str(f"{key}_scale"), torch.randn_like(value))
+            loc = pyro.param(str(f"{key}_loc"), torch.randn_like(value, dtype=torch.float32)) 
+            scale = pyro.param(str(f"{key}_scale"), torch.randn_like(value, dtype=torch.float32))
             distr = Normal(loc=loc, scale=softplus(scale))
             dists.update({str(key):distr})
 

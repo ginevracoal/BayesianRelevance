@@ -9,7 +9,6 @@ from utils.seeding import *
 from utils.savedir import *
 from plot.attacks import plot_grid_attacks
 from attacks.robustness_measures import softmax_robustness
-import attacks.torchvision_gradient_based as torchvision_atks
 from torch.autograd.gradcheck import zero_gradients
 
 from attacks.deeprobust.fgsm import FGSM

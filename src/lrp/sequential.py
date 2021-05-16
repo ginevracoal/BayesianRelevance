@@ -1,8 +1,8 @@
 import torch
-
-from . import Linear, Conv2d
-from .maxpool import MaxPool2d
-from .functional.utils import normalize
+from lrp.linear import Linear
+from lrp.conv import Conv2d
+from lrp.maxpool import MaxPool2d
+from lrp.functional.utils import normalize
 
 def grad_decorator_fn(module):
     """

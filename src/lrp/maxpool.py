@@ -1,5 +1,5 @@
 import torch
-from .functional import maxpool2d
+from lrp.functional import maxpool2d
 
 class MaxPool2d(torch.nn.MaxPool2d):
     def forward(self, input, explain=False, rule="epsilon", **kwargs):

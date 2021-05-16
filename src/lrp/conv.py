@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from .functional import conv2d
+from lrp.functional import conv2d
 
 class Conv2d(torch.nn.Conv2d): 
     def _conv_forward_explain(self, input, weight, conv2d_fn, **kwargs):

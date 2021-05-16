@@ -17,7 +17,10 @@ from utils.savedir import *
 from utils.seeding import *
 from utils.model_settings import baseNN_settings
 
-import lrp
+from lrp.linear import Linear 
+from lrp.maxpool import MaxPool2d 
+from lrp.conv import Conv2d 
+from lrp.sequential import Sequential 
 
 DEBUG = False
 
@@ -67,20 +70,20 @@ class baseNN(nn.Module):
 
             self.model = nn.Sequential(
                 nn.Flatten(), 
-                lrp.Linear(input_size, hidden_size),
+                Linear(input_size, hidden_size),
                 activ(),
-                lrp.Linear(hidden_size, output_size))
+                Linear(hidden_size, output_size))
 
             self.learnable_layers_idxs = [1, 3]
 
         elif architecture == "fc2":
             self.model = nn.Sequential(
                 nn.Flatten(),
-                lrp.Linear(input_size, hidden_size),
+                Linear(input_size, hidden_size),
                 activ(),
-                lrp.Linear(hidden_size, hidden_size),
+                Linear(hidden_size, hidden_size),
                 activ(),
-                lrp.Linear(hidden_size, output_size)
+                Linear(hidden_size, output_size)
                 )
 
             self.learnable_layers_idxs = [1, 3, 5]
@@ -88,15 +91,15 @@ class baseNN(nn.Module):
         elif architecture == "fc4":
             self.model = nn.Sequential(
                 nn.Flatten(),
-                lrp.Linear(input_size, hidden_size),
+                Linear(input_size, hidden_size),
                 activ(),
-                lrp.Linear(hidden_size, hidden_size),
+                Linear(hidden_size, hidden_size),
                 activ(),
-                lrp.Linear(hidden_size, hidden_size),
+                Linear(hidden_size, hidden_size),
                 activ(),
-                lrp.Linear(hidden_size, hidden_size),
+                Linear(hidden_size, hidden_size),
                 activ(),
-                lrp.Linear(hidden_size, output_size))
+                Linear(hidden_size, output_size))
 
             self.learnable_layers_idxs = [1, 3, 5, 7, 9]
 
@@ -105,22 +108,80 @@ class baseNN(nn.Module):
             if self.dataset_name in ["mnist","fashion_mnist"]:
 
                 self.model = nn.Sequential(
-                    lrp.Conv2d(in_channels, 16, kernel_size=5),
+                    Conv2d(in_channels, 16, kernel_size=5),
                     activ(),
-                    nn.MaxPool2d(kernel_size=2),
-                    lrp.Conv2d(16, hidden_size, kernel_size=5),
+                    MaxPool2d(kernel_size=2),
+                    Conv2d(16, hidden_size, kernel_size=5),
                     activ(),
-                    nn.MaxPool2d(kernel_size=2, stride=1),
+                    MaxPool2d(kernel_size=2, stride=1),
                     nn.Flatten(),
-                    lrp.Linear(int(hidden_size/(4*4))*input_size, output_size))
+                    Linear(int(hidden_size/(4*4))*input_size, output_size))
 
                 self.learnable_layers_idxs = [0, 3, 7]
+
+            elif self.dataset_name in ["cifar"]:
+
+                self.model = nn.Sequential(
+
+                    # Conv Layer block 1
+                    Conv2d(in_channels=in_channels, out_channels=32, kernel_size=3, padding=1),
+                    nn.BatchNorm2d(32),
+                    activ(),
+                    nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
+                    activ(),
+                    MaxPool2d(kernel_size=2, stride=2),
+
+                    # Conv Layer block 2
+                    Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
+                    nn.BatchNorm2d(128),
+                    activ(),
+                    Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
+                    activ(),
+                    MaxPool2d(kernel_size=2, stride=2),
+                    nn.Dropout2d(p=0.05),
+
+                    # Conv Layer block 3
+                    Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1),
+                    nn.BatchNorm2d(256),
+                    activ(),
+                    Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1),
+                    activ(),
+                    MaxPool2d(kernel_size=2, stride=2),
+
+                    # Linear
+                    nn.Dropout(p=0.1),
+                    nn.Flatten(),
+                    Linear(4096, hidden_size),
+                    activ(),
+                    Linear(hidden_size, 512),
+                    activ(),
+                    nn.Dropout(p=0.1),
+                    Linear(512, output_size))
+
+                self.learnable_layers_idxs = [0, 3, 6, 9, 13, 16, 21, 23, 26]
+
+                # self.model = nn.Sequential(
+                #     Conv2d(in_channels, 32, kernel_size=5),
+                #     activ(),
+                #     MaxPool2d(kernel_size=2),
+                #     Conv2d(32, hidden_size, kernel_size=5),
+                #     activ(),
+                #     MaxPool2d(kernel_size=2, stride=1),
+                #     nn.Flatten(),
+                #     Linear(82944, output_size))
 
             else:
                 raise NotImplementedError()
 
         else:
             raise NotImplementedError()
+
+    def num_flat_features(self, x):
+        size = x.size()[1:]
+        num_features = 1
+        for s in size:
+            num_features *= s
+        return num_features + 1
 
     def train(self, train_loader, savedir, device):
         print("\n == baseNN training ==")
@@ -190,10 +251,10 @@ class baseNN(nn.Module):
     def forward(self, inputs, layer_idx=-1, softmax=False, *args, **kwargs):
 
         layer_idx = self._set_correct_layer_idx(layer_idx)
+        # print(self.model(inputs).shape)
 
         # preds = nn.Sequential(*list(self.model.children())[:layer_idx])(inputs)
-
-        model = lrp.Sequential(*list(self.model.children())[:layer_idx])
+        model = Sequential(*list(self.model.children())[:layer_idx])
         preds = model.forward(inputs, *args, **kwargs)
 
         if softmax:

@@ -245,7 +245,7 @@ def plot_attacks_explanations_layers(images, explanations, attacks, attacks_expl
     images_cmap='Greys'
     cmap = plt.cm.get_cmap(relevance_cmap)
 
-    set_seed(0)
+    set_seed(2)
     im_idx = np.random.choice(successful_attacks_idxs, 1)
     print("im_idx =", im_idx)
 
