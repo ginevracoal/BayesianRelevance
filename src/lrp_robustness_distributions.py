@@ -113,12 +113,12 @@ for layer_idx in [detnet.learnable_layers_idxs[-1]]:
 	### Load explanations
 
 	savedir = get_lrp_savedir(model_savedir=det_model_savedir, attack_method=args.attack_method, 
-							  layer_idx=layer_idx)
+							  rule=args.rule, layer_idx=layer_idx)
 	det_lrp = load_from_pickle(path=savedir, filename="det_lrp")
 	det_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
 
 	savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
-							  layer_idx=layer_idx, lrp_method=args.lrp_method)
+							  rule=args.rule, layer_idx=layer_idx, lrp_method=args.lrp_method)
 	bay_lrp=[]
 	bay_attack_lrp=[]
 	for n_samples in n_samples_list:

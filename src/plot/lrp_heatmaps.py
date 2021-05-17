@@ -49,6 +49,7 @@ def plot_explanations(images, explanations, rule, savedir, filename, layer_idx=-
         im = axes[1, col].imshow(expl, cmap=cmap)
 
     os.makedirs(savedir, exist_ok=True)
+    print("\nSaving: ", os.path.join(savedir,filename+".png"))
     plt.savefig(os.path.join(savedir,filename+".png"))
 
 def relevant_subset(images, pxl_idxs, lrp_rob_method):
@@ -183,6 +184,7 @@ def plot_attacks_explanations(images, explanations, attacks, attacks_explanation
     cbar.set_label('Relevance', labelpad=-60)
 
     os.makedirs(savedir, exist_ok=True)
+    print("\nSaving: ", os.path.join(savedir,filename+"_layeridx="+str(layer_idx)+".png"))
     plt.savefig(os.path.join(savedir,filename+"_layeridx="+str(layer_idx)+".png"))
 
 def plot_vanishing_explanations(images, samples_explanations, n_samples_list, rule, savedir, filename,
@@ -232,6 +234,7 @@ def plot_vanishing_explanations(images, samples_explanations, n_samples_list, ru
         # cbar.set_label('Relevance', labelpad=10)
 
     os.makedirs(savedir, exist_ok=True)
+    print("\nSaving: ", os.path.join(savedir, filename+".png"))    
     plt.savefig(os.path.join(savedir, filename+".png"))
 
 
@@ -330,8 +333,8 @@ def plot_attacks_explanations_layers(images, explanations, attacks, attacks_expl
     cbar.outline.set_visible(False)
 
     os.makedirs(savedir, exist_ok=True)
+    print("\nSaving: ", os.path.join(savedir, filename+".png"))        
     plt.savefig(os.path.join(savedir,filename+"_layeridx="+str(layer_idx)+".png"))
-
 
 
 def plot_heatmaps_det_vs_bay(image, det_attack, bay_attack, det_prediction, bay_prediction, label,
@@ -401,5 +404,6 @@ def plot_heatmaps_det_vs_bay(image, det_attack, bay_attack, det_prediction, bay_
     cbar.outline.set_visible(False)
 
     os.makedirs(savedir, exist_ok=True)
-    plt.savefig(os.path.join(savedir,filename+".png"))
+    print("\nSaving: ", os.path.join(savedir, filename+".png"))            
+    plt.savefig(os.path.join(savedir, filename+".png"))
 

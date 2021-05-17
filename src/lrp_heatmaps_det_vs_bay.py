@@ -83,12 +83,13 @@ labels = y_test.argmax(-1).to(args.device)
 
 layer_idx = detnet.learnable_layers_idxs[-1]
 
-savedir = get_lrp_savedir(model_savedir=det_model_savedir, attack_method=args.attack_method, layer_idx=layer_idx)
+savedir = get_lrp_savedir(model_savedir=det_model_savedir, attack_method=args.attack_method, rule=args.rule, 
+                            layer_idx=layer_idx)
 det_lrp = load_from_pickle(path=savedir, filename="det_lrp")
 det_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
 
 savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
-                          layer_idx=layer_idx, lrp_method=args.lrp_method)
+                          rule=args.rule, layer_idx=layer_idx, lrp_method=args.lrp_method)
 bay_lrp = load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(args.n_samples))
 bay_attack_lrp = load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(args.n_samples))
 
@@ -118,7 +119,8 @@ print("bay LRP robustness =", bay_robustness[im_idx])
 
 ### Plots
 
-savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, lrp_method=args.lrp_method)
+savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
+                         rule=args.rule, lrp_method=args.lrp_method)
 
 filename=args.rule+"_heatmaps_det_vs_bay_"+m["dataset"]+"_topk="+str(args.topk)+"_failed_atk="+str(args.attack_method)
 

@@ -45,15 +45,15 @@ def stripplot_lrp_values(lrp_heatmaps_list, n_samples_list, savedir, filename, l
     fig.text(0.03, 0.5, r"LRP heatmaps components components", 
              va='center', rotation='vertical')
 
-    savedir = os.path.join(savedir, lrp_savedir(layer_idx))
     os.makedirs(savedir, exist_ok=True)
+    print("\nSaving: ", os.path.join(savedir, filename+".png"))            
     fig.savefig(os.path.join(savedir, filename+".png"))
 
 
 def lrp_labels_distributions(lrp_heatmaps, labels, num_classes, n_samples_list, savedir, filename, topk=None,
                             layer_idx=-1):
 
-    savedir = os.path.join(savedir, lrp_savedir(layer_idx), "labels_distributions")
+    savedir = os.path.join(savedir, "labels_distributions")
     os.makedirs(savedir, exist_ok=True)
 
     if topk is not None:
@@ -101,6 +101,7 @@ def lrp_labels_distributions(lrp_heatmaps, labels, num_classes, n_samples_list, 
 
         plt.legend()
         os.makedirs(savedir, exist_ok=True)
+        print("\nSaving: ", os.path.join(savedir, filename+"_label="+str(label)+".png"))                    
         fig.savefig(os.path.join(savedir, filename+"_label="+str(label)+".png"))
         plt.close(fig)
 
@@ -108,7 +109,7 @@ def lrp_labels_distributions(lrp_heatmaps, labels, num_classes, n_samples_list, 
 def lrp_samples_distributions(lrp_heatmaps, labels, num_classes, n_samples_list, savedir, 
                               filename, layer_idx=-1):
 
-    savedir = os.path.join(savedir, lrp_savedir(layer_idx), "samples_distributions")
+    savedir = os.path.join(savedir, "samples_distributions")
     os.makedirs(savedir, exist_ok=True)
     
     flat_lrp_heatmaps = lrp_heatmaps.reshape(*lrp_heatmaps.shape[:2], -1)
@@ -152,13 +153,14 @@ def lrp_samples_distributions(lrp_heatmaps, labels, num_classes, n_samples_list,
             ax.set_yscale('log')
 
         plt.legend()
+        print("\nSaving: ", os.path.join(savedir, filename+"_samp="+str(n_samples)+".png"))                            
         fig.savefig(os.path.join(savedir, filename+"_samp="+str(n_samples)+".png"))
         plt.close(fig)
 
 def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, savedir, filename, topk=1,
                              layer_idx=-1):
     
-    savedir = os.path.join(savedir, lrp_savedir(layer_idx), "pixels_distributions")
+    savedir = os.path.join(savedir, "pixels_distributions")
     os.makedirs(savedir, exist_ok=True) 
 
     ### dataframe
@@ -203,6 +205,7 @@ def lrp_pixels_distributions(lrp_heatmaps, labels, num_classes, n_samples, saved
                 sns.distplot(samp_df["lrp"], ax=ax, kde=False)
                 ax.set_yscale('log')
 
+        print("\nSaving: ", os.path.join(savedir, filename+"_im_idx="+str(im_idx)+".png"))                            
         fig.savefig(os.path.join(savedir, filename+"_im_idx="+str(im_idx)+".png"))
         plt.close(fig)
 
@@ -314,6 +317,7 @@ def lrp_imagewise_robustness_distributions(det_lrp_robustness, bay_lrp_robustnes
         ax[row_idx,0].legend(prop={'size': 8})
         ax[row_idx,1].legend(prop={'size': 8})
 
+    print("\nSaving: ", os.path.join(savedir, filename+"_succ_vs_failed.png"))                            
     fig.savefig(os.path.join(savedir, filename+"_succ_vs_failed.png"))
     plt.close(fig)
 
@@ -350,6 +354,7 @@ def lrp_imagewise_robustness_distributions(det_lrp_robustness, bay_lrp_robustnes
         ax[row_idx].legend()
         ax[row_idx].legend(prop={'size': 8})
 
+    print("\nSaving: ", os.path.join(savedir, filename+"_all_images.png"))                            
     fig.savefig(os.path.join(savedir, filename+"_all_images.png"))
     plt.close(fig)
 
@@ -442,6 +447,7 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
     ax[1,2].legend()
     ax[2,2].legend()
 
+    print("\nSaving: ", os.path.join(savedir, filename+".png"))                            
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)    
 
@@ -498,6 +504,7 @@ def lrp_layers_robustness_distributions(
         ax[row_idx,1].set_ylabel("layer idx="+str(layer_idx), rotation=270, labelpad=15, weight='bold', size=8)
 
     fig.subplots_adjust(top=0.98)
+    print("\nSaving: ", os.path.join(savedir, filename+"_succ_vs_failed.png"))                                
     fig.savefig(os.path.join(savedir, filename+"_succ_vs_failed.png"))
     plt.close(fig)
 
@@ -537,6 +544,7 @@ def lrp_layers_robustness_distributions(
         plt.subplots_adjust(wspace=0.05)
         ax[0,0].legend(prop={'size': 8})
 
+        print("\nSaving: ", os.path.join(savedir, filename+"_all_images.png"))                                
         fig.savefig(os.path.join(savedir, filename+"_all_images.png"))
         plt.close(fig)
 
@@ -568,6 +576,7 @@ def lrp_layers_robustness_distributions(
         # plt.setp(ax[0].get_legend().get_texts(), fontsize='8')
         # plt.legend(frameon=False)
         # plt.subplots_adjust(hspace=0.1)
+        print("\nSaving: ", os.path.join(savedir, filename+"_all_images.png"))                                        
         fig.savefig(os.path.join(savedir, filename+"_all_images.png"))
         plt.close(fig)
 
@@ -630,6 +639,7 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, bay_lrp_robustness,
     # ax[0,0].legend(bbox_to_anchor=(-0.5, 0.5))
     # ax[0,1].legend(bbox_to_anchor=(-1.6, -0.5))
 
+    print("\nSaving: ", os.path.join(savedir, filename+".png"))                                
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)
 
@@ -738,6 +748,7 @@ def lrp_layers_mode_robustness(det_lrp_robustness, bay_lrp_robustness, mode_lrp_
         g.set_xticklabels(topk_list)
 
     fig.subplots_adjust(top=0.9)
+    print("\nSaving: ", os.path.join(savedir, filename+"_all_images.png"))                                    
     fig.savefig(os.path.join(savedir, filename+"_all_images.png"))
     plt.close(fig)
 

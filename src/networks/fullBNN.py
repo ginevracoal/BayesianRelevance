@@ -50,6 +50,7 @@ class BNN(PyroModule):
                               output_size=output_size, hidden_size=hidden_size, 
                               activation=activation, architecture=architecture, 
                               epochs=epochs, lr=lr)
+
         self.name = self.get_name()
         self.n_layers = self.basenet.n_layers
 

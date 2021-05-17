@@ -102,7 +102,7 @@ for layer_idx in detnet.learnable_layers_idxs:
     if args.model=="baseNN":
 
         savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, 
-                                  layer_idx=layer_idx)
+                                  rule=args.rule, layer_idx=layer_idx)
         lrp = load_from_pickle(path=savedir, filename="det_lrp")
         attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
 
@@ -134,7 +134,8 @@ pxl_idxs_layers=np.array(pxl_idxs_layers)
 ### Plots
 
 lrp_method=None if args.model=="baseNN" else args.lrp_method
-savedir = get_lrp_savedir(model_savedir=model_savedir, attack_method=args.attack_method, lrp_method=lrp_method)
+savedir = get_lrp_savedir(model_savedir=model_savedir, rule=args.rule, 
+                        attack_method=args.attack_method, lrp_method=lrp_method)
 
 filename=args.rule+"_layers_heatmaps_"+m["dataset"]+"_images="+str(n_inputs)+\
                 "_atk="+str(args.attack_method)

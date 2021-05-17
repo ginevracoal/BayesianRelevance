@@ -108,10 +108,10 @@ class baseNN(nn.Module):
             if self.dataset_name in ["mnist","fashion_mnist"]:
 
                 self.model = nn.Sequential(
-                    Conv2d(in_channels, 16, kernel_size=5),
+                    Conv2d(in_channels, 32, kernel_size=5),
                     activ(),
                     MaxPool2d(kernel_size=2),
-                    Conv2d(16, hidden_size, kernel_size=5),
+                    Conv2d(32, hidden_size, kernel_size=5),
                     activ(),
                     MaxPool2d(kernel_size=2, stride=1),
                     nn.Flatten(),
@@ -152,23 +152,15 @@ class baseNN(nn.Module):
                     nn.Dropout(p=0.1),
                     nn.Flatten(),
                     Linear(4096, hidden_size),
+                    # Linear(8192, hidden_size),
+                    # Linear(16384, hidden_size),
                     activ(),
                     Linear(hidden_size, 512),
                     activ(),
                     nn.Dropout(p=0.1),
                     Linear(512, output_size))
 
-                self.learnable_layers_idxs = [0, 3, 6, 9, 13, 16, 21, 23, 26]
-
-                # self.model = nn.Sequential(
-                #     Conv2d(in_channels, 32, kernel_size=5),
-                #     activ(),
-                #     MaxPool2d(kernel_size=2),
-                #     Conv2d(32, hidden_size, kernel_size=5),
-                #     activ(),
-                #     MaxPool2d(kernel_size=2, stride=1),
-                #     nn.Flatten(),
-                #     Linear(82944, output_size))
+                # self.learnable_layers_idxs = [0, 3, 6, 9, 13, 16, 21, 23, 26]
 
             else:
                 raise NotImplementedError()

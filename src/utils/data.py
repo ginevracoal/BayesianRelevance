@@ -135,7 +135,6 @@ def load_half_moons(channels="first", n_samples=30000):
         x_train = x_train.reshape(x_train.shape[0], 1, n_coords, n_channels)
         x_test = x_test.reshape(x_test.shape[0], 1, n_coords, n_channels)
     input_shape = x_train.shape[1:]
-    
 
     # binary one hot encoding
     num_classes = 2
@@ -209,67 +208,66 @@ def onehot_to_labels(y):
     elif type(y) is torch.Tensor:
         return torch.max(y, 1)[1]
 
-def load_cifar(channels, img_rows=32, img_cols=32):
-    x_train = None
-    y_train = []
+# def load_cifar(channels, img_rows=32, img_cols=32):
+#     x_train = None
+#     y_train = []
 
-    data_dir="../../cifar-10/"
+#     data_dir="../../cifar-10/"
 
-    for batch in range(1, 6):
-        data_dic = unpickle(data_dir + "data_batch_{}".format(batch))
-        if batch == 1:
-            x_train = data_dic['data']
-        else:
-            x_train = np.vstack((x_train, data_dic['data']))
-        y_train += data_dic['labels']
+#     for batch in range(1, 6):
+#         data_dic = unpickle(data_dir + "data_batch_{}".format(batch))
+#         if batch == 1:
+#             x_train = data_dic['data']
+#         else:
+#             x_train = np.vstack((x_train, data_dic['data']))
+#         y_train += data_dic['labels']
 
-    test_data_dic = unpickle(data_dir + "test_batch")
-    x_test = test_data_dic['data']
-    y_test = test_data_dic['labels']
+#     test_data_dic = unpickle(data_dir + "test_batch")
+#     x_test = test_data_dic['data']
+#     y_test = test_data_dic['labels']
 
-    x_train = x_train.reshape((len(x_train), 3, img_rows, img_cols))
-    x_train = np.rollaxis(x_train, 1, 4)
-    y_train = np.array(y_train)
+#     x_train = x_train.reshape((len(x_train), 3, img_rows, img_cols))
+#     x_train = np.rollaxis(x_train, 1, 4)
+#     y_train = np.array(y_train)
 
-    x_test = x_test.reshape((len(x_test), 3, img_rows, img_cols))
-    x_test = np.rollaxis(x_test, 1, 4)
-    y_test = np.array(y_test)
+#     x_test = x_test.reshape((len(x_test), 3, img_rows, img_cols))
+#     x_test = np.rollaxis(x_test, 1, 4)
+#     y_test = np.array(y_test)
 
-    input_shape = x_train.shape[1:]
+#     input_shape = x_train.shape[1:]
 
-    x_train = x_train.astype('float32')
-    x_test = x_test.astype('float32')
-    x_train /= 255
-    x_test /= 255
+#     x_train = x_train.astype('float32')
+#     x_test = x_test.astype('float32')
+#     x_train /= 255
+#     x_test /= 255
 
-    if channels == "first":
-        x_train = x_train.reshape(x_train.shape[0], 3, img_rows, img_cols)
-        x_test = x_test.reshape(x_test.shape[0], 3, img_rows, img_cols)
+#     if channels == "first":
+#         x_train = x_train.reshape(x_train.shape[0], 3, img_rows, img_cols)
+#         x_test = x_test.reshape(x_test.shape[0], 3, img_rows, img_cols)
 
-    elif channels == "last":
-        x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 3)
-        x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 3)
+#     elif channels == "last":
+#         x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 3)
+#         x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 3)
 
-    y_train = keras.utils.to_categorical(y_train, 10)
-    y_test = keras.utils.to_categorical(y_test, 10)
+#     y_train = keras.utils.to_categorical(y_train, 10)
+#     y_test = keras.utils.to_categorical(y_test, 10)
 
-    input_shape = x_train.shape[1:]
-    num_classes = 10
-    return x_train, y_train, x_test, y_test, input_shape, num_classes
+#     input_shape = x_train.shape[1:]
+#     num_classes = 10
+#     return x_train, y_train, x_test, y_test, input_shape, num_classes
 
 def load_dataset(dataset_name, n_inputs=None, channels="first", shuffle=False):
 
     if dataset_name == "mnist":
         x_train, y_train, x_test, y_test, input_shape, num_classes = load_mnist(channels)
-    elif dataset_name == "cifar":
-        x_train, y_train, x_test, y_test, input_shape, num_classes = load_cifar(channels)
+    # elif dataset_name == "cifar":
+    #     x_train, y_train, x_test, y_test, input_shape, num_classes = load_cifar(channels)
     elif dataset_name == "fashion_mnist":
         x_train, y_train, x_test, y_test, input_shape, num_classes = load_fashion_mnist(channels)
     elif dataset_name == "half_moons":
         x_train, y_train, x_test, y_test, input_shape, num_classes = load_half_moons()
     else:
         raise AssertionError("\nDataset not available.")
-
 
     x_train, y_train = torch.from_numpy(x_train), torch.from_numpy(y_train)
     x_test, y_test = torch.from_numpy(x_test), torch.from_numpy(y_test)

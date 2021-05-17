@@ -34,7 +34,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 n_inputs=100 if args.debug else args.n_inputs
-n_samples_list=[10,50]#,100]
+n_samples_list=[10,50,100]
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
@@ -102,7 +102,8 @@ labels = y_test.argmax(-1).to(args.device)
 
 for layer_idx in detnet.learnable_layers_idxs:
 
-    savedir = get_lrp_savedir(model_savedir=det_model_savedir, attack_method=args.attack_method, layer_idx=layer_idx)
+    savedir = get_lrp_savedir(model_savedir=det_model_savedir, attack_method=args.attack_method, 
+                              layer_idx=layer_idx, rule=args.rule)
 
     ### Deterministic explanations
 
@@ -112,8 +113,9 @@ for layer_idx in detnet.learnable_layers_idxs:
 
     else:
 
-        det_lrp = compute_explanations(images, detnet, layer_idx=layer_idx, rule=args.rule, method=args.lrp_method)
-        det_attack_lrp = compute_explanations(det_attack, detnet, layer_idx=layer_idx, rule=args.rule, 
+        det_lrp = compute_explanations(images, detnet, layer_idx=layer_idx, rule=args.rule, device=args.device, 
+                                        method=args.lrp_method)
+        det_attack_lrp = compute_explanations(det_attack, detnet, layer_idx=layer_idx, rule=args.rule, device=args.device,
                                                 method=args.lrp_method)
 
         save_to_pickle(det_lrp, path=savedir, filename="det_lrp")
@@ -122,7 +124,7 @@ for layer_idx in detnet.learnable_layers_idxs:
     ### Bayesian explanations
 
     savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
-                              layer_idx=layer_idx, lrp_method=args.lrp_method)
+                              layer_idx=layer_idx, rule=args.rule, lrp_method=args.lrp_method)
 
     bay_lrp=[]
     bay_attack_lrp=[]
@@ -134,12 +136,12 @@ for layer_idx in detnet.learnable_layers_idxs:
             bay_lrp.append(load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(n_samples)))
             bay_attack_lrp.append(load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(n_samples)))
 
-        if m["inference"]=="svi":
-            mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post")
+        # if m["inference"]=="svi":
+        #     mode_lrp = load_from_pickle(path=savedir, filename="mode_lrp_avg_post")
 
-            for n_samples in n_samples_list:
-                mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
-            mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post"))
+        #     for n_samples in n_samples_list:
+        #         mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_samp="+str(n_samples)))
+        #     mode_attack_lrp.append(load_from_pickle(path=savedir, filename="mode_attack_lrp_avg_post"))
 
             # print(mode_lrp.shape, torch.stack(mode_attack_lrp).shape)
 
@@ -148,34 +150,27 @@ for layer_idx in detnet.learnable_layers_idxs:
         for samp_idx, n_samples in enumerate(n_samples_list):
 
             bay_lrp.append(compute_explanations(images, bayesnet, rule=args.rule, layer_idx=layer_idx, 
-                                                n_samples=n_samples, method=args.lrp_method))
-            bay_attack_lrp.append(compute_explanations(bay_attack[samp_idx], bayesnet, layer_idx=layer_idx,
-                                                       rule=args.rule, n_samples=n_samples, method=args.lrp_method))
+                                                n_samples=n_samples, method=args.lrp_method, device=args.device))
+            bay_attack_lrp.append(compute_explanations(bay_attack[samp_idx], bayesnet, layer_idx=layer_idx, 
+                                    device=args.device, rule=args.rule, n_samples=n_samples, method=args.lrp_method))
 
             save_to_pickle(bay_lrp[samp_idx], path=savedir, filename="bay_lrp_samp="+str(n_samples))
             save_to_pickle(bay_attack_lrp[samp_idx], path=savedir, filename="bay_attack_lrp_samp="+str(n_samples))
         
-        if m["inference"]=="svi":
+        # if m["inference"]=="svi":
 
-            mode_lrp = compute_explanations(images, bayesnet, rule=args.rule, layer_idx=layer_idx, 
-                                            n_samples=n_samples, avg_posterior=True, method=args.lrp_method)
-            save_to_pickle(mode_lrp, path=savedir, filename="mode_lrp_avg_post")
+        #     mode_lrp = compute_explanations(images, bayesnet, rule=args.rule, layer_idx=layer_idx, device=args.device,
+        #                                     n_samples=n_samples, avg_posterior=True, method=args.lrp_method)
+        #     save_to_pickle(mode_lrp, path=savedir, filename="mode_lrp_avg_post")
 
-            for samp_idx, n_samples in enumerate(n_samples_list):
-                mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx, 
-                                                            n_samples=n_samples, method=args.lrp_method))
-                save_to_pickle(mode_attack_lrp[samp_idx], path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
+        #     for samp_idx, n_samples in enumerate(n_samples_list):
+        #         mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx, 
+        #                                                   device=args.device, n_samples=n_samples, method=args.lrp_method))
+        #         save_to_pickle(mode_attack_lrp[samp_idx], path=savedir, filename="mode_attack_lrp_samp="+str(n_samples))
 
-            mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx,
-                                                            # n_samples=n_samples, 
-                                                        avg_posterior=True, method=args.lrp_method))
-            save_to_pickle(mode_attack_lrp[samp_idx+1], path=savedir, filename="mode_attack_lrp_avg_post")
-
-
-            # mode_attack_lrp = compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx,
-            #                                                 # n_samples=n_samples, 
-            #                                             avg_posterior=True, method=args.lrp_method)
-            # save_to_pickle(mode_attack_lrp, path=savedir, filename="mode_attack_lrp_avg_post")
+        #     mode_attack_lrp.append(compute_explanations(mode_attack, bayesnet, rule=args.rule, layer_idx=layer_idx,
+        #                                          device=args.device, avg_posterior=True, method=args.lrp_method))
+        #     save_to_pickle(mode_attack_lrp[samp_idx+1], path=savedir, filename="mode_attack_lrp_avg_post")
 
 
     n_images = det_lrp.shape[0]

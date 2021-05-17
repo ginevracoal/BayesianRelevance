@@ -97,13 +97,14 @@ for topk in topk_list:
 	for layer_idx in detnet.learnable_layers_idxs:
 
 		### Load explanations
-		savedir = get_lrp_savedir(model_savedir=det_model_savedir, attack_method=args.attack_method, layer_idx=layer_idx)
+		savedir = get_lrp_savedir(model_savedir=det_model_savedir, attack_method=args.attack_method, 
+									rule=args.rule, layer_idx=layer_idx)
 
 		det_lrp = load_from_pickle(path=savedir, filename="det_lrp")
 		det_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
 
 		savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
-	                          	  layer_idx=layer_idx, lrp_method=args.lrp_method)
+	                          	  rule=args.rule, layer_idx=layer_idx, lrp_method=args.lrp_method)
 		bay_lrp=[]
 		bay_attack_lrp=[]
 		for n_samples in n_samples_list:
@@ -184,7 +185,7 @@ mode_lrp_robustness_topk = np.array(mode_lrp_robustness_topk)
 ### Plots
 
 savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
-                      	  lrp_method=args.lrp_method)
+                      	  rule=args.rule, lrp_method=args.lrp_method)
 
 filename=args.rule+"_lrp_robustness_"+m["dataset"]+"_images="+str(n_inputs)+\
 		  "_samples="+str(n_samples)+"_atk="+str(args.attack_method)

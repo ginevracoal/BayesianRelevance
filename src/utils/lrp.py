@@ -64,7 +64,9 @@ def select_informative_pixels(lrp_heatmaps, topk):
 	return chosen_pxls_lrp, chosen_pxl_idxs
 
 
-def compute_explanations(x_test, network, rule, method, n_samples=None, layer_idx=-1, avg_posterior=False):
+def compute_explanations(x_test, network, rule, method, device, n_samples=None, layer_idx=-1, avg_posterior=False):
+
+	x_test = x_test.to(device)
 
 	print("\nLRP layer idx =", layer_idx)
 
