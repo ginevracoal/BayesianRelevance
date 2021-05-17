@@ -270,7 +270,7 @@ for topk in topk_list:
 savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
                       	  rule=args.rule, lrp_method=args.lrp_method)
 
-filename=args.rule+"_lrp_robustness_"+m["dataset"]+"_images="+str(n_inputs)+\
+filename=args.rule+"_lrp_robustness_"+m["dataset"]+"_"+str(bayesnet.inference)+"_images="+str(n_inputs)+\
 		  "_samples="+str(n_samples)+"_atk="+str(args.attack_method)
 
 if args.normalize:

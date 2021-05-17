@@ -514,7 +514,7 @@ def lrp_layers_robustness_distributions(
     if len(n_samples_list) > 1 and len(topk_list) > 1: # split cols 
 
         alpha = alphas[0]
-        fig, ax = plt.subplots(len(learnable_layers_idxs), len(topk_list), figsize=(5, 5), sharex=True, dpi=150, 
+        fig, ax = plt.subplots(len(learnable_layers_idxs), len(topk_list), figsize=(6, 6), sharex=True, dpi=150, 
                                 facecolor='w', edgecolor='k', sharey=True) 
         fig.tight_layout()
         fig.subplots_adjust(bottom=0.08) 
@@ -544,8 +544,8 @@ def lrp_layers_robustness_distributions(
         plt.subplots_adjust(wspace=0.05)
         ax[0,0].legend(prop={'size': 8})
 
-        print("\nSaving: ", os.path.join(savedir, filename+"_all_images.png"))                                
-        fig.savefig(os.path.join(savedir, filename+"_all_images.png"))
+        print("\nSaving: ", os.path.join(savedir, filename+".png"))                                
+        fig.savefig(os.path.join(savedir, filename+".png"))
         plt.close(fig)
 
     else:

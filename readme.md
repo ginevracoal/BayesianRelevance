@@ -57,11 +57,11 @@ python lrp_heatmaps_det_vs_bay.py --n_inputs=500 --model_idx=2 --topk=100 --n_sa
 ```
 python lrp_heatmaps_layers.py --model=baseNN --model_idx=0 --n_inputs=500 --topk=100 --n_samples=50 --attack_method=fgsm --lrp_method=avg_heatmap --normalize=True
 ```
-<img src="images/epsilon_layers_heatmaps_mnist_images=500_atk=fgsm_norm_layeridx=7.png" width="500">
+<img src="images/layers_heatmap_mnist_det_topk=100.png" width="500">
 
 ```
-python lrp_layers_robustness.py --n_inputs=500 --model_idx=0 --model=fullBNN --attack_method=fgsm --rule=epsilon
+python lrp_layers_robustness.py --n_inputs=500 --model_idx=0 --model=fullBNN --attack_method=fgsm --rule=gamma
 ```
 
-<img src="images/dist_epsilon_lrp_robustness_mnist_images=500_samples=100_atk=fgsm_layers_all_images.png" width="350">
-<img src="images/scatterplot_epsilon_lrp_robustness_mnist_images=500_samples=100_atk=fgsm_layers_topk=100.png" width="350">
+<img src="images/dist_gamma_lrp_robustness_mnist_svi_images=500_samples=100_atk=fgsm_layers.png" width="350">
+<img src="images/scatterplot_gamma_lrp_robustness_mnist_svi_images=500_samples=100_atk=fgsm_layers_topk=100.png" width="350">
