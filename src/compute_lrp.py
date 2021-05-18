@@ -93,9 +93,9 @@ for n_samples in n_samples_list:
     bay_attack.append(load_attack(method=args.attack_method, model_savedir=bay_model_savedir, 
                                   n_samples=n_samples))
 
-if m["inference"]=="svi":
-    mode_attack = load_attack(method=args.attack_method, model_savedir=bay_model_savedir, 
-                              n_samples=n_samples, atk_mode=True)
+# if m["inference"]=="svi":
+#     mode_attack = load_attack(method=args.attack_method, model_savedir=bay_model_savedir, 
+#                               n_samples=n_samples, atk_mode=True)
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)

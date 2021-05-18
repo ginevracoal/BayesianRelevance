@@ -60,8 +60,8 @@ python lrp_heatmaps_layers.py --model=baseNN --model_idx=0 --n_inputs=500 --topk
 <img src="images/layers_heatmap_mnist_det_topk=100.png" width="500">
 
 ```
-python lrp_layers_robustness.py --n_inputs=500 --model_idx=0 --model=fullBNN --attack_method=fgsm --rule=gamma
+python lrp_layers_robustness.py --n_inputs=500 --model_idx=0 --model=fullBNN --attack_method=fgsm --rule=epsilon
 ```
 
-<img src="images/dist_gamma_lrp_robustness_mnist_svi_images=500_samples=100_atk=fgsm_layers.png" width="350">
-<img src="images/scatterplot_gamma_lrp_robustness_mnist_svi_images=500_samples=100_atk=fgsm_layers_topk=100.png" width="350">
+<img src="images/dist_epsilon_lrp_robustness_mnist_svi_images=500_samples=100_atk=fgsm_layers.png" width="350">
+<img src="images/scatterplot_epsilon_lrp_robustness_mnist_svi_images=500_samples=100_atk=fgsm_layers_topk=100.png" width="350">

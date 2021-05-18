@@ -325,7 +325,7 @@ def lrp_imagewise_robustness_distributions(det_lrp_robustness, bay_lrp_robustnes
 
     sns.set_style("darkgrid")
     matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
-    fig, ax = plt.subplots(3, 1, figsize=(5, 6), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
+    fig, ax = plt.subplots(3, 1, figsize=(5, 5), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
     fig.tight_layout()
 
     sns.distplot(det_lrp_robustness, ax=ax[0], label=f"det atk", 
