@@ -514,7 +514,7 @@ def lrp_layers_robustness_distributions(
     if len(n_samples_list) > 1 and len(topk_list) > 1: # split cols 
 
         alpha = alphas[0]
-        fig, ax = plt.subplots(len(learnable_layers_idxs), len(topk_list), figsize=(6, 6), sharex=True, dpi=150, 
+        fig, ax = plt.subplots(len(learnable_layers_idxs), len(topk_list), figsize=(5, 5), sharex=True, dpi=150, 
                                 facecolor='w', edgecolor='k', sharey=True) 
         fig.tight_layout()
         fig.subplots_adjust(bottom=0.08) 
@@ -590,8 +590,8 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, bay_lrp_robustness,
     os.makedirs(savedir, exist_ok=True) 
 
     sns.set_style("darkgrid")
-    matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
-    fig, ax = plt.subplots(len(learnable_layers_idxs), 1, figsize=(5, 7), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
+    matplotlib.rc('font', **{'size': 10})
+    fig, ax = plt.subplots(len(learnable_layers_idxs), 1, figsize=(4.5, 6), sharex=True, dpi=150, facecolor='w', edgecolor='k') 
     fig.tight_layout()
 
     det_col =  plt.cm.get_cmap('rocket', 100)(np.linspace(0, 1, 10))[7]
@@ -623,11 +623,11 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, bay_lrp_robustness,
         ax[layer_idx].yaxis.set_label_position("right")
         ax[layer_idx].set_ylabel("Layer idx="+str(layer), rotation=270, labelpad=15, size=9, weight='bold')
 
-    fig.subplots_adjust(left=0.13)
+    fig.subplots_adjust(left=0.16)
     fig.subplots_adjust(bottom=0.1)
-    ax[len(learnable_layers_idxs)-1].set_xlabel("LRP Robustness", weight='bold', size=10)
+    ax[len(learnable_layers_idxs)-1].set_xlabel("LRP Robustness", size=10)
 
-    fig.text(0.04, 0.4, "Softmax Robustness", ha='center', rotation=90)
+    fig.text(0.04, 0.4, "Softmax Robustness", ha='center', weight='normal', rotation=90)
     ax[0].legend(prop={'size': 9})
 
     # ax[int(len(learnable_layers_idxs)/2)].set_ylabel("Softmax robustness")

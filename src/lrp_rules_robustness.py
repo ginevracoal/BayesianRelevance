@@ -128,21 +128,13 @@ def plot_rules_robustness(df, n_samples, learnable_layers_idxs, savedir, filenam
 
     os.makedirs(savedir, exist_ok=True) 
     sns.set_style("darkgrid")
-    # sns.set_style("ticks")
     matplotlib.rc('font', **{'size': 10})
 
-    det_col =  plt.cm.get_cmap('rocket', 100)(np.linspace(0, 1, 10))[2:]
-    bay_col = plt.cm.get_cmap('crest', 100)(np.linspace(0, 1, 10))[1:]
+    det_col =  plt.cm.get_cmap('rocket', 100)(np.linspace(0, 1, 13))[3:]
+    bay_col = plt.cm.get_cmap('crest', 100)(np.linspace(0, 1, 10))[3:]
     palettes = [det_col, bay_col]
 
-    # palette = {}
-    # for 
-    # palette = {"epsilon": bay_col[1], "gamma": bay_col[3], "alpha1beta0":bay_col[5]}
-
-    # models_list = list(df.model.unique())
-    # palette = {models_list[0]: det_col, models_list[1]: bay_col}
-
-    fig, ax = plt.subplots(len(learnable_layers_idxs), 2, figsize=(4.5, 6), sharex=True, sharey=True, dpi=150, 
+    fig, ax = plt.subplots(len(learnable_layers_idxs), 2, figsize=(4.5, 5), sharex=True, sharey=True, dpi=150, 
                             facecolor='w', edgecolor='k') 
     fig.tight_layout()
     fig.subplots_adjust(bottom=0.1)
@@ -158,10 +150,24 @@ def plot_rules_robustness(df, n_samples, learnable_layers_idxs, savedir, filenam
             sns.boxplot(data=temp_df, ax=ax[row_idx, col_idx], x='rule', y='robustness', orient='v', hue='rule', 
                         palette=palette, dodge=False)
 
-            for patch in ax[row_idx, col_idx].artists:
+            # for patch in ax[row_idx, col_idx].artists:
+            #     r, g, b, a = patch.get_facecolor()
+            #     patch.set_facecolor((r, g, b, .75))
+            #     patch.set_edgecolor((r, g, b, a))
+
+            for i, patch in enumerate(ax[row_idx, col_idx].artists):
+                
                 r, g, b, a = patch.get_facecolor()
-                patch.set_facecolor((r, g, b, .85))
-                patch.set_edgecolor((r, g, b, a))
+                col = (r, g, b, a) 
+                patch.set_facecolor((r, g, b, .7))
+                patch.set_edgecolor(col)
+
+                for j in range(i*6, i*6+6):
+                    line = ax[row_idx, col_idx].lines[j]
+                    line.set_color(col)
+                    line.set_mfc(col)
+                    line.set_mec(col)
+                    # line.set_linewidth(0.5)
 
             ax[0, col_idx].xaxis.set_label_position("top")
             ax[0, col_idx].set_xlabel(model, weight='bold', size=10)

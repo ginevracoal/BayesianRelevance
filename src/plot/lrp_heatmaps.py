@@ -291,7 +291,7 @@ def plot_attacks_explanations_layers(images, explanations, attacks, attacks_expl
 
     rows = 2
     cols = n_layers+1
-    fig, axes = plt.subplots(rows, cols, figsize=(8, 4), dpi=150)
+    fig, axes = plt.subplots(rows, cols, figsize=(7, 3.5), dpi=150)
     fig.tight_layout()
 
     fig.text(0.035, 0.63, f"Image", ha='center', rotation=90, weight='bold')
@@ -362,7 +362,7 @@ def plot_heatmaps_det_vs_bay(image, det_attack, bay_attack, det_prediction, bay_
                 min(det_attack_explanation.flatten()), min(bay_attack_explanation.flatten()), -0.000001])
     norm = colors.TwoSlopeNorm(vcenter=0., vmax=vmax, vmin=vmin)
 
-    fig, axes = plt.subplots(2, 3, figsize=(7, 4), dpi=150, sharex=True, sharey=True)
+    fig, axes = plt.subplots(2, 3, figsize=(5, 3), dpi=150, sharex=True, sharey=True)
     fig.tight_layout()
 
     # axes[0, 0].imshow(np.squeeze(image), cmap=images_cmap)
@@ -372,18 +372,18 @@ def plot_heatmaps_det_vs_bay(image, det_attack, bay_attack, det_prediction, bay_
     plt.rcParams.update(rc)
     plt.rcParams["font.serif"] = ["Times New Roman"] + plt.rcParams["font.serif"]
 
-    fig.text(0.035, 0.55, f"Deterministic Net.", ha='center', rotation=90, weight='bold', size=12)
-    fig.text(0.035, 0.15, f"Bayesian Net.", ha='center', rotation=90, weight='bold', size=12)
+    fig.text(0.035, 0.55, f"Deterministic", ha='center', rotation=90, weight='bold', size=12)
+    fig.text(0.035, 0.15, f"Bayesian", ha='center', rotation=90, weight='bold', size=12)
 
-    fig.text(0.2, 0.95, r"$\tilde{x}$", ha='center', size=15)
+    fig.text(0.2, 0.93, r"$\tilde{x}$", ha='center', size=15)
     axes[0, 0].imshow(np.squeeze(det_attack), cmap=images_cmap)
     axes[1, 0].imshow(np.squeeze(bay_attack), cmap=images_cmap)
 
-    fig.text(0.48, 0.95, r"$R(x)$", ha='center', size=15)
+    fig.text(0.48, 0.93, r"$R(x)$", ha='center', size=15)
     expl = axes[0, 1].imshow(np.squeeze(det_explanation), cmap=cmap, norm=norm)
     expl = axes[1, 1].imshow(np.squeeze(bay_explanation), cmap=cmap, norm=norm)
 
-    fig.text(0.76, 0.95, r"$R(\tilde{x})$", ha='center', size=15)
+    fig.text(0.76, 0.93, r"$R(\tilde{x})$", ha='center', size=15)
     atk_expl = axes[0, 2].imshow(np.squeeze(det_attack_explanation), cmap=cmap, norm=norm)
     axes[1, 2].imshow(np.squeeze(bay_attack_explanation), cmap=cmap, norm=norm)
 
@@ -391,14 +391,14 @@ def plot_heatmaps_det_vs_bay(image, det_attack, bay_attack, det_prediction, bay_
         axes[0,col_idx].set_axis_off()
         axes[1,col_idx].set_axis_off()
 
-    fig.subplots_adjust(top=0.93)
-    fig.subplots_adjust(right=0.88)
+    fig.subplots_adjust(top=0.9)
+    fig.subplots_adjust(right=0.87)
 
     # cbar_ax = fig.add_axes([0.91, 0.61, 0.01, 0.32])
     # cbar = fig.colorbar(det_atk_expl, ax=axes[0, :].ravel().tolist(), cax=cbar_ax)
     # cbar.set_label('LRP', labelpad=-50)
 
-    cbar_ax = fig.add_axes([0.91, 0.2, 0.02, 0.6])
+    cbar_ax = fig.add_axes([0.88, 0.2, 0.02, 0.6])
     cbar = fig.colorbar(atk_expl, ax=axes[1, :].ravel().tolist(), cax=cbar_ax)
     # cbar.set_label('LRP', weight="bold", labelpad=-50)
     cbar.outline.set_visible(False)
