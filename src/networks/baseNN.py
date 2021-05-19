@@ -108,10 +108,10 @@ class baseNN(nn.Module):
             if self.dataset_name in ["mnist","fashion_mnist"]:
 
                 self.model = nn.Sequential(
-                    Conv2d(in_channels, 32, kernel_size=5),
+                    Conv2d(in_channels=in_channels, out_channels=32, kernel_size=5, padding=0),
                     activ(),
                     MaxPool2d(kernel_size=2),
-                    Conv2d(32, hidden_size, kernel_size=5),
+                    Conv2d(in_channels=32, out_channels=hidden_size, kernel_size=5, padding=0),
                     activ(),
                     MaxPool2d(kernel_size=2, stride=1),
                     nn.Flatten(),

@@ -150,11 +150,6 @@ def plot_rules_robustness(df, n_samples, learnable_layers_idxs, savedir, filenam
             sns.boxplot(data=temp_df, ax=ax[row_idx, col_idx], x='rule', y='robustness', orient='v', hue='rule', 
                         palette=palette, dodge=False)
 
-            # for patch in ax[row_idx, col_idx].artists:
-            #     r, g, b, a = patch.get_facecolor()
-            #     patch.set_facecolor((r, g, b, .75))
-            #     patch.set_edgecolor((r, g, b, a))
-
             for i, patch in enumerate(ax[row_idx, col_idx].artists):
                 
                 r, g, b, a = patch.get_facecolor()
@@ -167,7 +162,6 @@ def plot_rules_robustness(df, n_samples, learnable_layers_idxs, savedir, filenam
                     line.set_color(col)
                     line.set_mfc(col)
                     line.set_mec(col)
-                    # line.set_linewidth(0.5)
 
             ax[0, col_idx].xaxis.set_label_position("top")
             ax[0, col_idx].set_xlabel(model, weight='bold', size=10)
@@ -178,18 +172,9 @@ def plot_rules_robustness(df, n_samples, learnable_layers_idxs, savedir, filenam
             ax[row_idx, col_idx].get_legend().remove()
             ax[row_idx, col_idx].set_xlabel("")
             ax[2, col_idx].set_xlabel("LRP rule")
-
             ax[row_idx, col_idx].set_xticklabels([r'$\epsilon$',r'$\gamma$',r'$\alpha\beta$'])
 
-            # print([t.get_text() for t in ax[row_idx, col_idx].get_xticklabels()])
-            # ax[row_idx, col_idx].set_xticklabels([textwrap.fill(t.get_text(), 10)  for t in ax[row_idx, col_idx].get_xticklabels()])
-
     fig.subplots_adjust(left=0.15)
-    # ax[0].legend(bbox_to_anchor=(0.7, 1.45))
-    # ax[0].legend(loc="upper left")
-    # plt.setp(ax[0].get_legend().get_texts(), fontsize='8')
-    # plt.legend(frameon=False)
-    # plt.subplots_adjust(hspace=0.1)
     print("\nSaving: ", os.path.join(savedir, filename+".png"))                                        
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)
