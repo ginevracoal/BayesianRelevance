@@ -63,6 +63,8 @@ class baseNN(nn.Module):
             activ = nn.Sigmoid
         elif activation == "tanh":
             activ = nn.Tanh
+        elif activation == "softplus":
+            activ = nn.Softplus
         else: 
             raise AssertionError("\nWrong activation name.")
 
@@ -88,7 +90,7 @@ class baseNN(nn.Module):
 
             self.learnable_layers_idxs = [1, 3, 5]
 
-        elif architecture == "fc4":
+        elif architecture == "fc3":
             self.model = nn.Sequential(
                 nn.Flatten(),
                 Linear(input_size, hidden_size),
@@ -101,7 +103,7 @@ class baseNN(nn.Module):
                 activ(),
                 Linear(hidden_size, output_size))
 
-            self.learnable_layers_idxs = [1, 3, 5, 7, 9]
+            self.learnable_layers_idxs = [1, 3, 5, 7, 9, 11]
 
         elif architecture == "conv":
 
@@ -122,48 +124,76 @@ class baseNN(nn.Module):
             elif self.dataset_name in ["cifar"]:
 
                 self.model = nn.Sequential(
-
-                    # Conv Layer block 1
-                    Conv2d(in_channels=in_channels, out_channels=32, kernel_size=3, padding=1),
-                    nn.BatchNorm2d(32),
+                    Conv2d(in_channels=in_channels, out_channels=32, kernel_size=5, padding=0),
                     activ(),
-                    nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
+                    MaxPool2d(kernel_size=2),
+                    Conv2d(in_channels=32, out_channels=hidden_size, kernel_size=5, padding=0),
                     activ(),
-                    MaxPool2d(kernel_size=2, stride=2),
-
-                    # Conv Layer block 2
-                    Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
-                    nn.BatchNorm2d(128),
+                    Conv2d(in_channels=hidden_size, out_channels=hidden_size, kernel_size=5, padding=0),
                     activ(),
-                    Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
-                    activ(),
-                    MaxPool2d(kernel_size=2, stride=2),
-                    nn.Dropout2d(p=0.05),
-
-                    # Conv Layer block 3
-                    Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1),
-                    nn.BatchNorm2d(256),
-                    activ(),
-                    Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1),
-                    activ(),
-                    MaxPool2d(kernel_size=2, stride=2),
-
-                    # Linear
-                    nn.Dropout(p=0.1),
+                    MaxPool2d(kernel_size=2, stride=1),
                     nn.Flatten(),
-                    Linear(4096, hidden_size),
-                    # Linear(8192, hidden_size),
-                    # Linear(16384, hidden_size),
-                    activ(),
-                    Linear(hidden_size, 512),
-                    activ(),
-                    nn.Dropout(p=0.1),
-                    Linear(512, output_size))
+                    Linear(41472, output_size))   # hidden=512
+
+                # self.model = nn.Sequential(
+                #     # Conv Layer block 1
+                #     Conv2d(in_channels=in_channels, out_channels=32, kernel_size=3, padding=1),
+                #     nn.BatchNorm2d(32),
+                #     activ(),
+                #     nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
+                #     activ(),
+                #     MaxPool2d(kernel_size=2, stride=2),
+
+                #     # Conv Layer block 2
+                #     Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
+                #     nn.BatchNorm2d(128),
+                #     activ(),
+                #     Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
+                #     activ(),
+                #     MaxPool2d(kernel_size=2, stride=2),
+                #     nn.Dropout2d(p=0.05),
+
+                #     # Conv Layer block 3
+                #     Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1),
+                #     nn.BatchNorm2d(256),
+                #     activ(),
+                #     Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1),
+                #     activ(),
+                #     MaxPool2d(kernel_size=2, stride=2),
+
+                #     # Linear
+                #     nn.Dropout(p=0.1),
+                #     nn.Flatten(),
+                #     Linear(4096, hidden_size),
+                #     # Linear(8192, hidden_size),
+                #     # Linear(16384, hidden_size),
+                #     activ(),
+                #     Linear(hidden_size, 512),
+                #     activ(),
+                #     nn.Dropout(p=0.1),
+                #     Linear(512, output_size))
 
                 # self.learnable_layers_idxs = [0, 3, 6, 9, 13, 16, 21, 23, 26]
 
-            else:
-                raise NotImplementedError()
+        elif architecture == "alexnet":
+
+            self.model = nn.Sequential(
+                Conv2d(in_channels=in_channels, out_channels=64, kernel_size=11, stride=4, padding=5, bias=True),
+                activ(),
+                MaxPool2d(kernel_size=2, stride=2),
+                Conv2d(in_channels=64, out_channels=192, kernel_size=5, padding=2, bias=True),
+                activ(),
+                MaxPool2d(kernel_size=2, stride=2),
+                Conv2d(in_channels=192, out_channels=384, kernel_size=3, padding=1, bias=True),
+                activ(),
+                Conv2d(in_channels=384, out_channels=hidden_size, kernel_size=3, padding=1, bias=True),
+                activ(),
+                Conv2d(in_channels=hidden_size, out_channels=128, kernel_size=3, padding=1, bias=True),
+                activ(),
+                MaxPool2d(kernel_size=2, stride=2),
+                nn.Flatten(),
+                Linear(1 * 1 * 128, output_size, bias=True)
+                )
 
         else:
             raise NotImplementedError()

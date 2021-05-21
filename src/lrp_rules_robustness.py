@@ -92,7 +92,7 @@ if args.load:
 
 else:
     df = pd.DataFrame()
-    rules_list = ['epsilon','gamma'] if m["architecture"] in ['conv','conv2'] else ['epsilon','gamma','alpha1beta0']
+    rules_list = ['epsilon','gamma','alpha1beta0']
 
     for rule in rules_list: 
         for layer_idx in detnet.learnable_layers_idxs:

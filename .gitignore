@@ -5,3 +5,4 @@ experiments/
 *screenlog.0
 src/old/
 attacks/deeprobust/other/
+*.npy

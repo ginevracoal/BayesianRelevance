@@ -1,1 +1,1 @@
-Code from TorchLRP library: https://github.com/fhvilshoj/TorchLRP
+Code adapted to this framework from TorchLRP library: https://github.com/fhvilshoj/TorchLRP

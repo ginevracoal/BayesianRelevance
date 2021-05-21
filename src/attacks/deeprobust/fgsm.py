@@ -92,11 +92,15 @@ def fgm(model, image, label, epsilon, order, clip_min, clip_max, device):
     opt = optim.SGD([X_fgsm], lr=1e-3)
     opt.zero_grad()
 
-    loss = nn.CrossEntropyLoss()(model(X_fgsm), label)
+    out = model(X_fgsm)
+    out = out[0] if len(out)>1 else out
 
+    loss = nn.CrossEntropyLoss()(out, label)
     loss.backward()
-    #print(X_fgsm)
-    #print(X_fgsm.grad)
+
+    # print(X_fgsm)
+    # print(X_fgsm.grad)
+
     if order == np.inf:
         d = epsilon * X_fgsm.grad.data.sign()
     elif order == 2:

@@ -4,6 +4,7 @@ Bayesian Neural Network model
 
 import argparse
 import os
+import keras
 import numpy as np
 import pandas as pd 
 import copy
@@ -267,7 +268,7 @@ class BNN(PyroModule):
         print("\n == fullBNN HMC training ==")
         pyro.clear_param_store()
 
-        num_batches = len(train_loader)
+        num_batches = int(len(train_loader.dataset)/train_loader.batch_size)
         batch_samples = int(n_samples/num_batches)+1
         print("\nn_batches =",num_batches,"\tbatch_samples =", batch_samples)
 
@@ -285,7 +286,7 @@ class BNN(PyroModule):
             mcmc_run = mcmc.run(x_batch, y_batch)
 
             posterior_samples = mcmc.get_samples(batch_samples)
-            print('module$$$model.1.weight:\n', posterior_samples['module$$$model.1.weight'][:,0,:5])
+            # print('module$$$model.1.weight:\n', posterior_samples['module$$$model.1.weight'][:,0,:5])
 
             for sample_idx in range(batch_samples):
                 net_copy = copy.deepcopy(self.basenet)
