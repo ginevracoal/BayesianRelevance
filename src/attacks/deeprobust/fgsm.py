@@ -93,7 +93,7 @@ def fgm(model, image, label, epsilon, order, clip_min, clip_max, device):
     opt.zero_grad()
 
     out = model(X_fgsm)
-    out = out[0] if len(out)>1 else out
+    out = out[0] if len(out)>1 else out # handle bayesian_torch fwd   
 
     loss = nn.CrossEntropyLoss()(out, label)
     loss.backward()

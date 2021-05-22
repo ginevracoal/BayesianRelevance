@@ -12,17 +12,16 @@ import torch.utils.data
 # from torch.utils.tensorboard import SummaryWriter
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
+# import bayesian_torch.models.deterministic.resnet as resnet
 import numpy as np
 
 from tqdm import tqdm
 import random 
 from torch.utils.data import Subset, DataLoader
-import bayesian_torch.bayesian_torch.models.bayesian.resnet_variational as resnet
-
-# import sys
-# sys.path.append(".")
+import bayesian_torch.bayesian_torch.models.deterministic.resnet as resnet
 from attacks.run_attacks import run_attack, save_attack, load_attack
 from utils.lrp import *
+
 
 model_names = sorted(
     name for name in resnet.__dict__
@@ -30,8 +29,6 @@ model_names = sorted(
     and name.startswith("resnet") and callable(resnet.__dict__[name]))
 
 print(model_names)
-len_trainset = 50000
-len_testset = 10000
 
 parser = argparse.ArgumentParser(description='CIFAR10')
 parser.add_argument('--arch',
@@ -65,7 +62,7 @@ parser.add_argument('--start-epoch',
 #                     help='mini-batch size (default: 512)')
 parser.add_argument('--lr',
                     '--learning-rate',
-                    default=0.001,
+                    default=0.1,
                     type=float,
                     metavar='LR',
                     help='initial learning rate')
@@ -107,7 +104,7 @@ parser.add_argument('--half',
 parser.add_argument('--save-dir',
                     dest='save_dir',
                     help='The directory used to save the trained models',
-                    default='../experiments/fullBNN/cifar_resnet/',
+                    default='../experiments/baseNN/cifar_resnet/',
                     type=str)
 parser.add_argument(
     '--save-every',
@@ -117,17 +114,6 @@ parser.add_argument(
     default=10)
 parser.add_argument('--mode', type=str, default='test', help='train | test')
 parser.add_argument(
-    '--num_monte_carlo',
-    type=int,
-    default=20,
-    metavar='N',
-    help='number of Monte Carlo samples to be drawn during inference')
-parser.add_argument('--num_mc',
-                    type=int,
-                    default=5,
-                    metavar='N',
-                    help='number of Monte Carlo runs during training')
-parser.add_argument(
     '--tensorboard',
     type=bool,
     default=False,
@@ -136,64 +122,11 @@ parser.add_argument(
 parser.add_argument(
     '--log_dir',
     type=str,
-    default='./bayesian_torch/logs/cifar/bayesian',
+    default='./bayesian_torch/logs/cifar/deterministic',
     metavar='N',
     help='use tensorboard for logging and visualization of training progress')
 
 best_prec1 = 0
-
-
-def MOPED_layer(layer, det_layer, delta):
-    """
-    Set the priors and initialize surrogate posteriors of Bayesian NN with Empirical Bayes
-    MOPED (Model Priors with Empirical Bayes using Deterministic DNN)
-    Reference:
-    [1] Ranganath Krishnan, Mahesh Subedar, Omesh Tickoo.
-        Specifying Weight Priors in Bayesian Deep Neural Networks with Empirical Bayes. AAAI 2020.
-    """
-
-    if (str(layer) == 'Conv2dReparameterization()'):
-        #set the priors
-        print(str(layer))
-        layer.prior_weight_mu = det_layer.weight.data
-        if layer.prior_bias_mu is not None:
-            layer.prior_bias_mu = det_layer.bias.data
-
-        #initialize surrogate posteriors
-        layer.mu_kernel.data = det_layer.weight.data
-        layer.rho_kernel.data = get_rho(det_layer.weight.data, delta)
-        if layer.mu_bias is not None:
-            layer.mu_bias.data = det_layer.bias.data
-            layer.rho_bias.data = get_rho(det_layer.bias.data, delta)
-
-    elif (isinstance(layer, nn.Conv2d)):
-        print(str(layer))
-        layer.weight.data = det_layer.weight.data
-        if layer.bias is not None:
-            layer.bias.data = det_layer.bias.data
-
-    elif (str(layer) == 'LinearReparameterization()'):
-        print(str(layer))
-        layer.prior_weight_mu = det_layer.weight.data
-        if layer.prior_bias_mu is not None:
-            layer.prior_bias_mu = det_layer.bias.data
-
-        #initialize the surrogate posteriors
-        layer.mu_weight.data = det_layer.weight.data
-        layer.rho_weight.data = get_rho(det_layer.weight.data, delta)
-        if layer.mu_bias is not None:
-            layer.mu_bias.data = det_layer.bias.data
-            layer.rho_bias.data = get_rho(det_layer.bias.data, delta)
-
-    elif str(layer).startswith('Batch'):
-        #initialize parameters
-        print(str(layer))
-        layer.weight.data = det_layer.weight.data
-        if layer.bias is not None:
-            layer.bias.data = det_layer.bias.data
-        layer.running_mean.data = det_layer.running_mean.data
-        layer.running_var.data = det_layer.running_var.data
-        layer.num_batches_tracked.data = det_layer.num_batches_tracked.data
 
 
 def main():
@@ -209,6 +142,8 @@ def main():
         model.cuda()
     else:
         model.cpu()
+
+    print(model)
 
     # optionally resume from a checkpoint
     if args.resume:
@@ -235,7 +170,7 @@ def main():
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
-    batch_size = 128 if args.mode=='train' else 100
+    batch_size=512 if args.mode=='train' else 100
 
     train_loader = torch.utils.data.DataLoader(datasets.CIFAR10(
         root='./bayesian_torch/data',
@@ -276,6 +211,14 @@ def main():
         model.half()
         criterion.half()
 
+    optimizer = torch.optim.SGD(model.parameters(),
+                                args.lr,
+                                momentum=args.momentum,
+                                weight_decay=args.weight_decay)
+
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        optimizer, milestones=[100, 150], last_epoch=args.start_epoch - 1)
+
     if args.arch in ['resnet110']:
         for param_group in optimizer.param_groups:
             param_group['lr'] = args.lr * 0.1
@@ -285,25 +228,13 @@ def main():
         return
 
     if args.mode == 'train':
-
         for epoch in range(args.start_epoch, args.epochs):
-
-            lr = args.lr
-            if (epoch >= 80 and epoch < 120):
-                lr = 0.1 * args.lr
-            elif (epoch >= 120 and epoch < 160):
-                lr = 0.01 * args.lr
-            elif (epoch >= 160 and epoch < 180):
-                lr = 0.001 * args.lr
-            elif (epoch >= 180):
-                lr = 0.0005 * args.lr
-
-            optimizer = torch.optim.Adam(model.parameters(), lr)
 
             # train for one epoch
             print('current lr {:.5e}'.format(optimizer.param_groups[0]['lr']))
             train(args, train_loader, model, criterion, optimizer, epoch,
                   tb_writer)
+            lr_scheduler.step()
 
             prec1 = validate(args, val_loader, model, criterion, epoch,
                              tb_writer)
@@ -311,50 +242,35 @@ def main():
             is_best = prec1 > best_prec1
             best_prec1 = max(prec1, best_prec1)
 
-            if is_best:
-                save_checkpoint(
-                    {
-                        'epoch': epoch + 1,
-                        'state_dict': model.state_dict(),
-                        'best_prec1': best_prec1,
-                    },
-                    is_best,
-                    filename=os.path.join(
-                        args.save_dir,
-                        'bayesian_{}_cifar.pth'.format(args.arch)))
+            if epoch > 0 and epoch % args.save_every == 0:
+                if is_best:
+                    save_checkpoint(
+                        {
+                            'epoch': epoch + 1,
+                            'state_dict': model.state_dict(),
+                            'best_prec1': best_prec1,
+                        },
+                        is_best,
+                        filename=os.path.join(
+                            args.save_dir, '{}_cifar.pth'.format(args.arch)))
 
     elif args.mode == 'test':
 
-        checkpoint_file = args.save_dir + '/bayesian_{}_cifar.pth'.format(
-            args.arch)
+        checkpoint_file = args.save_dir + '/{}_cifar.pth'.format(args.arch)
         if torch.cuda.is_available():
             checkpoint = torch.load(checkpoint_file)
             device="cuda"
         else:
-            checkpoint = torch.load(checkpoint_file, map_location=torch.device('cpu'))
+            checkpoint = torch.load(checkpoint_file,
+                                    map_location=torch.device('cpu'))
             device="cpu"
-
-        # print(model.state_dict().keys())
-        # print(checkpoint['state_dict'].keys())
-        # exit()
-
-        state_dict = checkpoint['state_dict']
-        # for key in ["module.linear.mu_weight", "module.linear.rho_weight", "module.linear.mu_bias", 
-        #             "module.linear.rho_bias", "module.linear.eps_weight", "module.linear.prior_weight_mu", 
-        #             "module.linear.prior_weight_sigma", "module.linear.eps_bias", "module.linear.prior_bias_mu", 
-        #             "module.linear.prior_bias_sigma"]:
-        #     del state_dict[key]
-
-        model.load_state_dict(state_dict)
-        # print(model)
-        evaluate(args, model, val_loader, n_samples=args.num_monte_carlo)
+        model.load_state_dict(checkpoint['state_dict'])
+        evaluate(args, model, val_loader)
 
         # Adversarial attacks
 
         method='fgsm'
         test_inputs = 100
-        n_samples_list = [100]
-
         dataset = Subset(val_loader.dataset, range(test_inputs))
         images, labels = ([],[])
         for image, label in dataset:
@@ -362,17 +278,11 @@ def main():
             labels.append(label)
         images = torch.stack(images)
 
-        bay_attack=[]
-        for n_samples in n_samples_list:
+        # attacks = attack(model, dataset, method=method)
+        # save_attack(inputs=images, attacks=attacks, method=method, model_savedir=args.save_dir)
+        attacks = load_attack(method='fgsm', model_savedir=args.save_dir)
 
-            print(f"\nn_samples = {n_samples}")
-
-            # attacks = attack(model, dataset, n_samples=n_samples, method=method)
-            # save_attack(inputs=images, attacks=attacks, method=method, model_savedir=args.save_dir, n_samples=n_samples)
-            attacks = load_attack(method=method, model_savedir=args.save_dir, n_samples=n_samples)
-
-            evaluate(args, model, DataLoader(dataset=list(zip(attacks, labels))), n_samples=n_samples)
-            bay_attack.append(attacks)
+        evaluate(args, model, DataLoader(dataset=list(zip(attacks, labels))))
 
         # LRP
 
@@ -384,20 +294,15 @@ def main():
                 print(f"\nlayer_idx = {layer_idx}")
 
                 savedir = get_lrp_savedir(model_savedir=args.save_dir, attack_method='fgsm', 
-                                            layer_idx=layer_idx, rule=rule)
+                                        layer_idx=layer_idx, rule=rule)
 
-                bay_lrp=[]
-                bay_attack_lrp=[]
+                det_lrp = compute_lrp(images, model, rule=rule, device=device)
+                det_attack_lrp = compute_lrp(attacks, model, device=device, rule=rule)
 
-                for samp_idx, n_samples in enumerate(n_samples_list):
+                save_to_pickle(det_lrp, path=savedir, filename="det_lrp")
+                save_to_pickle(det_attack_lrp, path=savedir, filename="det_attack_lrp")
 
-                    bay_lrp.append(compute_lrp(images, model, rule=rule, n_samples=n_samples, device=device))
-                    bay_attack_lrp.append(compute_lrp(bay_attack[samp_idx], model, 
-                                            device=device, rule=rule, n_samples=n_samples))
 
-                    save_to_pickle(bay_lrp[samp_idx], path=savedir, filename="bay_lrp_samp="+str(n_samples))
-                    save_to_pickle(bay_attack_lrp[samp_idx], path=savedir, filename="bay_attack_lrp_samp="\
-                                    +str(n_samples))
 
 def train(args,
           train_loader,
@@ -423,41 +328,17 @@ def train(args,
         if torch.cuda.is_available():
             target = target.cuda()
             input_var = input.cuda()
-            target_var = target
         else:
             target = target.cpu()
             input_var = input.cpu()
-            target_var = target
 
+        target_var = target
         if args.half:
             input_var = input_var.half()
 
         # compute output
-        output_ = []
-        kl_ = []
-        for mc_run in range(args.num_mc):
-            output, kl = model(input_var)
-            output_.append(output)
-            kl_.append(kl)
-        output = torch.mean(torch.stack(output_), dim=0)
-        kl = torch.mean(torch.stack(kl_), dim=0)
-        cross_entropy_loss = criterion(output, target_var)
-        scaled_kl = kl / len_trainset
-        #ELBO loss
-        loss = cross_entropy_loss + scaled_kl
-        '''
-        #another way of computing gradients with multiple MC samples
-        cross_entropy_loss = 0
-        scaled_kl = 0
-        for mc_run in range(args.num_mc):
-            output, kl = model(input_var)
-            cross_entropy_loss += criterion(output, target_var)
-            scaled_kl += (kl/len_trainset)
-        cross_entropy_loss = cross_entropy_loss/args.num_mc
-        scaled_kl = scaled_kl/args.num_mc
-        loss = cross_entropy_loss + scaled_kl
-        #end
-        '''
+        output = model(input_var)
+        loss = criterion(output, target_var)
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -490,19 +371,16 @@ def train(args,
                       top1=top1))
 
         if tb_writer is not None:
-            tb_writer.add_scalar('train/cross_entropy_loss',
-                                 cross_entropy_loss.item(), epoch)
-            tb_writer.add_scalar('train/kl_div', scaled_kl.item(), epoch)
-            tb_writer.add_scalar('train/elbo_loss', loss.item(), epoch)
+            tb_writer.add_scalar('train/loss', loss.item(), epoch)
             tb_writer.add_scalar('train/accuracy', prec1.item(), epoch)
             tb_writer.flush()
+
 
 def validate(args, val_loader, model, criterion, epoch, tb_writer=None):
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
 
-    # switch to evaluate mode
     model.eval()
 
     end = time.time()
@@ -521,18 +399,8 @@ def validate(args, val_loader, model, criterion, epoch, tb_writer=None):
                 input_var = input_var.half()
 
             # compute output
-            output_ = []
-            kl_ = []
-            for mc_run in range(args.num_mc):
-                output, kl = model(input_var)
-                output_.append(output)
-                kl_.append(kl)
-            output = torch.mean(torch.stack(output_), dim=0)
-            kl = torch.mean(torch.stack(kl_), dim=0)
-            cross_entropy_loss = criterion(output, target_var)
-            scaled_kl = kl / len_trainset
-            #ELBO loss
-            loss = cross_entropy_loss + scaled_kl
+            output = model(input_var)
+            loss = criterion(output, target_var)
 
             output = output.float()
             loss = loss.float()
@@ -558,10 +426,7 @@ def validate(args, val_loader, model, criterion, epoch, tb_writer=None):
                           top1=top1))
 
             if tb_writer is not None:
-                tb_writer.add_scalar('val/cross_entropy_loss',
-                                     cross_entropy_loss.item(), epoch)
-                tb_writer.add_scalar('val/kl_div', scaled_kl.item(), epoch)
-                tb_writer.add_scalar('val/elbo_loss', loss.item(), epoch)
+                tb_writer.add_scalar('val/loss', loss.item(), epoch)
                 tb_writer.add_scalar('val/accuracy', prec1.item(), epoch)
                 tb_writer.flush()
 
@@ -570,13 +435,11 @@ def validate(args, val_loader, model, criterion, epoch, tb_writer=None):
     return top1.avg
 
 
-def evaluate(args, model, val_loader, n_samples):
-    pred_probs_mc = []
-    test_loss = 0
+def evaluate(args, model, val_loader):
+    model.eval()
     correct = 0
     output_list = []
     labels_list = []
-    model.eval()
     with torch.no_grad():
         begin = time.time()
         for data, target in val_loader:
@@ -584,33 +447,23 @@ def evaluate(args, model, val_loader, n_samples):
                 data, target = data.cuda(), target.cuda()
             else:
                 data, target = data.cpu(), target.cpu()
-            output_mc = []
-            for mc_run in range(n_samples):
-                output, _ = model.forward(data)
-                output_mc.append(output)
-            output_ = torch.stack(output_mc)
-            output_list.append(output_)
+            output = model(data)
+            output = torch.nn.functional.softmax(output, dim=1)
+            pred = output.argmax(dim=1, keepdim=True)
+            correct += pred.eq(target.view_as(pred)).sum().item()
+            output_list.append(output)
             labels_list.append(target)
         end = time.time()
+        print("inference throughput: ", 10000 / (end - begin), " images/s")
+    output = torch.cat(output_list)
+    target = torch.cat(labels_list)
+    print('\nTest Accuracy: {:.2f}%\n'.format(100. * correct /
+                                              len(val_loader.dataset)))
+    target_labels = target.cpu().data.numpy()
+    np.save('./probs_cifar_det.npy', output.data.cpu().numpy())
+    np.save('./cifar_test_labels.npy', target.data.cpu().numpy())
 
-        # print(len(val_loader.dataset))
-        print("inference throughput: ", len(val_loader.dataset) / (end - begin),
-              " images/s")
-
-        output = torch.stack(output_list)
-        output = output.permute(1, 0, 2, 3)
-        output = output.contiguous().view(n_samples, len(val_loader.dataset), -1)
-        output = torch.nn.functional.softmax(output, dim=2)
-        labels = torch.cat(labels_list)
-        pred_mean = output.mean(dim=0)
-        Y_pred = torch.argmax(pred_mean, axis=1)
-        print('Test accuracy:',
-              (Y_pred.data.cpu().numpy() == labels.data.cpu().numpy()).mean() *
-              100)
-        np.save('./bayesian_torch/probs_cifar_mc.npy', output.data.cpu().numpy())
-        np.save('./bayesian_torch/cifar_test_labels_mc.npy', labels.data.cpu().numpy())
-
-def attack(model, dataset, n_samples, method):
+def attack(model, dataset, method):
 
     model.eval()
     adversarial_attacks = []
@@ -626,44 +479,33 @@ def attack(model, dataset, n_samples, method):
             data, target = data.cpu(), target.cpu()
             device = 'cpu'
 
-        samples_attacks=[]
-
-        for idx in list(range(n_samples)):
-            # random.seed(idx)
-            perturbed_image = run_attack(net=model, image=data, label=target, method=method, 
-                                         device=device, hyperparams=None).squeeze()
-            perturbed_image = torch.clamp(perturbed_image, 0., 1.)
-            samples_attacks.append(perturbed_image)
-
-        adversarial_attacks.append(torch.stack(samples_attacks).mean(0))
+        perturbed_image = run_attack(net=model, image=data, label=target, method=method, 
+                                     device=device, hyperparams=None).squeeze()
+        perturbed_image = torch.clamp(perturbed_image, 0., 1.)
+        adversarial_attacks.append(perturbed_image)
 
     return torch.stack(adversarial_attacks)
 
-def compute_lrp(x_test, network, rule, device, n_samples=None, avg_posterior=False):
+def compute_lrp(x_test, network, rule, device):
 
     x_test = x_test.to(device)
 
     explanations = []
     for x in tqdm(x_test):
 
-        post_explanations = []
-        for j in range(n_samples):
+        # Forward pass
+        x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
+        x_copy.requires_grad = True
+        y_hat = network.forward(x_copy, explain=True, rule=rule)
+        
+        # Choose argmax
+        y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
+        y_hat = y_hat.sum()
 
-            # Forward pass
-            x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
-            x_copy.requires_grad = True
-            y_hat = network.forward(x_copy, explain=True, rule=rule)[0]
-            
-            # Choose argmax
-            y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
-            y_hat = y_hat.sum()
-
-            # Backward pass (compute explanation)
-            y_hat.backward()
-            lrp = x_copy.grad.squeeze(1)
-            post_explanations.append(lrp)
-
-        explanations.append(torch.stack(post_explanations).mean(0))
+        # Backward pass (compute explanation)
+        y_hat.backward()
+        lrp = x_copy.grad.squeeze(1)
+        explanations.append(lrp)
 
     return torch.stack(explanations) 
 

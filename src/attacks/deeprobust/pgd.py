@@ -95,6 +95,7 @@ def pgd_attack(model,
                   bound = 'linf'):
 
     out = model(X)
+    out = out[0] if len(out)>1 else out # handle bayesian_torch fwd
     err = (out.data.max(1)[1] != y.data).float().sum()
     #TODO: find a other way
     device = X.device
@@ -108,6 +109,7 @@ def pgd_attack(model,
     for i in range(num_steps):
 
         pred = model(X_pgd)
+        pred = pred[0] if len(pred)>1 else pred # handle bayesian_torch fwd
         loss = nn.CrossEntropyLoss()(pred, y)
 
         if print_process:
@@ -128,6 +130,7 @@ def pgd_attack(model,
 
         if bound == 'l2':
             output = model(X+delta)
+            output = output[0] if len(output)>1 else output # handle bayesian_torch fwd      
             incorrect = output.max(1)[1] != y
             correct = (~incorrect).unsqueeze(1).unsqueeze(1).unsqueeze(1).float()
             #Finding the correct examples so as to attack only them
