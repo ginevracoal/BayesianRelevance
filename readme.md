@@ -49,19 +49,58 @@ python compute_lrp.py --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=e
 ### Reproduce plots
 
 ```
+# attack networks
+python attack_networks.py --model=baseNN --model_idx=2 --attack_method=fgsm --n_inputs=500
+python attack_networks.py --model=fullBNN --model_idx=2 --attack_method=fgsm --n_inputs=500
+
+# compute LRP heatmaps
+python compute_lrp.py --model_idx=2 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+
+# plot
 python lrp_heatmaps_det_vs_bay.py --n_inputs=500 --model_idx=2 --topk=100 --n_samples=100 --attack_method=fgsm --lrp_method=avg_heatmap 
 ```
 <img src="images/epsilon_heatmaps_det_vs_bay_mnist_topk=100_failed_atk=fgsm.png" width="400">
 
 
 ```
+# attack networks
+python attack_networks.py --model=baseNN --model_idx=0 --attack_method=fgsm --n_inputs=500
+
+# compute LRP heatmaps
+python compute_lrp.py --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+
+# plot
 python lrp_heatmaps_layers.py --model=baseNN --model_idx=0 --n_inputs=500 --topk=100 --n_samples=50 --attack_method=fgsm --lrp_method=avg_heatmap --normalize=True
 ```
 <img src="images/layers_heatmap_mnist_det_topk=100.png" width="500">
 
 ```
+# attack networks
+python attack_networks.py --model=baseNN --model_idx=0 --attack_method=fgsm --n_inputs=500
+python attack_networks.py --model=fullBNN --model_idx=0 --attack_method=fgsm --n_inputs=500
+
+# compute LRP heatmaps
+python compute_lrp.py --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+
+# plot
 python lrp_layers_robustness.py --n_inputs=500 --model_idx=0 --model=fullBNN --attack_method=fgsm --rule=epsilon
 ```
 
 <img src="images/dist_epsilon_lrp_robustness_mnist_svi_images=500_samples=100_atk=fgsm_layers.png" width="350">
 <img src="images/scatterplot_epsilon_lrp_robustness_mnist_svi_images=500_samples=100_atk=fgsm_layers_topk=100.png" width="350">
+
+```
+# attack networks
+python attack_networks.py --model=baseNN --model_idx=0 --attack_method=fgsm --n_inputs=500
+python attack_networks.py --model=fullBNN --model_idx=0 --attack_method=fgsm --n_inputs=500
+
+# compute LRP heatmaps
+python compute_lrp.py --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=gamma
+python compute_lrp.py --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=alpha1beta0
+
+# plot
+python lrp_rules_robustness.py --n_inputs=500 --model_idx=0 --topk=30 --n_samples=100 --lrp_method=avg_heatmap
+```
+
+<img src="images/rules_robustness_mnist_svi_fgsm_images=500_samples=100_topk=30.png" width="350">
