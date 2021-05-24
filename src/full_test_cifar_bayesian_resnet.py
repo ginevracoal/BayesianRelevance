@@ -9,7 +9,6 @@ import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
-# from torch.utils.tensorboard import SummaryWriter
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import numpy as np
@@ -18,9 +17,6 @@ from tqdm import tqdm
 import random 
 from torch.utils.data import Subset, DataLoader
 import bayesian_torch.bayesian_torch.models.bayesian.resnet_variational as resnet
-
-# import sys
-# sys.path.append(".")
 from attacks.run_attacks import run_attack, save_attack, load_attack
 from utils.lrp import *
 
@@ -57,12 +53,6 @@ parser.add_argument('--start-epoch',
                     type=int,
                     metavar='N',
                     help='manual epoch number (useful on restarts)')
-# parser.add_argument('-b',
-#                     '--batch-size',
-#                     default=128,
-#                     type=int,
-#                     metavar='N',
-#                     help='mini-batch size (default: 512)')
 parser.add_argument('--lr',
                     '--learning-rate',
                     default=0.001,

@@ -9,10 +9,8 @@ import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
-# from torch.utils.tensorboard import SummaryWriter
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-# import bayesian_torch.models.deterministic.resnet as resnet
 import numpy as np
 
 from tqdm import tqdm
@@ -54,12 +52,6 @@ parser.add_argument('--start-epoch',
                     type=int,
                     metavar='N',
                     help='manual epoch number (useful on restarts)')
-# parser.add_argument('-b',
-#                     '--batch-size',
-#                     default=128,
-#                     type=int,
-#                     metavar='N',
-#                     help='mini-batch size (default: 512)')
 parser.add_argument('--lr',
                     '--learning-rate',
                     default=0.1,
