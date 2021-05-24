@@ -23,7 +23,7 @@ def _backward_rho(ctx, relevance_output):
     Z                = ctx.incr(F.conv2d(input, weight, bias, ctx.stride, ctx.padding, ctx.dilation, ctx.groups))
 
     relevance_output = relevance_output / Z
-    relevance_input  = F.conv_transpose2d(relevance_output, weight, None, padding=0)
+    relevance_input  = F.conv_transpose2d(relevance_output, weight, None, padding=1) # <---
     relevance_input  = relevance_input * input
 
     return relevance_input, None, None, None, None, None, None, 
@@ -149,7 +149,7 @@ class Conv2DPatternNet(Function):
     def backward(ctx, relevance_output):
         return _pattern_backward(ctx, relevance_output)
 
-conv2d = {
+conv2d_cifar = {
         "gradient":             F.conv2d,
         "epsilon":              Conv2DEpsilon.apply,
         "gamma":                Conv2DGamma.apply,

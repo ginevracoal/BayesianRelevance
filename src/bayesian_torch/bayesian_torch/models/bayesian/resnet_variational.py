@@ -15,7 +15,7 @@ from bayesian_torch.bayesian_torch.layers import LinearReparameterization
 
 from lrp.sequential import Sequential 
 from lrp.linear import Linear
-from lrp.conv import Conv2d 
+# from lrp.conv import Conv2d 
 
 __all__ = [
     'ResNet', 'resnet20', 'resnet32', 'resnet44', 'resnet56', 'resnet110'
@@ -150,7 +150,7 @@ class ResNet(nn.Module):
 
     def forward(self, x, explain=False, rule="epsilon"): # <-----------------------
         kl_sum = 0
-        out, kl = self.conv1(x, explain, rule)
+        out, kl = self.conv1(x, explain, rule) # <-----------------------
         kl_sum += kl
         out = self.bn1(out)
         out = F.relu(out)

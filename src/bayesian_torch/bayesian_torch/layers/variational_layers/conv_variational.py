@@ -49,7 +49,7 @@ from torch.nn import Parameter
 from ..base_variational_layer import BaseVariationalLayer_
 import math
 
-from lrp.functional.conv import conv2d # <------------------------------
+from lrp.functional.conv_cifar import conv2d_cifar # <------------------------------
 from lrp.conv import Conv2d # <------------------------------
 
 
@@ -278,14 +278,16 @@ class Conv2dReparameterization(BaseVariationalLayer_):
         self.prior_weight_mu.fill_(self.prior_mean)
         self.prior_weight_sigma.fill_(self.prior_variance)
 
-        self.mu_kernel.data.normal_(mean=self.posterior_mu_init[0], std=0.1)
-        self.rho_kernel.data.normal_(mean=self.posterior_rho_init[0], std=0.1)
+        std=0.1
+
+        self.mu_kernel.data.normal_(mean=self.posterior_mu_init[0], std=std)
+        self.rho_kernel.data.normal_(mean=self.posterior_rho_init[0], std=std)
         if self.bias:
             self.prior_bias_mu.fill_(self.prior_mean)
             self.prior_bias_sigma.fill_(self.prior_variance)
 
-            self.mu_bias.data.normal_(mean=self.posterior_mu_init[0], std=0.1)
-            self.rho_bias.data.normal_(mean=self.posterior_rho_init[0], std=0.1)
+            self.mu_bias.data.normal_(mean=self.posterior_mu_init[0], std=std)
+            self.rho_bias.data.normal_(mean=self.posterior_rho_init[0], std=std)
 
     def forward(self, input, explain=False, rule="epsilon"): # <------------------------------
         sigma_weight = torch.log1p(torch.exp(self.rho_kernel))
@@ -294,8 +296,12 @@ class Conv2dReparameterization(BaseVariationalLayer_):
         kl_weight = self.kl_div(self.mu_kernel, sigma_weight,
                                 self.prior_weight_mu, self.prior_weight_sigma)
         weight = weight.to(input.device) # <------------------------------
-        
+            
         bias = None
+
+        # print(self.posterior_mu_init[0], "\t", self.posterior_rho_init[0])
+        # print(self.mu_kernel.min().item(), self.mu_kernel.max().item(), "\t", self.rho_kernel.min().item(), self.rho_kernel.max().item())
+        # print(self.mu_kernel[0,0,0].cpu().detach(), "\t", self.rho_kernel[0,0,0].cpu().detach())
 
         if self.bias:
             sigma_bias = torch.log1p(torch.exp(self.rho_bias))
@@ -307,7 +313,7 @@ class Conv2dReparameterization(BaseVariationalLayer_):
             bias = bias.to(input.device) # <------------------------------
 
         if explain is True:
-            out = conv2d[rule](input, weight, bias, self.stride, self.padding, self.dilation, self.groups) # <------------------------------
+            out = conv2d_cifar[rule](input, weight, bias, self.stride, self.padding, self.dilation, self.groups) # <------------------------------
             # out = Conv2d(input, weight, bias, self.stride, self.padding, self.dilation, self.groups)
         else:
             out = F.conv2d(input, weight, bias, self.stride, self.padding, self.dilation, self.groups)

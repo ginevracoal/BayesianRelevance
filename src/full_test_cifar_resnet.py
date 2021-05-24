@@ -269,8 +269,8 @@ def main():
 
         # Adversarial attacks
 
-        method='fgsm'
-        test_inputs = 500
+        method='pgd'
+        test_inputs = 100
         dataset = Subset(val_loader.dataset, range(test_inputs))
         images, labels = ([],[])
         for image, label in dataset:
@@ -278,22 +278,22 @@ def main():
             labels.append(label)
         images = torch.stack(images)
 
-        attacks = attack(model, dataset, method=method)
-        save_attack(inputs=images, attacks=attacks, method=method, model_savedir=args.save_dir)
-        # attacks = load_attack(method='fgsm', model_savedir=args.save_dir)
+        # attacks = attack(model, dataset, method=method)
+        # save_attack(inputs=images, attacks=attacks, method=method, model_savedir=args.save_dir)
+        attacks = load_attack(method='fgsm', model_savedir=args.save_dir)
 
         evaluate(args, model, DataLoader(dataset=list(zip(attacks, labels))))
 
         # LRP
 
         for rule in ['epsilon','gamma','alpha1beta0']:
-            learnable_layers_idxs=[38]#[0,2,14,26,38]
+            learnable_layers_idxs=[38] #[0,2,14,26,38]
 
             for layer_idx in learnable_layers_idxs:
 
                 print(f"\nlayer_idx = {layer_idx}")
 
-                savedir = get_lrp_savedir(model_savedir=args.save_dir, attack_method='fgsm', 
+                savedir = get_lrp_savedir(model_savedir=args.save_dir, attack_method=method, 
                                         layer_idx=layer_idx, rule=rule)
 
                 det_lrp = compute_lrp(images, model, rule=rule, device=device)
@@ -507,7 +507,8 @@ def compute_lrp(x_test, network, rule, device):
         lrp = x_copy.grad.squeeze(1)
         explanations.append(lrp)
 
-    return torch.stack(explanations) 
+    explanations = torch.stack(explanations)
+    return explanations 
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     """

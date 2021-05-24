@@ -147,7 +147,8 @@ def plot_rules_robustness(df, n_samples, learnable_layers_idxs, savedir, filenam
             ax[1].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=15, weight='bold', size=8)
             ax[col_idx].get_legend().remove()
             ax[col_idx].set_xlabel("")
-            ax[col_idx].set_xlabel("LRP rule")
+            ax[0].set_xlabel("Det.")
+            ax[1].set_xlabel("Bay. samp ="+str(n_samples))
             ax[col_idx].set_xticklabels([r'$\epsilon$',r'$\gamma$',r'$\alpha\beta$'])
 
     fig.subplots_adjust(left=0.15)

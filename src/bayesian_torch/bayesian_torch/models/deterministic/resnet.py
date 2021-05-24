@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import torch.nn.init as init
 
 from lrp.linear import Linear
-from lrp.conv import Conv2d
+from lrp.conv_cifar import Conv2d
 from lrp.sequential import Sequential
 
 
