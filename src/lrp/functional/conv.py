@@ -23,7 +23,7 @@ def _backward_rho(ctx, relevance_output):
     Z                = ctx.incr(F.conv2d(input, weight, bias, ctx.stride, ctx.padding, ctx.dilation, ctx.groups))
 
     relevance_output = relevance_output / Z
-    relevance_input  = F.conv_transpose2d(relevance_output, weight, None, padding=0)
+    relevance_input  = F.conv_transpose2d(relevance_output, weight, None, padding=1) # <---
     relevance_input  = relevance_input * input
 
     return relevance_input, None, None, None, None, None, None, 
@@ -75,14 +75,14 @@ def _conv_alpha_beta_backward(alpha, beta, ctx, relevance_output):
 
         def f(X1, X2, W1, W2): 
 
-            Z1  = F.conv2d(X1, W1, bias=None, stride=1, padding=0) 
-            Z2  = F.conv2d(X2, W2, bias=None, stride=1, padding=0)
+            Z1  = F.conv2d(X1, W1, bias=None, stride=1, padding=1) 
+            Z2  = F.conv2d(X2, W2, bias=None, stride=1, padding=1)
             Z   = Z1 + Z2
 
             rel_out = relevance_output / (Z + (Z==0).float()* 1e-6)
 
-            t1 = F.conv_transpose2d(rel_out, W1, bias=None, padding=0) 
-            t2 = F.conv_transpose2d(rel_out, W2, bias=None, padding=0)
+            t1 = F.conv_transpose2d(rel_out, W1, bias=None, padding=1) 
+            t2 = F.conv_transpose2d(rel_out, W2, bias=None, padding=1)
 
             r1  = t1 * X1
             r2  = t2 * X2

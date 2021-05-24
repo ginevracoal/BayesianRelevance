@@ -173,7 +173,7 @@ def main():
     batch_size=512 if args.mode=='train' else 100
 
     train_loader = torch.utils.data.DataLoader(datasets.CIFAR10(
-        root='./bayesian_torch/data',
+        root='../experiments/bayesian_torch/data',
         train=True,
         transform=transforms.Compose([
             transforms.RandomHorizontalFlip(),
@@ -188,7 +188,7 @@ def main():
                                                pin_memory=True)
 
     val_loader = torch.utils.data.DataLoader(datasets.CIFAR10(
-        root='./bayesian_torch/data',
+        root='../experiments/bayesian_torch/data',
         train=False,
         transform=transforms.Compose([
             transforms.ToTensor(),
@@ -270,7 +270,7 @@ def main():
         # Adversarial attacks
 
         method='fgsm'
-        test_inputs = 100
+        test_inputs = 500
         dataset = Subset(val_loader.dataset, range(test_inputs))
         images, labels = ([],[])
         for image, label in dataset:
@@ -278,9 +278,9 @@ def main():
             labels.append(label)
         images = torch.stack(images)
 
-        # attacks = attack(model, dataset, method=method)
-        # save_attack(inputs=images, attacks=attacks, method=method, model_savedir=args.save_dir)
-        attacks = load_attack(method='fgsm', model_savedir=args.save_dir)
+        attacks = attack(model, dataset, method=method)
+        save_attack(inputs=images, attacks=attacks, method=method, model_savedir=args.save_dir)
+        # attacks = load_attack(method='fgsm', model_savedir=args.save_dir)
 
         evaluate(args, model, DataLoader(dataset=list(zip(attacks, labels))))
 
@@ -460,8 +460,8 @@ def evaluate(args, model, val_loader):
     print('\nTest Accuracy: {:.2f}%\n'.format(100. * correct /
                                               len(val_loader.dataset)))
     target_labels = target.cpu().data.numpy()
-    np.save('./probs_cifar_det.npy', output.data.cpu().numpy())
-    np.save('./cifar_test_labels.npy', target.data.cpu().numpy())
+    np.save('../experiments/bayesian_torch/probs_cifar_det.npy', output.data.cpu().numpy())
+    np.save('../experiments/bayesian_torch/cifar_test_labels.npy', target.data.cpu().numpy())
 
 def attack(model, dataset, method):
 
