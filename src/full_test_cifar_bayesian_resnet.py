@@ -335,8 +335,8 @@ def main():
         # Adversarial attacks
 
         method='fgsm'
-        test_inputs = 10
-        n_samples_list = [10]
+        test_inputs = 500
+        n_samples_list = [100]
 
         dataset = Subset(val_loader.dataset, range(test_inputs))
         images, labels = ([],[])
@@ -591,6 +591,7 @@ def validate(args, val_loader, model, criterion, epoch, tb_writer=None):
 
 
 def evaluate(args, model, val_loader, n_samples):
+
     pred_probs_mc = []
     test_loss = 0
     correct = 0
@@ -601,6 +602,7 @@ def evaluate(args, model, val_loader, n_samples):
     with torch.no_grad():
         begin = time.time()
         for data, target in val_loader:
+
             if torch.cuda.is_available():
                 data, target = data.cuda(), target.cuda()
             else:
@@ -609,13 +611,13 @@ def evaluate(args, model, val_loader, n_samples):
             for mc_run in range(n_samples):
                 output, _ = model.forward(data)
                 output_mc.append(output)
+
             output_ = torch.stack(output_mc)
             output_list.append(output_)
             labels_list.append(target)
 
         end = time.time()
 
-        # print(len(val_loader.dataset))
         print("inference throughput: ", len(val_loader.dataset) / (end - begin),
               " images/s")
 

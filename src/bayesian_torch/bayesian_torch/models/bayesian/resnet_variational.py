@@ -151,6 +151,7 @@ class ResNet(nn.Module):
     def forward(self, x, explain=False, rule="epsilon"): # <-----------------------
         kl_sum = 0
         out, kl = self.conv1(x, explain, rule) # <-----------------------
+        # print(self.conv1.mu_kernel[0,0,0].cpu().detach(), "\t", self.conv1.rho_kernel[0,0,0].cpu().detach())
         kl_sum += kl
         out = self.bn1(out)
         out = F.relu(out)
