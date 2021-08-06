@@ -105,13 +105,6 @@ parser.add_argument(
     help='Saves checkpoints at every specified number of epochs',
     type=int,
     default=10)
-parser.add_argument('--mode', type=str, default='test', help='train | test')
-parser.add_argument(
-    '--num_monte_carlo',
-    type=int,
-    default=20,
-    metavar='N',
-    help='number of Monte Carlo samples to be drawn during inference')
 parser.add_argument('--num_mc',
                     type=int,
                     default=5,
@@ -129,6 +122,23 @@ parser.add_argument(
     default='./bayesian_torch/logs/cifar/bayesian',
     metavar='N',
     help='use tensorboard for logging and visualization of training progress')
+parser.add_argument('--mode', type=str, default='test', help='train | test')
+parser.add_argument(
+    '--n_samples',
+    type=int,
+    default=100,
+    metavar='N',
+    help='number of Monte Carlo samples to be drawn during inference')
+parser.add_argument(
+    '--attack_method',
+    type=str, 
+    default='fgsm',
+    help='fgsm, pgd')
+parser.add_argument(
+    '--test_inputs',
+    type=int, 
+    default=500)
+
 
 best_prec1 = 0
 
@@ -330,13 +340,14 @@ def main():
 
         state_dict = checkpoint['state_dict']
         model.load_state_dict(state_dict)
-        evaluate(args, model, val_loader, n_samples=args.num_monte_carlo)
+        evaluate(args, model, val_loader, n_samples=args.n_samples)
 
         # Adversarial attacks
 
-        method='fgsm'
-        test_inputs = 500
-        n_samples_list = [100]
+        method=args.attack_method
+        test_inputs = args.test_inputs
+        n_samples = args.n_samples
+        print(f"\nn_samples = {n_samples}")
 
         dataset = Subset(val_loader.dataset, range(test_inputs))
         images, labels = ([],[])
@@ -345,17 +356,11 @@ def main():
             labels.append(label)
         images = torch.stack(images)
 
-        bay_attack=[]
-        for n_samples in n_samples_list:
+        bay_attack = attack(model, dataset, n_samples=n_samples, method=method)
+        save_attack(inputs=images, attacks=bay_attack, method=method, model_savedir=args.save_dir, n_samples=n_samples)
+        # bay_attack = load_attack(method=method, model_savedir=args.save_dir, n_samples=n_samples)
 
-            print(f"\nn_samples = {n_samples}")
-
-            # attacks = attack(model, dataset, n_samples=n_samples, method=method)
-            # save_attack(inputs=images, attacks=attacks, method=method, model_savedir=args.save_dir, n_samples=n_samples)
-            attacks = load_attack(method=method, model_savedir=args.save_dir, n_samples=n_samples)
-
-            evaluate(args, model, DataLoader(dataset=list(zip(attacks, labels))), n_samples=n_samples)
-            bay_attack.append(attacks)
+        evaluate(args, model, DataLoader(dataset=list(zip(bay_attack, labels))), n_samples=n_samples)
 
         # LRP
 
@@ -369,31 +374,25 @@ def main():
                 savedir = get_lrp_savedir(model_savedir=args.save_dir, attack_method=method, 
                                             layer_idx=layer_idx, rule=rule)
 
-                bay_lrp=[]
-                bay_attack_lrp=[]
+                bay_lrp = compute_lrp(images, model, rule=rule, n_samples=n_samples, device=device)
+                bay_attack_lrp = compute_lrp(bay_attack, model, 
+                                        device=device, rule=rule, n_samples=n_samples)
 
-                for samp_idx, n_samples in enumerate(n_samples_list):
+                save_to_pickle(bay_lrp, path=savedir, filename="bay_lrp_samp="+str(n_samples))
+                save_to_pickle(bay_attack_lrp, path=savedir, filename="bay_attack_lrp_samp="+str(n_samples))
 
-                    bay_lrp.append(compute_lrp(images, model, rule=rule, n_samples=n_samples, device=device))
-                    bay_attack_lrp.append(compute_lrp(bay_attack[samp_idx], model, 
-                                            device=device, rule=rule, n_samples=n_samples))
+                set_seed(0)
+                idxs = np.random.choice(len(images), 10, replace=False)
+                original_images_plot = torch.stack([images[i].squeeze() for i in idxs])
+                adversarial_images_plot = torch.stack([bay_attack[i].squeeze() for i in idxs])
+                bay_lrp_heatmaps_plot = torch.stack([bay_lrp[i].squeeze() for i in idxs])
+                bay_attack_lrp_heatmaps_plot = torch.stack([bay_attack_lrp[i].squeeze() for i in idxs])
+                plot_lrp_grid(original_images=original_images_plot.detach().cpu(), 
+                              adversarial_images=adversarial_images_plot.detach().cpu(),
+                              bay_lrp_heatmaps=bay_lrp_heatmaps_plot.detach().cpu(),
+                              bay_attack_lrp_heatmaps=bay_attack_lrp_heatmaps_plot.detach().cpu(), 
+                              filename="lrp_samp="+str(n_samples), savedir=savedir)
 
-
-                    save_to_pickle(bay_lrp[samp_idx], path=savedir, filename="bay_lrp_samp="+str(n_samples))
-                    save_to_pickle(bay_attack_lrp[samp_idx], path=savedir, filename="bay_attack_lrp_samp="\
-                                    +str(n_samples))
-
-                    set_seed(0)
-                    idxs = np.random.choice(len(images), 10, replace=False)
-                    original_images_plot = torch.stack([images[i].squeeze() for i in idxs])
-                    adversarial_images_plot = torch.stack([attacks[i].squeeze() for i in idxs])
-                    bay_lrp_heatmaps_plot = torch.stack([bay_lrp[samp_idx].squeeze() for i in idxs])
-                    bay_attack_lrp_heatmaps_plot = torch.stack([bay_attack_lrp[samp_idx].squeeze() for i in idxs])
-                    plot_lrp_grid(original_images=original_images_plot.detach().cpu(), 
-                                  adversarial_images=adversarial_images_plot.detach().cpu(),
-                                  bay_lrp_heatmaps=bay_lrp_heatmaps_plot.detach().cpu(),
-                                  bay_attack_lrp_heatmaps=bay_attack_lrp_heatmaps_plot.detach().cpu(), 
-                                  filename="lrp_samp="+str(n_samples), savedir=savedir)
 
 def train(args,
           train_loader,
@@ -495,9 +494,6 @@ def train(args,
 
 def plot_lrp_grid(original_images, adversarial_images, bay_lrp_heatmaps, bay_attack_lrp_heatmaps, filename, savedir):
 
-    bay_lrp_heatmaps = bay_lrp_heatmaps.mean(0)
-    bay_attack_lrp_heatmaps = bay_attack_lrp_heatmaps.mean(0)
-
     import matplotlib.pyplot as plt
 
     fig, axes = plt.subplots(4, len(original_images), figsize = (12,4))
@@ -509,9 +505,9 @@ def plot_lrp_grid(original_images, adversarial_images, bay_lrp_heatmaps, bay_att
         bay_lrp_heatmap = bay_lrp_heatmaps[i].permute(1,2,0) if len(bay_lrp_heatmaps[i].shape) > 2 else bay_lrp_heatmaps[i]
         bay_attack_lrp_heatmap = bay_attack_lrp_heatmaps[i].permute(1,2,0) if len(bay_attack_lrp_heatmaps[i].shape) > 2 else bay_attack_lrp_heatmaps[i]
 
-        axes[0, i].imshow(original_image)
+        axes[0, i].imshow(torch.clamp(original_image, 0., 1.))
         axes[1, i].imshow(bay_lrp_heatmap)
-        axes[2, i].imshow(adversarial_image)
+        axes[2, i].imshow(torch.clamp(adversarial_image, 0., 1.))
         axes[3, i].imshow(bay_attack_lrp_heatmap)
         
     os.makedirs(os.path.dirname(savedir+"/"), exist_ok=True)
@@ -659,16 +655,19 @@ def attack(model, dataset, n_samples, method):
             perturbed_image = torch.clamp(perturbed_image, 0., 1.)
             samples_attacks.append(perturbed_image)
 
-        adversarial_attacks.append(torch.stack(samples_attacks).mean(0))
+        adversarial_attack = torch.stack(samples_attacks).mean(0)
+        adversarial_attacks.append(adversarial_attack)
 
     return torch.stack(adversarial_attacks)
 
-def compute_lrp(x_test, network, rule, device, n_samples=None, avg_posterior=False):
+def compute_lrp(x_test, network, rule, device, n_samples, avg_posterior=False):
 
     x_test = x_test.to(device)
 
     explanations = []
     for x in tqdm(x_test):
+
+        x = torch.clamp(x, 0., 1.)
 
         post_explanations = []
         for idx in range(n_samples):
@@ -689,7 +688,9 @@ def compute_lrp(x_test, network, rule, device, n_samples=None, avg_posterior=Fal
             lrp = x_copy.grad.squeeze(1)
             post_explanations.append(lrp)
 
-        explanations.append(torch.stack(post_explanations).mean(0).squeeze())
+        post_explanations = torch.stack(post_explanations).mean(0).squeeze()
+        post_explanations = torch.clamp(post_explanations, 0., 1.)
+        explanations.append(post_explanations)
 
     return torch.stack(explanations) 
 

@@ -19,9 +19,11 @@ from attacks.deepfool import DeepFool
 from deeprobust.image.attack.Nattack import NATTACK
 from deeprobust.image.attack.YOPOpgd import FASTPGD
 
-def attack(net, x_test, y_test, device, method, hyperparams={}, n_samples=None, sample_idxs=None, avg_posterior=False):
+def attack(net, x_test, y_test, device, method, hyperparams={}, n_samples=None, sample_idxs=None, avg_posterior=False,
+			verbose=True):
 
-	print(f"\n\nCrafting {method} attacks")
+	if verbose:
+		print(f"\n\nCrafting {method} attacks")
 
 	net.to(device)
 	x_test, y_test = x_test.to(device), y_test.to(device)
@@ -31,7 +33,9 @@ def attack(net, x_test, y_test, device, method, hyperparams={}, n_samples=None, 
 	if n_samples is None or avg_posterior is True:
 		net.avg_posterior=avg_posterior
 
-		for idx in tqdm(range(len(x_test))):
+		iterable_x_test = tqdm(range(len(x_test))) if verbose else range(len(x_test))
+		for idx in iterable_x_test:
+
 			image = x_test[idx].unsqueeze(0)
 			label = y_test[idx].argmax(-1).unsqueeze(0)
 			num_classes = len(y_test[idx])
@@ -52,7 +56,9 @@ def attack(net, x_test, y_test, device, method, hyperparams={}, n_samples=None, 
 		else:
 			sample_idxs = list(range(n_samples))
 
-		for idx in tqdm(range(len(x_test))):
+		iterable_x_test = tqdm(range(len(x_test))) if verbose else range(len(x_test))
+		for idx in iterable_x_test:
+
 			image = x_test[idx].unsqueeze(0)
 			label = y_test[idx].argmax(-1).unsqueeze(0)
 			num_classes = len(y_test[idx])
@@ -78,7 +84,7 @@ def run_attack(net, image, label, method, device, hyperparams=None):
 
 	if method == "fgsm":
 		adversary = FGSM
-		adversary_params = {'epsilon': 0.2, 'order': np.inf, 'clip_max': None, 'clip_min': None}
+		adversary_params = {'epsilon': 0.2, 'order': np.inf, 'clip_max': 1.0, 'clip_min': 0.0}
 		adv = adversary(net, device)
 		perturbed_image = adv.generate(image, label, **adversary_params)
 

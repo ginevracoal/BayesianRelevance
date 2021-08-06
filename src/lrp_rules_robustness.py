@@ -29,7 +29,7 @@ import seaborn as sns
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
-parser.add_argument("--topk", default=30, type=int, help="Choose model idx from pre defined settings")
+parser.add_argument("--topk", default=20, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--n_samples", default=100, type=int)
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")

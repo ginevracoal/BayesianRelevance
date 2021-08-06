@@ -470,43 +470,43 @@ def lrp_layers_robustness_distributions(
 
     ### Successful vs failed
     
-    fig, ax = plt.subplots(len(learnable_layers_idxs), 2, figsize=(10, 6), sharex=True, dpi=150, 
-                            facecolor='w', edgecolor='k') 
-    fig.tight_layout()
-    fig.text(0.3, 0.98, "Successful attacks", ha='center')
-    fig.text(0.75, 0.98, "Failed attacks", ha='center')
-    fig.subplots_adjust(bottom=0.1)
-    ax[len(learnable_layers_idxs)-1,0].set_xlabel("LRP robustness", weight='bold')
-    ax[len(learnable_layers_idxs)-1,1].set_xlabel("LRP robustness", weight='bold')
+    # fig, ax = plt.subplots(len(learnable_layers_idxs), 2, figsize=(10, 6), sharex=True, dpi=150, 
+    #                         facecolor='w', edgecolor='k') 
+    # fig.tight_layout()
+    # fig.text(0.3, 0.98, "Successful attacks", ha='center')
+    # fig.text(0.75, 0.98, "Failed attacks", ha='center')
+    # fig.subplots_adjust(bottom=0.1)
+    # ax[len(learnable_layers_idxs)-1,0].set_xlabel("LRP robustness", weight='bold')
+    # ax[len(learnable_layers_idxs)-1,1].set_xlabel("LRP robustness", weight='bold')
 
-    for row_idx, layer_idx in enumerate(learnable_layers_idxs):
-        for topk_idx, topk in enumerate(topk_list):
+    # for row_idx, layer_idx in enumerate(learnable_layers_idxs):
+    #     for topk_idx, topk in enumerate(topk_list):
 
-            sns.kdeplot(det_successful_lrp_robustness[topk_idx][row_idx], ax=ax[row_idx,0], color=det_col, 
-                         label=f"Det. topk={topk}", alpha=alphas[topk_idx], fill=True, linewidth=0, clip=clip)
+    #         sns.kdeplot(det_successful_lrp_robustness[topk_idx][row_idx], ax=ax[row_idx,0], color=det_col, 
+    #                      label=f"Det. topk={topk}", alpha=alphas[topk_idx], fill=True, linewidth=0, clip=clip)
             
-            for samp_idx, n_samples in enumerate(n_samples_list):
-                sns.kdeplot(bay_successful_lrp_robustness[topk_idx][row_idx][samp_idx], ax=ax[row_idx,0],
-                            color=bay_col[samp_idx], 
-                            alpha=alphas[topk_idx], label=f"Bay. samp={n_samples} topk={topk}", fill=True,
-                            linewidth=0, clip=clip)
+    #         for samp_idx, n_samples in enumerate(n_samples_list):
+    #             sns.kdeplot(bay_successful_lrp_robustness[topk_idx][row_idx][samp_idx], ax=ax[row_idx,0],
+    #                         color=bay_col[samp_idx], 
+    #                         alpha=alphas[topk_idx], label=f"Bay. samp={n_samples} topk={topk}", fill=True,
+    #                         linewidth=0, clip=clip)
 
-            sns.kdeplot(det_failed_lrp_robustness[topk_idx][row_idx], ax=ax[row_idx,1], color=det_col, 
-                         label=f"Det. topk={topk}", alpha=alphas[topk_idx], fill=True, linewidth=0, clip=clip)
+    #         sns.kdeplot(det_failed_lrp_robustness[topk_idx][row_idx], ax=ax[row_idx,1], color=det_col, 
+    #                      label=f"Det. topk={topk}", alpha=alphas[topk_idx], fill=True, linewidth=0, clip=clip)
             
-            for samp_idx, n_samples in enumerate(n_samples_list):
-                sns.kdeplot(bay_failed_lrp_robustness[topk_idx][row_idx][samp_idx], ax=ax[row_idx,1], 
-                            color=bay_col[samp_idx], 
-                            alpha=alphas[topk_idx], label=f"Bay. samp={n_samples} topk={topk}", fill=True,
-                            linewidth=0, clip=clip)
+    #         for samp_idx, n_samples in enumerate(n_samples_list):
+    #             sns.kdeplot(bay_failed_lrp_robustness[topk_idx][row_idx][samp_idx], ax=ax[row_idx,1], 
+    #                         color=bay_col[samp_idx], 
+    #                         alpha=alphas[topk_idx], label=f"Bay. samp={n_samples} topk={topk}", fill=True,
+    #                         linewidth=0, clip=clip)
         
-        ax[row_idx,1].yaxis.set_label_position("right")
-        ax[row_idx,1].set_ylabel("layer idx="+str(layer_idx), rotation=270, labelpad=15, weight='bold', size=8)
+    #     ax[row_idx,1].yaxis.set_label_position("right")
+    #     ax[row_idx,1].set_ylabel("layer idx="+str(layer_idx), rotation=270, labelpad=15, weight='bold', size=8)
 
-    fig.subplots_adjust(top=0.98)
-    print("\nSaving: ", os.path.join(savedir, filename+"_succ_vs_failed.png"))                                
-    fig.savefig(os.path.join(savedir, filename+"_succ_vs_failed.png"))
-    plt.close(fig)
+    # fig.subplots_adjust(top=0.98)
+    # print("\nSaving: ", os.path.join(savedir, filename+"_succ_vs_failed.png"))                                
+    # fig.savefig(os.path.join(savedir, filename+"_succ_vs_failed.png"))
+    # plt.close(fig)
 
     ### All images
     topk_list=topk_list[:2]
@@ -601,22 +601,30 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, bay_lrp_robustness,
     topk_idx=len(topk_list)-1
     topk=topk_list[-1]
 
+    print(topk_idx, topk)
+
     for layer_idx, layer in enumerate(learnable_layers_idxs):
         # for topk_idx, topk in enumerate(topk_list):
 
         legend = 'brief' if layer_idx==0 else False
 
+        rho = np.corrcoef(det_lrp_robustness[topk_idx][layer_idx], 
+                          det_softmax_robustness[topk_idx][layer_idx])[0,1]
+
         sns.scatterplot(det_lrp_robustness[topk_idx][layer_idx], 
                         det_softmax_robustness[topk_idx][layer_idx],
-                        ax=ax[layer_idx], label="Deterministic", 
+                        ax=ax[layer_idx], label=r"Det. $\rho$="+str(round(rho,2)), 
                         alpha=alpha, linewidth=0,
                         legend=legend, color=det_col)
         
         for samp_idx, n_samples in enumerate(n_samples_list):
 
+            rho = np.corrcoef(bay_lrp_robustness[topk_idx][layer_idx][samp_idx], 
+                              bay_softmax_robustness[topk_idx][layer_idx][samp_idx])[0,1]
+
             sns.scatterplot(bay_lrp_robustness[topk_idx][layer_idx][samp_idx], 
                             bay_softmax_robustness[topk_idx][layer_idx][samp_idx], 
-                            ax=ax[layer_idx], label=f"Bayesian {n_samples} samples", 
+                            ax=ax[layer_idx], label=r"Bay. $\rho$="+str(round(rho,2))+" samp="+str(n_samples), 
                             alpha=alpha, linewidth=0,
                             legend=legend, color=bay_col[samp_idx])
 

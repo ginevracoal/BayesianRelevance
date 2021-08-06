@@ -57,7 +57,7 @@ def relevant_subset(images, pxl_idxs, lrp_rob_method):
     flat_images = images.reshape(*images.shape[:1], -1)
     images_rel = np.zeros(flat_images.shape)
 
-    print("relevant pixels=", pxl_idxs)
+    print("\n", len(pxl_idxs[0]), "relevant pixels =", pxl_idxs[0])
 
     if lrp_rob_method=="imagewise":
 

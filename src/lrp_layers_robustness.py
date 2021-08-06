@@ -27,7 +27,7 @@ from attacks.run_attacks import *
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
-parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, redBNN")
+parser.add_argument("--model", default="fullBNN", type=str, help="fullBNN")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
@@ -38,7 +38,7 @@ args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
 n_samples_list=[10,50,100]
-topk_list = [10,30,100]
+topk_list = [5, 10, 20]#10,30,100]
 n_inputs=100 if args.debug else args.n_inputs
 
 print("PyTorch Version: ", torch.__version__)

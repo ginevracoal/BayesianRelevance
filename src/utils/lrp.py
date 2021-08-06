@@ -19,11 +19,11 @@ DEBUG=False
 
 def select_informative_pixels(lrp_heatmaps, topk):
 	"""
-	Flattens image shape dimensions and selects the most relevant topk pixels. 
+	Flattens image shape dimensions and selects the most relevant topk % pixels. 
 	Returns lrp heatmaps on the selected pixels and the chosen pixel indexes. 
 	"""
 	if DEBUG:
-		print(f"\nTop {topk} most informative pixels:", end="\t")
+		print(f"\nTop {topk}% most informative pixels:", end="\t")
 
 	if len(lrp_heatmaps.shape)==3:
 		if DEBUG:
@@ -54,7 +54,13 @@ def select_informative_pixels(lrp_heatmaps, topk):
 	else:
 		flat_lrp_heatmap = flat_lrp_heatmaps
 
-	chosen_pxl_idxs = torch.argsort(flat_lrp_heatmap)[-topk:]
+	# topk_percentage = int(len(flat_lrp_heatmap)*topk/100)
+	# chosen_pxl_idxs = torch.argsort(flat_lrp_heatmap)[-topk_percentage:]
+	half_topk_percentage = int(len(flat_lrp_heatmap)*(topk/2)/100)
+	chosen_pxl_idxs = [torch.argsort(flat_lrp_heatmap)[-half_topk_percentage:],
+					   torch.argsort(flat_lrp_heatmap)[:half_topk_percentage]]
+	chosen_pxl_idxs = torch.cat(chosen_pxl_idxs)
+
 	chosen_pxls_lrp = flat_lrp_heatmaps[..., chosen_pxl_idxs] 
 
 	if DEBUG:
@@ -235,8 +241,6 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method):
 	robustness = []
 	chosen_pxl_idxs=[]
 
-	# print(original_heatmaps.shape, adversarial_heatmaps.shape)
-
 	if method=="imagewise":
 
 		for im_idx in range(len(original_heatmaps)):
@@ -245,7 +249,8 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method):
 
 			pxl_idxs = np.intersect1d(orig_pxl_idxs.detach().cpu().numpy(), adv_pxl_idxs.detach().cpu().numpy())
 
-			robustness.append(len(pxl_idxs)/topk)
+			topk_percentage = int(len(original_heatmaps[im_idx].flatten())*topk/100)
+			robustness.append(len(pxl_idxs)/topk_percentage)
 			chosen_pxl_idxs.append(pxl_idxs)
 
 	elif method=="pixelwise":
@@ -261,6 +266,8 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method):
 
 	else:
 		raise NotImplementedError
+
+	print("\ntopk n. pixels =", topk_percentage)
 
 	if DEBUG:
 		print("\n", pxl_idxs.shape, np.array(chosen_pxl_idxs).shape, np.array(robustness).shape)

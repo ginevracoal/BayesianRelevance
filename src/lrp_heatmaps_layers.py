@@ -24,9 +24,9 @@ from attacks.gradient_based import evaluate_attack
 from attacks.run_attacks import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
-parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
-parser.add_argument("--topk", default=200, type=int, help="Choose model idx from pre defined settings")
+parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points.")
+parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings.")
+parser.add_argument("--topk", default=20, type=int, help="Percentage of pixels for computing the LRP.") # 200
 parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--n_samples", default=50, type=int)
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")

@@ -11,13 +11,14 @@ import attacks.deeprobust as deeprobust
 
 from networks.baseNN import *
 from networks.fullBNN import *
-from networks.redBNN import *
+from networks.advNN import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, redBNN")
+parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, advNN")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings.")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--redBNN_layer_idx", default=-1, type=int, help="Index for the Bayesian layer in redBNN.")
+parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
@@ -48,6 +49,27 @@ if args.model=="baseNN":
         net.train(train_loader=train_loader, savedir=savedir, device=args.device)
 
     net.evaluate(test_loader=test_loader, device=args.device)
+
+elif args.model=="advNN":
+
+    model = baseNN_settings["model_"+str(args.model_idx)]
+
+    train_loader, test_loader, inp_shape, out_size = data_loaders(dataset_name=model["dataset"], n_inputs=n_inputs,
+                                                                  batch_size=128, shuffle=True)
+
+    savedir = get_model_savedir(model=args.model, dataset=model["dataset"], architecture=model["architecture"], 
+                         baseiters=None, debug=args.debug, model_idx=args.model_idx, attack_method=args.attack_method)
+    
+    net = advNN(inp_shape, out_size, *list(model.values()), attack_method=args.attack_method)
+
+    if args.load:
+        net.load(savedir=savedir, device=args.device)
+    
+    else:
+        net.train(train_loader=train_loader, savedir=savedir, device=args.device)
+
+    net.evaluate(test_loader=test_loader, device=args.device)
+
 
 else:
 

@@ -118,7 +118,7 @@ def fgm(model, image, label, epsilon, order, clip_min, clip_max, device):
         clip_max = np.inf
         clip_min = -np.inf
 
-    x_adv = torch.clamp(x_adv,clip_min, clip_max)
+    x_adv = torch.clamp(x_adv, clip_min, clip_max)
 
     return x_adv
 

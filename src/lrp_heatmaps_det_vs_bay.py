@@ -26,7 +26,7 @@ from attacks.run_attacks import *
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
 parser.add_argument("--model_idx", default=2, type=int, help="Choose model idx from pre defined settings")
-parser.add_argument("--topk", default=100, type=int, help="Choose model idx from pre defined settings")
+parser.add_argument("--topk", default=20, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--n_samples", default=100, type=int)
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
@@ -107,15 +107,17 @@ bay_robustness, bay_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp, adversa
 
 ### Select failed attack
 
-set_seed(15)
+set_seed(0)#15)
 shared_failed_idxs = np.intersect1d(det_failed_idxs, bay_failed_idxs)
 shared_failed_idxs = shared_failed_idxs[np.where(bay_robustness[shared_failed_idxs]!=1.)]
 
 im_idx = shared_failed_idxs[np.argmin(det_robustness[shared_failed_idxs])]
-# im_idx = shared_failed_idxs[np.argmax(bay_robustness[shared_failed_idxs])]
 
-print("det LRP robustness =", det_robustness[im_idx])
+print("\ndet LRP robustness =", det_robustness[im_idx])
 print("bay LRP robustness =", bay_robustness[im_idx])
+
+print("\ndet distance =", torch.norm(images[im_idx]-det_attacks[im_idx], float('inf')).item())
+print("bay distance =", torch.norm(images[im_idx]-bay_attacks[im_idx], float('inf')).item())
 
 ### Plots
 

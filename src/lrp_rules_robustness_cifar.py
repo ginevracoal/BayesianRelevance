@@ -28,7 +28,7 @@ import seaborn as sns
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
-parser.add_argument("--topk", default=50, type=int, help="Choose model idx from pre defined settings")
+parser.add_argument("--topk", default=5, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--n_samples", default=100, type=int)
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
@@ -82,7 +82,6 @@ else:
                                           topk=args.topk, method=lrp_robustness_method)
             bay_robustness, bay_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp, adversarial_heatmaps=bay_attack_lrp, 
                                           topk=args.topk, method=lrp_robustness_method)
-
 
             for robustness in det_robustness:
 
@@ -148,7 +147,7 @@ def plot_rules_robustness(df, n_samples, learnable_layers_idxs, savedir, filenam
             ax[col_idx].get_legend().remove()
             ax[col_idx].set_xlabel("")
             ax[0].set_xlabel("Det.")
-            ax[1].set_xlabel("Bay. samp ="+str(n_samples))
+            ax[1].set_xlabel("Bay. samp="+str(n_samples))
             ax[col_idx].set_xticklabels([r'$\epsilon$',r'$\gamma$',r'$\alpha\beta$'])
 
     fig.subplots_adjust(left=0.15)

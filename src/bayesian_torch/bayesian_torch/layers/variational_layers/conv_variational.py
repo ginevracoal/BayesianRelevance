@@ -50,7 +50,7 @@ from ..base_variational_layer import BaseVariationalLayer_
 import math
 
 from lrp.functional.conv_cifar import conv2d_cifar # <------------------------------
-from lrp.conv import Conv2d # <------------------------------
+from lrp.conv_cifar import Conv2d # <------------------------------
 
 
 __all__ = [

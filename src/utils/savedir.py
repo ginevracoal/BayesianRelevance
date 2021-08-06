@@ -7,7 +7,7 @@ TESTS = "../experiments/"
 ATK_DIR = "attacks/"
 
 def get_model_savedir(model, dataset, architecture, iters=None, inference=None, baseiters=None,
-                      model_idx=None, layer_idx=None, debug=False, torchvision=False):
+                      model_idx=None, layer_idx=None, debug=False, torchvision=False, attack_method=None):
 
     if torchvision:
         model = str(model)+"_torchvision"
@@ -28,6 +28,9 @@ def get_model_savedir(model, dataset, architecture, iters=None, inference=None, 
 
     if layer_idx:
         savedir+="_layeridx="+str(layer_idx)
+
+    if attack_method:
+        savedir+="_atk="+str(attack_method)
 
     if debug:
         return os.path.join(TESTS, "debug/", savedir)

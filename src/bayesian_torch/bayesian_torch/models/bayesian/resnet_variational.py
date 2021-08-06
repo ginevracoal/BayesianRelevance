@@ -15,7 +15,7 @@ from bayesian_torch.bayesian_torch.layers import LinearReparameterization
 
 from lrp.sequential import Sequential 
 from lrp.linear import Linear
-# from lrp.conv import Conv2d 
+from lrp.conv_cifar import Conv2d
 
 __all__ = [
     'ResNet', 'resnet20', 'resnet32', 'resnet44', 'resnet56', 'resnet110'
@@ -29,7 +29,8 @@ posterior_rho_init = -2.0
 
 def _weights_init(m):
     classname = m.__class__.__name__
-    if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d) or isinstance(m, Linear): # <--------------
+    if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d) \
+    or isinstance(m, Linear) or isinstance(m, Conv2d): # <--------------
         init.kaiming_normal_(m.weight)
 
 
@@ -151,7 +152,12 @@ class ResNet(nn.Module):
     def forward(self, x, explain=False, rule="epsilon"): # <-----------------------
         kl_sum = 0
         out, kl = self.conv1(x, explain, rule) # <-----------------------
+
         # print(self.conv1.mu_kernel[0,0,0].cpu().detach(), "\t", self.conv1.rho_kernel[0,0,0].cpu().detach())
+        # print(self.conv1.mu_kernel.mean().item(), self.conv1.mu_kernel.std().item())
+        # print(self.conv1.rho_kernel.mean().item(), self.conv1.rho_kernel.std().item())
+        # exit()
+
         kl_sum += kl
         out = self.bn1(out)
         out = F.relu(out)

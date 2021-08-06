@@ -21,6 +21,7 @@ from lrp.linear import Linear
 from lrp.maxpool import MaxPool2d 
 from lrp.conv import Conv2d 
 from lrp.sequential import Sequential 
+from lrp.sequential import Sequential 
 
 DEBUG = False
 
@@ -68,17 +69,7 @@ class baseNN(nn.Module):
         else: 
             raise AssertionError("\nWrong activation name.")
 
-        if architecture == "fc":
-
-            self.model = nn.Sequential(
-                nn.Flatten(), 
-                Linear(input_size, hidden_size),
-                activ(),
-                Linear(hidden_size, output_size))
-
-            self.learnable_layers_idxs = [1, 3]
-
-        elif architecture == "fc2":
+        if architecture == "fc2":
             self.model = nn.Sequential(
                 nn.Flatten(),
                 Linear(input_size, hidden_size),
@@ -119,7 +110,7 @@ class baseNN(nn.Module):
                     nn.Flatten(),
                     Linear(int(hidden_size/(4*4))*input_size, output_size))
 
-                self.learnable_layers_idxs = [0, 3, 7]
+                self.learnable_layers_idxs = [0, 4, 9]
 
             elif self.dataset_name in ["cifar"]:
 
@@ -133,47 +124,9 @@ class baseNN(nn.Module):
                     activ(),
                     MaxPool2d(kernel_size=2, stride=1),
                     nn.Flatten(),
-                    Linear(41472, output_size))   # hidden=512
+                    Linear(41472, output_size))
 
-                # self.model = nn.Sequential(
-                #     # Conv Layer block 1
-                #     Conv2d(in_channels=in_channels, out_channels=32, kernel_size=3, padding=1),
-                #     nn.BatchNorm2d(32),
-                #     activ(),
-                #     nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
-                #     activ(),
-                #     MaxPool2d(kernel_size=2, stride=2),
-
-                #     # Conv Layer block 2
-                #     Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
-                #     nn.BatchNorm2d(128),
-                #     activ(),
-                #     Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
-                #     activ(),
-                #     MaxPool2d(kernel_size=2, stride=2),
-                #     nn.Dropout2d(p=0.05),
-
-                #     # Conv Layer block 3
-                #     Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1),
-                #     nn.BatchNorm2d(256),
-                #     activ(),
-                #     Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1),
-                #     activ(),
-                #     MaxPool2d(kernel_size=2, stride=2),
-
-                #     # Linear
-                #     nn.Dropout(p=0.1),
-                #     nn.Flatten(),
-                #     Linear(4096, hidden_size),
-                #     # Linear(8192, hidden_size),
-                #     # Linear(16384, hidden_size),
-                #     activ(),
-                #     Linear(hidden_size, 512),
-                #     activ(),
-                #     nn.Dropout(p=0.1),
-                #     Linear(512, output_size))
-
-                # self.learnable_layers_idxs = [0, 3, 6, 9, 13, 16, 21, 23, 26]
+                self.learnable_layers_idxs = [0, 4, 7, 12]
 
         elif architecture == "alexnet":
 

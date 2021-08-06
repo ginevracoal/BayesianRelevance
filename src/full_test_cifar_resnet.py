@@ -104,7 +104,6 @@ parser.add_argument(
     help='Saves checkpoints at every specified number of epochs',
     type=int,
     default=10)
-parser.add_argument('--mode', type=str, default='test', help='train | test')
 parser.add_argument(
     '--tensorboard',
     type=bool,
@@ -117,6 +116,16 @@ parser.add_argument(
     default='./bayesian_torch/logs/cifar/deterministic',
     metavar='N',
     help='use tensorboard for logging and visualization of training progress')
+parser.add_argument('--mode', type=str, default='test', help='train | test')
+parser.add_argument(
+    '--attack_method',
+    type=str, 
+    default='fgsm',
+    help='fgsm, pgd')
+parser.add_argument(
+    '--test_inputs',
+    type=int, 
+    default=500)
 
 best_prec1 = 0
 
@@ -261,8 +270,8 @@ def main():
 
         # Adversarial attacks
 
-        method='pgd'
-        test_inputs = 100
+        method=args.attack_method
+        test_inputs = args.test_inputs
         dataset = Subset(val_loader.dataset, range(test_inputs))
         images, labels = ([],[])
         for image, label in dataset:
@@ -270,9 +279,9 @@ def main():
             labels.append(label)
         images = torch.stack(images)
 
-        # attacks = attack(model, dataset, method=method)
-        # save_attack(inputs=images, attacks=attacks, method=method, model_savedir=args.save_dir)
-        attacks = load_attack(method='fgsm', model_savedir=args.save_dir)
+        attacks = attack(model, dataset, method=method)
+        save_attack(inputs=images, attacks=attacks, method=method, model_savedir=args.save_dir)
+        # attacks = load_attack(method=method, model_savedir=args.save_dir)
 
         evaluate(args, model, DataLoader(dataset=list(zip(attacks, labels))))
 
@@ -484,6 +493,7 @@ def compute_lrp(x_test, network, rule, device):
 
     explanations = []
     for x in tqdm(x_test):
+        x = torch.clamp(x, 0., 1.)
 
         # Forward pass
         x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
@@ -497,6 +507,7 @@ def compute_lrp(x_test, network, rule, device):
         # Backward pass (compute explanation)
         y_hat.backward()
         lrp = x_copy.grad.squeeze(1)
+        lrp = torch.clamp(lrp, 0., 1.)
         explanations.append(lrp)
 
     explanations = torch.stack(explanations)

@@ -9,14 +9,14 @@ from attacks.gradient_based import evaluate_attack
 from attacks.run_attacks import *
 from networks.baseNN import *
 from networks.fullBNN import *
-from networks.redBNN import *
+from networks.advNN import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, redBNN")
+parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, advNN")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings.")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points to be attacked.")
+parser.add_argument("--n_inputs", default=1000, type=int, help="Number of test points to be attacked.")
 parser.add_argument("--redBNN_layer_idx", default=-1, type=int, help="Index for the Bayesian layer in redBNN.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
@@ -43,6 +43,28 @@ if args.model=="baseNN":
                                 debug=args.debug, model_idx=args.model_idx)
     
     net = baseNN(inp_shape, out_size, *list(model.values()))
+    net.load(savedir=savedir, device=args.device)
+
+    if args.load:
+        x_attack = load_attack(method=args.attack_method, model_savedir=savedir)
+    
+    else:
+        x_attack = attack(net=net, x_test=x_test, y_test=y_test,
+                          device=args.device, method=args.attack_method)
+        save_attack(x_test, x_attack, method=args.attack_method, model_savedir=savedir)
+
+    evaluate_attack(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, device=args.device)
+
+elif args.model=="advNN":
+
+    model = baseNN_settings["model_"+str(args.model_idx)]
+
+    x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], n_inputs=n_inputs)[2:]
+
+    savedir = get_model_savedir(model=args.model, dataset=model["dataset"], architecture=model["architecture"], 
+                                debug=args.debug, model_idx=args.model_idx, attack_method=args.attack_method)
+    
+    net = advNN(inp_shape, out_size, *list(model.values()), attack_method=args.attack_method)
     net.load(savedir=savedir, device=args.device)
 
     if args.load:

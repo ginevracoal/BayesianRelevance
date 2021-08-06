@@ -178,54 +178,55 @@ class BNN(PyroModule):
 
         if self.inference == "svi":
 
-            if avg_posterior is True:
+            # if avg_posterior is True:
 
-                guide_trace = poutine.trace(self.guide).get_trace(inputs)   
+            #     guide_trace = poutine.trace(self.guide).get_trace(inputs)   
 
-                avg_state_dict = {}
-                for key in self.basenet.state_dict().keys():
-                    avg_weights = guide_trace.nodes[str(key)+"_loc"]['value']
-                    avg_state_dict.update({str(key):avg_weights})
+            #     avg_state_dict = {}
+            #     for key in self.basenet.state_dict().keys():
+            #         avg_weights = guide_trace.nodes[str(key)+"_loc"]['value']
+            #         avg_state_dict.update({str(key):avg_weights})
 
-                basenet_copy = copy.deepcopy(self.basenet)
-                basenet_copy.load_state_dict(avg_state_dict)
-                out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
+            #     basenet_copy = copy.deepcopy(self.basenet)
+            #     basenet_copy.load_state_dict(avg_state_dict)
+            #     out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
+            #     if softmax:
+            #         out = nnf.softmax(out, dim=-1)
+            #     preds = [out]
+
+            # else:
+
+            preds = []  
+
+            if training:
+                guide_trace = poutine.trace(self.guide).get_trace(inputs)  
+                out = guide_trace.nodes['_RETURN']['value']
                 if softmax:
                     out = nnf.softmax(out, dim=-1)
-                preds = [out]
+                preds.append(out)
 
             else:
+                for seed in sample_idxs:
+                    pyro.set_rng_seed(seed)
 
-                preds = []  
-
-                if training:
                     guide_trace = poutine.trace(self.guide).get_trace(inputs)  
-                    out = guide_trace.nodes['_RETURN']['value']
+
+                    sampled_dict = {}
+                    for key in self.basenet.state_dict().keys():
+                        dist = Normal(loc=guide_trace.nodes[key+"_loc"]["value"], 
+                                      scale=softplus(guide_trace.nodes[key+"_scale"]["value"]))
+                        weights = pyro.sample(key, dist)
+                        sampled_dict.update({key:weights}) 
+
+                    basenet_copy = copy.deepcopy(self.basenet)
+                    basenet_copy.load_state_dict(sampled_dict)
+                    out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
+
+                    # print(weights[:5])
+
                     if softmax:
                         out = nnf.softmax(out, dim=-1)
                     preds.append(out)
-
-                else:
-                    for seed in sample_idxs:
-                        pyro.set_rng_seed(seed)
-                        guide_trace = poutine.trace(self.guide).get_trace(inputs)  
-
-                        weights = {}
-                        for key, value in self.basenet.state_dict().items():
-
-                            w = guide_trace.nodes[str(f"module$$${key}")]["value"]
-                            weights.update({str(key):w})
-
-                        # self.basenet.load_state_dict(weights)
-                        # preds.append(self.basenet.forward(inputs, layer_idx=layer_idx, *args, **kwargs))
-
-                        basenet_copy = copy.deepcopy(self.basenet)
-                        basenet_copy.load_state_dict(weights)
-
-                        out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
-                        if softmax:
-                            out = nnf.softmax(out, dim=-1)
-                        preds.append(out)
 
         elif self.inference == "hmc":
 
@@ -268,9 +269,15 @@ class BNN(PyroModule):
         print("\n == fullBNN HMC training ==")
         pyro.clear_param_store()
 
-        num_batches = int(len(train_loader.dataset)/train_loader.batch_size)
-        batch_samples = int(n_samples/num_batches)+1
-        print("\nn_batches =",num_batches,"\tbatch_samples =", batch_samples)
+        if DEBUG:
+            num_batches = 1
+            batch_samples = 2
+            warmup = 2
+        else:
+            num_batches = int(len(train_loader.dataset)/train_loader.batch_size)
+            batch_samples = int(n_samples/num_batches)+1
+
+        print("\nn_batches =", num_batches,"\tbatch_samples =", batch_samples)
 
         # kernel = HMC(self.model, step_size=step_size, num_steps=num_steps)
         kernel = NUTS(self.model, adapt_step_size=True)
@@ -322,7 +329,7 @@ class BNN(PyroModule):
                 y_batch = y_batch.to(device)
                 loss += svi.step(x_data=x_batch, y_data=y_batch.argmax(dim=-1))
 
-                outputs = self.forward(x_batch, training=True, avg_posterior=False).to(device)
+                outputs = self.forward(x_batch, training=True).to(device)
                 predictions = outputs.argmax(-1)
                 labels = y_batch.argmax(-1)
                 correct_predictions += (predictions == labels).sum().item()
