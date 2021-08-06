@@ -110,7 +110,7 @@ class baseNN(nn.Module):
                     nn.Flatten(),
                     Linear(int(hidden_size/(4*4))*input_size, output_size))
 
-                self.learnable_layers_idxs = [0, 4, 9]
+                self.learnable_layers_idxs = [0, 3, 7]
 
             elif self.dataset_name in ["cifar"]:
 

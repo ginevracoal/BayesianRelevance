@@ -27,8 +27,7 @@ from attacks.run_attacks import *
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
-parser.add_argument("--model", default="fullBNN", type=str, help="fullBNN")
-parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
+parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm")
 parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--normalize", default=False, type=eval, help="Normalize lrp heatmaps.")
@@ -38,7 +37,7 @@ args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
 n_samples_list=[10,50,100]
-topk_list = [5, 10, 20]#10,30,100]
+topk_list = [5, 10, 20]
 n_inputs=100 if args.debug else args.n_inputs
 
 print("PyTorch Version: ", torch.__version__)
@@ -49,10 +48,12 @@ if args.device=="cuda":
 
 ### Load models and attacks
 
+### baseNN
+
 model = baseNN_settings["model_"+str(args.model_idx)]
 
-_, _, x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], 
-															shuffle=False, n_inputs=n_inputs)
+x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], 
+														shuffle=False, n_inputs=n_inputs)[2:]
 det_model_savedir = get_model_savedir(model="baseNN", dataset=model["dataset"], architecture=model["architecture"], 
 											debug=args.debug, model_idx=args.model_idx)
 detnet = baseNN(inp_shape, num_classes, *list(model.values()))
@@ -60,23 +61,36 @@ detnet.load(savedir=det_model_savedir, device=args.device)
 
 det_attack = load_attack(method=args.attack_method, model_savedir=det_model_savedir)
 
-if args.model=="fullBNN":
+### advNN
 
-		m = fullBNN_settings["model_"+str(args.model_idx)]
+model = baseNN_settings["model_"+str(args.model_idx)]
 
-		bay_model_savedir = get_model_savedir(model=args.model, dataset=m["dataset"], architecture=m["architecture"], 
-																model_idx=args.model_idx, debug=args.debug)
+x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], 
+														shuffle=False, n_inputs=n_inputs)[2:]
 
-		bayesnet = BNN(m["dataset"], *list(m.values())[1:], inp_shape, num_classes)
-		bayesnet.load(savedir=bay_model_savedir, device=args.device)
+adv_model_savedir = get_model_savedir(model="advNN", dataset=model["dataset"], architecture=model["architecture"], 
+                            debug=args.debug, model_idx=args.model_idx, attack_method=args.attack_method)
+advnet = advNN(inp_shape, num_classes, *list(model.values()), attack_method=args.attack_method)
+advnet.load(savedir=adv_model_savedir, device=args.device)
 
-		bay_attack=[]
-		for n_samples in n_samples_list:
-				bay_attack.append(load_attack(method=args.attack_method, model_savedir=bay_model_savedir, 
-													n_samples=n_samples))
+adv_attack = load_attack(method=args.attack_method, model_savedir=adv_model_savedir)
 
-else:
-	raise NotImplementedError
+### fullBNN
+
+m = fullBNN_settings["model_"+str(args.model_idx)]
+
+bay_model_savedir = get_model_savedir(model="fullBNN", dataset=m["dataset"], architecture=m["architecture"], 
+														model_idx=args.model_idx, debug=args.debug)
+
+bayesnet = BNN(m["dataset"], *list(m.values())[1:], inp_shape, num_classes)
+bayesnet.load(savedir=bay_model_savedir, device=args.device)
+
+bay_attack=[]
+for n_samples in n_samples_list:
+		bay_attack.append(load_attack(method=args.attack_method, model_savedir=bay_model_savedir, 
+											n_samples=n_samples))
+
+### plot
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
@@ -84,6 +98,9 @@ labels = y_test.argmax(-1).to(args.device)
 det_lrp_robustness_topk=[]
 det_successful_lrp_robustness_topk=[]
 det_failed_lrp_robustness_topk=[]
+adv_lrp_robustness_topk=[]
+adv_successful_lrp_robustness_topk=[]
+adv_failed_lrp_robustness_topk=[]
 bay_lrp_robustness_topk=[]
 bay_successful_lrp_robustness_topk=[]
 bay_failed_lrp_robustness_topk=[]
@@ -91,11 +108,15 @@ bay_failed_lrp_robustness_topk=[]
 det_norm_topk=[]
 det_successful_norm_topk=[]
 det_failed_norm_topk=[]
+adv_norm_topk=[]
+adv_successful_norm_topk=[]
+adv_failed_norm_topk=[]
 bay_norm_topk=[]
 bay_successful_norm_topk=[]
 bay_failed_norm_topk=[]
 
 det_softmax_robustness_topk=[]
+adv_softmax_robustness_topk=[]
 bay_softmax_robustness_topk=[]
 
 for topk in topk_list:
@@ -103,6 +124,9 @@ for topk in topk_list:
 	det_lrp_robustness_layers=[]
 	det_successful_lrp_robustness_layers=[]
 	det_failed_lrp_robustness_layers=[]
+	adv_lrp_robustness_layers=[]
+	adv_successful_lrp_robustness_layers=[]
+	adv_failed_lrp_robustness_layers=[]
 	bay_lrp_robustness_layers=[]
 	bay_successful_lrp_robustness_layers=[]
 	bay_failed_lrp_robustness_layers=[]
@@ -110,11 +134,15 @@ for topk in topk_list:
 	det_norm_layers=[]
 	det_successful_norm_layers=[]
 	det_failed_norm_layers=[]
+	adv_norm_layers=[]
+	adv_successful_norm_layers=[]
+	adv_failed_norm_layers=[]
 	bay_norm_layers=[]
 	bay_successful_norm_layers=[]
 	bay_failed_norm_layers=[]
 
 	det_softmax_robustness_layers=[]
+	adv_softmax_robustness_layers=[]
 	bay_softmax_robustness_layers=[]
 
 	for layer_idx in detnet.learnable_layers_idxs:
@@ -124,6 +152,11 @@ for topk in topk_list:
 									rule=args.rule, layer_idx=layer_idx)
 		det_lrp = load_from_pickle(path=savedir, filename="det_lrp")
 		det_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
+
+		savedir = get_lrp_savedir(model_savedir=adv_model_savedir, attack_method=args.attack_method, 
+									rule=args.rule, layer_idx=layer_idx)
+		adv_lrp = load_from_pickle(path=savedir, filename="det_lrp")
+		adv_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
 
 		savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
 	                          	  rule=args.rule, layer_idx=layer_idx, lrp_method=args.lrp_method)
@@ -147,6 +180,9 @@ for topk in topk_list:
 			for im_idx in range(det_lrp.shape[0]):
 				det_lrp[im_idx] = normalize(det_lrp[im_idx])
 				det_attack_lrp[im_idx] = normalize(det_attack_lrp[im_idx])
+
+				adv_lrp[im_idx] = normalize(det_lrp[im_idx])
+				adv_attack_lrp[im_idx] = normalize(det_attack_lrp[im_idx])
 
 				for samp_idx in range(len(n_samples_list)):
 					bay_lrp[samp_idx][im_idx] = normalize(bay_lrp[samp_idx][im_idx])
@@ -173,6 +209,27 @@ for topk in topk_list:
 		det_successful_norm = lrp_distances(det_lrp[det_successful_idxs], det_attack_lrp[det_successful_idxs], 
 											axis_norm=1).detach().cpu().numpy()
 		det_failed_norm = lrp_distances(det_lrp[det_failed_idxs], det_attack_lrp[det_failed_idxs], 
+										axis_norm=1).detach().cpu().numpy()
+
+		adv_preds, adv_atk_preds, adv_softmax_robustness, adv_successful_idxs, adv_failed_idxs = evaluate_attack(net=advnet, 
+						x_test=images, x_attack=adv_attack, y_test=y_test, device=args.device, return_classification_idxs=True)
+		adv_softmax_robustness = adv_softmax_robustness.detach().cpu().numpy()
+
+		adv_lrp_robustness, adv_lrp_pxl_idxs = lrp_robustness(original_heatmaps=adv_lrp, 
+															  adversarial_heatmaps=adv_attack_lrp, 
+															  topk=topk, method=lrp_robustness_method)
+
+		succ_adv_lrp_robustness, succ_adv_lrp_pxl_idxs = lrp_robustness(original_heatmaps=adv_lrp[adv_successful_idxs], 
+																		adversarial_heatmaps=adv_attack_lrp[adv_successful_idxs], 
+																		topk=topk, method=lrp_robustness_method)
+		fail_adv_lrp_robustness, fail_adv_lrp_pxl_idxs = lrp_robustness(original_heatmaps=adv_lrp[adv_failed_idxs], 
+																		adversarial_heatmaps=adv_attack_lrp[adv_failed_idxs], 
+																		topk=topk, method=lrp_robustness_method)
+		
+		adv_norm = lrp_distances(adv_lrp, adv_attack_lrp, axis_norm=1).detach().cpu().numpy()
+		adv_successful_norm = lrp_distances(adv_lrp[adv_successful_idxs], adv_attack_lrp[adv_successful_idxs], 
+											axis_norm=1).detach().cpu().numpy()
+		adv_failed_norm = lrp_distances(adv_lrp[adv_failed_idxs], adv_attack_lrp[adv_failed_idxs], 
 										axis_norm=1).detach().cpu().numpy()
 
 		bay_preds=[]
@@ -234,6 +291,9 @@ for topk in topk_list:
 		det_lrp_robustness_layers.append(det_lrp_robustness)
 		det_successful_lrp_robustness_layers.append(succ_det_lrp_robustness)
 		det_failed_lrp_robustness_layers.append(fail_det_lrp_robustness)
+		adv_lrp_robustness_layers.append(adv_lrp_robustness)
+		adv_successful_lrp_robustness_layers.append(succ_adv_lrp_robustness)
+		adv_failed_lrp_robustness_layers.append(fail_adv_lrp_robustness)
 		bay_lrp_robustness_layers.append(bay_lrp_robustness)
 		bay_successful_lrp_robustness_layers.append(succ_bay_lrp_robustness)
 		bay_failed_lrp_robustness_layers.append(fail_bay_lrp_robustness)
@@ -241,16 +301,23 @@ for topk in topk_list:
 		det_norm_layers.append(det_norm)
 		det_successful_norm_layers.append(det_successful_norm)
 		det_failed_norm_layers.append(det_failed_norm)
+		adv_norm_layers.append(adv_norm)
+		adv_successful_norm_layers.append(adv_successful_norm)
+		adv_failed_norm_layers.append(adv_failed_norm)
 		bay_norm_layers.append(bay_norm)
 		bay_successful_norm_layers.append(bay_successful_norm)
 		bay_failed_norm_layers.append(bay_failed_norm)
 
 		det_softmax_robustness_layers.append(det_softmax_robustness)
+		adv_softmax_robustness_layers.append(adv_softmax_robustness)
 		bay_softmax_robustness_layers.append(bay_softmax_robustness)
 
 	det_lrp_robustness_topk.append(det_lrp_robustness_layers)
 	det_successful_lrp_robustness_topk.append(det_successful_lrp_robustness_layers)
 	det_failed_lrp_robustness_topk.append(det_failed_lrp_robustness_layers)
+	adv_lrp_robustness_topk.append(adv_lrp_robustness_layers)
+	adv_successful_lrp_robustness_topk.append(adv_successful_lrp_robustness_layers)
+	adv_failed_lrp_robustness_topk.append(adv_failed_lrp_robustness_layers)
 	bay_lrp_robustness_topk.append(bay_lrp_robustness_layers)
 	bay_successful_lrp_robustness_topk.append(bay_successful_lrp_robustness_layers)
 	bay_failed_lrp_robustness_topk.append(bay_failed_lrp_robustness_layers)
@@ -258,11 +325,15 @@ for topk in topk_list:
 	det_norm_topk.append(det_norm_layers)
 	det_successful_norm_topk.append(det_successful_norm_layers)
 	det_failed_norm_topk.append(det_failed_norm_layers)
+	adv_norm_topk.append(adv_norm_layers)
+	adv_successful_norm_topk.append(adv_successful_norm_layers)
+	adv_failed_norm_topk.append(adv_failed_norm_layers)
 	bay_norm_topk.append(bay_norm_layers)
 	bay_successful_norm_topk.append(bay_successful_norm_layers)
 	bay_failed_norm_topk.append(bay_failed_norm_layers)
 
 	det_softmax_robustness_topk.append(det_softmax_robustness_layers)
+	adv_softmax_robustness_topk.append(adv_softmax_robustness_layers)
 	bay_softmax_robustness_topk.append(bay_softmax_robustness_layers)
 
 ### Plots
@@ -280,6 +351,9 @@ plot_lrp.lrp_layers_robustness_distributions(
 						det_lrp_robustness=det_lrp_robustness_topk,
 						det_successful_lrp_robustness=det_successful_lrp_robustness_topk,
 						det_failed_lrp_robustness=det_failed_lrp_robustness_topk,
+						adv_lrp_robustness=adv_lrp_robustness_topk,
+						adv_successful_lrp_robustness=adv_successful_lrp_robustness_topk,
+						adv_failed_lrp_robustness=adv_failed_lrp_robustness_topk,
 						bay_lrp_robustness=bay_lrp_robustness_topk,
 						bay_successful_lrp_robustness=bay_successful_lrp_robustness_topk,
 						bay_failed_lrp_robustness=bay_failed_lrp_robustness_topk,
@@ -292,8 +366,10 @@ plot_lrp.lrp_layers_robustness_distributions(
 
 plot_lrp.lrp_layers_robustness_scatterplot(
 						det_lrp_robustness=det_lrp_robustness_topk,
+						adv_lrp_robustness=adv_lrp_robustness_topk,
 						bay_lrp_robustness=bay_lrp_robustness_topk,
                       	det_softmax_robustness=det_softmax_robustness_topk,
+                      	adv_softmax_robustness=adv_softmax_robustness_topk,
                       	bay_softmax_robustness=bay_softmax_robustness_topk,
 						n_samples_list=n_samples_list,
 						topk_list=topk_list,

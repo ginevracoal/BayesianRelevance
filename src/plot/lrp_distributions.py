@@ -454,6 +454,7 @@ def lrp_robustness_scatterplot(adversarial_robustness, bayesian_adversarial_robu
 
 def lrp_layers_robustness_distributions(
         det_lrp_robustness, det_successful_lrp_robustness, det_failed_lrp_robustness,
+        adv_lrp_robustness, adv_successful_lrp_robustness, adv_failed_lrp_robustness,
         bay_lrp_robustness, bay_successful_lrp_robustness, bay_failed_lrp_robustness,
         n_samples_list, topk_list,
         n_original_images, learnable_layers_idxs, savedir, filename):
@@ -464,6 +465,7 @@ def lrp_layers_robustness_distributions(
     matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
 
     det_col =  plt.cm.get_cmap('rocket', 100)(np.linspace(0, 1, 10))[7]
+    adv_col =  plt.cm.get_cmap('flare', 100)(np.linspace(0, 1, 10))[8]
     bay_col = plt.cm.get_cmap('crest', 100)(np.linspace(0, 1, len(n_samples_list)+1))[1:]
     clip=(-0.1,1.1)
     alphas = np.linspace(0.6, 0.3, num=len(topk_list))
@@ -529,6 +531,8 @@ def lrp_layers_robustness_distributions(
 
                 sns.kdeplot(det_lrp_robustness[topk_idx][row_idx], ax=ax[row_idx, topk_idx], label=f"Det.", 
                             color=det_col, alpha=alpha, fill=True, linewidth=0, clip=clip)
+                sns.kdeplot(adv_lrp_robustness[topk_idx][row_idx], ax=ax[row_idx, topk_idx], label=f"Adv.", 
+                            color=adv_col, alpha=alpha, fill=True, linewidth=0, clip=clip)
 
                 for samp_idx, n_samples in enumerate(n_samples_list):
                     sns.kdeplot(bay_lrp_robustness[topk_idx][row_idx][samp_idx], ax=ax[row_idx, topk_idx], 
@@ -562,6 +566,9 @@ def lrp_layers_robustness_distributions(
                 sns.kdeplot(det_lrp_robustness[topk_idx][row_idx], ax=ax[row_idx], label=f"Det. topk={topk}", 
                             color=det_col, alpha=alphas[topk_idx], fill=True, linewidth=0, clip=clip)
 
+                sns.kdeplot(adv_lrp_robustness[topk_idx][row_idx], ax=ax[row_idx], label=f"Adv. topk={topk}", 
+                            color=adv_col, alpha=alphas[topk_idx], fill=True, linewidth=0, clip=clip)
+
                 for samp_idx, n_samples in enumerate(n_samples_list):
                     sns.kdeplot(bay_lrp_robustness[topk_idx][row_idx][samp_idx], ax=ax[row_idx], color=bay_col[samp_idx], 
                                 label=f"Bay. samp={n_samples} topk={topk}",  alpha=alphas[topk_idx],
@@ -581,9 +588,8 @@ def lrp_layers_robustness_distributions(
         plt.close(fig)
 
 
-def lrp_layers_robustness_scatterplot(det_lrp_robustness, bay_lrp_robustness,
-                                      # det_lrp_norm, bay_lrp_norm,
-                                      det_softmax_robustness, bay_softmax_robustness,
+def lrp_layers_robustness_scatterplot(det_lrp_robustness, adv_lrp_robustness, bay_lrp_robustness,
+                                      det_softmax_robustness, adv_softmax_robustness, bay_softmax_robustness,
                                        n_samples_list, topk_list,
                                        n_original_images, learnable_layers_idxs, savedir, filename):
 
@@ -595,6 +601,7 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, bay_lrp_robustness,
     fig.tight_layout()
 
     det_col =  plt.cm.get_cmap('rocket', 100)(np.linspace(0, 1, 10))[7]
+    adv_col =  plt.cm.get_cmap('flare', 100)(np.linspace(0, 1, 10))[8]
     bay_col = plt.cm.get_cmap('crest', 100)(np.linspace(0, 1, len(n_samples_list)+1))[1:]
     alpha = 0.5
 
@@ -616,6 +623,15 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, bay_lrp_robustness,
                         ax=ax[layer_idx], label=r"Det. $\rho$="+str(round(rho,2)), 
                         alpha=alpha, linewidth=0,
                         legend=legend, color=det_col)
+
+        rho = np.corrcoef(adv_lrp_robustness[topk_idx][layer_idx], 
+                          adv_softmax_robustness[topk_idx][layer_idx])[0,1]
+
+        sns.scatterplot(adv_lrp_robustness[topk_idx][layer_idx], 
+                        adv_softmax_robustness[topk_idx][layer_idx],
+                        ax=ax[layer_idx], label=r"Adv. $\rho$="+str(round(rho,2)), 
+                        alpha=alpha, linewidth=0,
+                        legend=legend, color=adv_col)
         
         for samp_idx, n_samples in enumerate(n_samples_list):
 

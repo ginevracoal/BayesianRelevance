@@ -21,9 +21,9 @@ from attacks.gradient_based import evaluate_attack
 from attacks.run_attacks import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_inputs", default=1000, type=int, help="Number of test points")
+parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
-parser.add_argument("--model", default="fullBNN", type=str, help="baseNN, fullBNN, advNN")
+parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, advNN")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation: epsilon, gamma, alpha1beta0")
@@ -65,7 +65,7 @@ if args.model in ["baseNN", "advNN"]:
 
         det_model_savedir = get_model_savedir(model=args.model, dataset=model["dataset"], architecture=model["architecture"], 
                                     debug=args.debug, model_idx=args.model_idx, attack_method=args.attack_method)
-        detnet = advNN(inp_shape, out_size, *list(model.values()), attack_method=args.attack_method)
+        detnet = advNN(inp_shape, num_classes, *list(model.values()), attack_method=args.attack_method)
         detnet.load(savedir=det_model_savedir, device=args.device)
 
         det_attack = load_attack(method=args.attack_method, model_savedir=det_model_savedir)
@@ -96,6 +96,14 @@ if args.model in ["baseNN", "advNN"]:
 
 elif args.model=="fullBNN":
 
+    # model = baseNN_settings["model_"+str(args.model_idx)]
+
+    # x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], shuffle=False, n_inputs=n_inputs)[2:]
+    
+    # det_model_savedir = get_model_savedir(model="baseNN", dataset=model["dataset"], architecture=model["architecture"], 
+    #                                   debug=args.debug, model_idx=args.model_idx)
+    # detnet = baseNN(inp_shape, num_classes, *list(model.values()))
+
     m = fullBNN_settings["model_"+str(args.model_idx)]
 
     x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=m["dataset"], shuffle=False, n_inputs=n_inputs)[2:]
@@ -117,7 +125,7 @@ elif args.model=="fullBNN":
     images = x_test.to(args.device)
     labels = y_test.argmax(-1).to(args.device)
 
-    for layer_idx in detnet.learnable_layers_idxs:
+    for layer_idx in bayesnet.basenet.learnable_layers_idxs:
 
         savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
                                   layer_idx=layer_idx, rule=args.rule, lrp_method=args.lrp_method)
