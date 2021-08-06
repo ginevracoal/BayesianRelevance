@@ -21,13 +21,12 @@ from attacks.gradient_based import evaluate_attack
 from attacks.run_attacks import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, advNN")
+parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation: epsilon, gamma, alpha1beta0")
-parser.add_argument("--redBNN_layer_idx", default=-1, type=int, help="Bayesian layer idx in redBNN.")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  

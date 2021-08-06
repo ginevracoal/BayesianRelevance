@@ -21,7 +21,6 @@ from lrp.linear import Linear
 from lrp.maxpool import MaxPool2d 
 from lrp.conv import Conv2d 
 from lrp.sequential import Sequential 
-from lrp.sequential import Sequential 
 
 DEBUG = False
 

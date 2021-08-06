@@ -178,24 +178,6 @@ class BNN(PyroModule):
 
         if self.inference == "svi":
 
-            # if avg_posterior is True:
-
-            #     guide_trace = poutine.trace(self.guide).get_trace(inputs)   
-
-            #     avg_state_dict = {}
-            #     for key in self.basenet.state_dict().keys():
-            #         avg_weights = guide_trace.nodes[str(key)+"_loc"]['value']
-            #         avg_state_dict.update({str(key):avg_weights})
-
-            #     basenet_copy = copy.deepcopy(self.basenet)
-            #     basenet_copy.load_state_dict(avg_state_dict)
-            #     out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
-            #     if softmax:
-            #         out = nnf.softmax(out, dim=-1)
-            #     preds = [out]
-
-            # else:
-
             preds = []  
 
             if training:
@@ -206,24 +188,40 @@ class BNN(PyroModule):
                 preds.append(out)
 
             else:
+                # for seed in sample_idxs:
+                #     pyro.set_rng_seed(seed)
+
+                #     guide_trace = poutine.trace(self.guide).get_trace(inputs)  
+
+                #     sampled_dict = {}
+                #     for key in self.basenet.state_dict().keys():
+                #         dist = Normal(loc=guide_trace.nodes[key+"_loc"]["value"], 
+                #                       scale=softplus(guide_trace.nodes[key+"_scale"]["value"]))
+                #         weights = pyro.sample(key, dist)
+                #         sampled_dict.update({key:weights}) 
+
+                #     basenet_copy = copy.deepcopy(self.basenet)
+                #     basenet_copy.load_state_dict(sampled_dict)
+                #     out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
+
+                #     if softmax:
+                #         out = nnf.softmax(out, dim=-1)
+                #     preds.append(out)
+
                 for seed in sample_idxs:
                     pyro.set_rng_seed(seed)
-
                     guide_trace = poutine.trace(self.guide).get_trace(inputs)  
 
-                    sampled_dict = {}
-                    for key in self.basenet.state_dict().keys():
-                        dist = Normal(loc=guide_trace.nodes[key+"_loc"]["value"], 
-                                      scale=softplus(guide_trace.nodes[key+"_scale"]["value"]))
-                        weights = pyro.sample(key, dist)
-                        sampled_dict.update({key:weights}) 
+                    weights = {}
+                    for key, value in self.basenet.state_dict().items():
+
+                        w = guide_trace.nodes[str(f"module$$${key}")]["value"]
+                        weights.update({str(key):w})
 
                     basenet_copy = copy.deepcopy(self.basenet)
-                    basenet_copy.load_state_dict(sampled_dict)
+                    basenet_copy.load_state_dict(weights)
+
                     out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
-
-                    # print(weights[:5])
-
                     if softmax:
                         out = nnf.softmax(out, dim=-1)
                     preds.append(out)

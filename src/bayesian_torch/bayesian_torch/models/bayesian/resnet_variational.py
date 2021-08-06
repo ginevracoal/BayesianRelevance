@@ -15,7 +15,7 @@ from bayesian_torch.bayesian_torch.layers import LinearReparameterization
 
 from lrp.sequential import Sequential 
 from lrp.linear import Linear
-from lrp.conv_cifar import Conv2d
+from lrp.conv import Conv2d
 
 __all__ = [
     'ResNet', 'resnet20', 'resnet32', 'resnet44', 'resnet56', 'resnet110'
