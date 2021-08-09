@@ -160,13 +160,13 @@ class BNN(PyroModule):
     def _set_correct_layer_idx(self, layer_idx):
         return self.basenet._set_correct_layer_idx(layer_idx)
 
-    def forward(self, inputs, n_samples=10, avg_posterior=False, sample_idxs=None, training=False,
+    def forward(self, inputs, n_samples=10, sample_idxs=None, training=False,
                 expected_out=True, softmax=False, layer_idx=-1, *args, **kwargs):
 
         # change external attack libraries behavior #
         n_samples = self.n_samples if hasattr(self, "n_samples") else n_samples
         sample_idxs = self.sample_idxs if hasattr(self, "sample_idxs") else sample_idxs
-        avg_posterior = self.avg_posterior if hasattr(self, "avg_posterior") else avg_posterior
+        # avg_posterior = self.avg_posterior if hasattr(self, "avg_posterior") else avg_posterior
         layer_idx = self.layer_idx if hasattr(self, "layer_idx") else layer_idx
         #############################################
 
@@ -181,10 +181,9 @@ class BNN(PyroModule):
             preds = []  
 
             if training:
-                guide_trace = poutine.trace(self.guide).get_trace(inputs)  
+
+                guide_trace = poutine.trace(self.guide).get_trace(inputs)   
                 out = guide_trace.nodes['_RETURN']['value']
-                if softmax:
-                    out = nnf.softmax(out, dim=-1)
                 preds.append(out)
 
             else:
@@ -231,34 +230,14 @@ class BNN(PyroModule):
             if n_samples>len(self.posterior_samples):
                 raise ValueError("Too many samples. Max available samples =", len(self.posterior_samples))
 
-            if avg_posterior is True:
-
-                avg_state_dict = {}
-                for key in self.basenet.state_dict().keys():
-
-                    weights = []
-                    for net in self.posterior_samples: 
-                        weights.append(net.state_dict()[key])
-
-                    avg_weights = torch.stack(weights).mean(0)
-                    avg_state_dict.update({str(key):avg_weights})
-
-                basenet_copy = copy.deepcopy(self.basenet)
-                basenet_copy.load_state_dict(avg_state_dict)
-                out = basenet_copy.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
+            preds = []
+            posterior_predictive = self.posterior_samples
+            for seed in sample_idxs:
+                net = posterior_predictive[seed]
+                out = net.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
                 if softmax:
                     out = nnf.softmax(out, dim=-1)
-                preds = [out]
-
-            else:
-                preds = []
-                posterior_predictive = self.posterior_samples
-                for seed in sample_idxs:
-                    net = posterior_predictive[seed]
-                    out = net.forward(inputs, layer_idx=layer_idx, *args, **kwargs)
-                    if softmax:
-                        out = nnf.softmax(out, dim=-1)
-                    preds.append(out)
+                preds.append(out)
         
         preds = torch.stack(preds)
         return preds.mean(0) if expected_out else preds
@@ -372,7 +351,7 @@ class BNN(PyroModule):
             for x_batch, y_batch in test_loader:
 
                 x_batch = x_batch.to(device)
-                outputs = self.forward(x_batch, n_samples=n_samples, avg_posterior=avg_posterior)
+                outputs = self.forward(x_batch, n_samples=n_samples)#, avg_posterior=avg_posterior)
                 predictions = outputs.to(device).argmax(-1)
                 labels = y_batch.to(device).argmax(-1)
                 correct_predictions += (predictions == labels).sum().item()

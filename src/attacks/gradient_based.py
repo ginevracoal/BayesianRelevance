@@ -147,6 +147,10 @@ def evaluate_attack(net, x_test, x_attack, y_test, device, n_samples=None, sampl
 	""" Evaluates the network on the original data and its adversarially perturbed version. 
 	When using a Bayesian network `n_samples` should be specified for the evaluation.     
 	"""
+
+	x_test = x_test.clone()
+	x_attack = x_attack.clone()
+
 	print(f"\nEvaluating against the attacks", end="")
 	if avg_posterior:
 		print(" with the posterior mode")

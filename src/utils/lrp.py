@@ -57,8 +57,8 @@ def select_informative_pixels(lrp_heatmaps, topk):
 	# topk_percentage = int(len(flat_lrp_heatmap)*topk/100)
 	# chosen_pxl_idxs = torch.argsort(flat_lrp_heatmap)[-topk_percentage:]
 	half_topk_percentage = int(len(flat_lrp_heatmap)*(topk/2)/100)
-	chosen_pxl_idxs = [torch.argsort(flat_lrp_heatmap)[-half_topk_percentage:],
-					   torch.argsort(flat_lrp_heatmap)[:half_topk_percentage]]
+	sorted_flat_lrp_idxs = torch.argsort(flat_lrp_heatmap)
+	chosen_pxl_idxs = [sorted_flat_lrp_idxs[-half_topk_percentage:], sorted_flat_lrp_idxs[:half_topk_percentage]]
 	chosen_pxl_idxs = torch.cat(chosen_pxl_idxs)
 
 	chosen_pxls_lrp = flat_lrp_heatmaps[..., chosen_pxl_idxs] 
@@ -113,7 +113,8 @@ def compute_explanations(x_test, network, rule, method, device, n_samples=None, 
 				# Forward pass
 				x_copy = copy.deepcopy(x.detach()).unsqueeze(0)
 				x_copy.requires_grad = True	
-				y_hat = network.forward(inputs=x_copy, n_samples=n_samples, explain=True, rule=rule, layer_idx=layer_idx)
+				y_hat = network.forward(inputs=x_copy, n_samples=n_samples, 
+									    explain=True, rule=rule, layer_idx=layer_idx)
 
 				# Choose argmax
 				y_hat = y_hat[torch.arange(x_copy.shape[0]), y_hat.max(1)[1]]
@@ -249,10 +250,9 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method):
 
 			pxl_idxs = np.intersect1d(orig_pxl_idxs.detach().cpu().numpy(), adv_pxl_idxs.detach().cpu().numpy())
 
-			topk_percentage = int(len(original_heatmaps[im_idx].flatten())*topk/100)
-			robustness.append(len(pxl_idxs)/topk_percentage)
+			robustness.append(len(pxl_idxs)/len(orig_pxl_idxs))
 			chosen_pxl_idxs.append(pxl_idxs)
-
+			
 	elif method=="pixelwise":
 
 		for im_idx in range(len(original_heatmaps)):
@@ -267,7 +267,6 @@ def lrp_robustness(original_heatmaps, adversarial_heatmaps, topk, method):
 	else:
 		raise NotImplementedError
 
-	print("\ntopk n. pixels =", topk_percentage)
 
 	if DEBUG:
 		print("\n", pxl_idxs.shape, np.array(chosen_pxl_idxs).shape, np.array(robustness).shape)

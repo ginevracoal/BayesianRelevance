@@ -37,7 +37,7 @@ args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
 n_samples_list=[10,50,100]
-topk_list = [5, 10, 20]
+topk_list = [10, 20]
 n_inputs=100 if args.debug else args.n_inputs
 
 print("PyTorch Version: ", torch.__version__)
@@ -63,17 +63,17 @@ det_attack = load_attack(method=args.attack_method, model_savedir=det_model_save
 
 ### advNN
 
-model = baseNN_settings["model_"+str(args.model_idx)]
-
-x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], 
-														shuffle=False, n_inputs=n_inputs)[2:]
-
 adv_model_savedir = get_model_savedir(model="advNN", dataset=model["dataset"], architecture=model["architecture"], 
                             debug=args.debug, model_idx=args.model_idx, attack_method=args.attack_method)
 advnet = advNN(inp_shape, num_classes, *list(model.values()), attack_method=args.attack_method)
 advnet.load(savedir=adv_model_savedir, device=args.device)
 
 adv_attack = load_attack(method=args.attack_method, model_savedir=adv_model_savedir)
+
+# # provvisorio:
+# adv_model_savedir = det_model_savedir
+# advnet = detnet
+# adv_attack = det_attack
 
 ### fullBNN
 
@@ -181,8 +181,8 @@ for topk in topk_list:
 				det_lrp[im_idx] = normalize(det_lrp[im_idx])
 				det_attack_lrp[im_idx] = normalize(det_attack_lrp[im_idx])
 
-				adv_lrp[im_idx] = normalize(det_lrp[im_idx])
-				adv_attack_lrp[im_idx] = normalize(det_attack_lrp[im_idx])
+				adv_lrp[im_idx] = normalize(adv_lrp[im_idx])
+				adv_attack_lrp[im_idx] = normalize(adv_attack_lrp[im_idx])
 
 				for samp_idx in range(len(n_samples_list)):
 					bay_lrp[samp_idx][im_idx] = normalize(bay_lrp[samp_idx][im_idx])
@@ -211,6 +211,8 @@ for topk in topk_list:
 		det_failed_norm = lrp_distances(det_lrp[det_failed_idxs], det_attack_lrp[det_failed_idxs], 
 										axis_norm=1).detach().cpu().numpy()
 
+
+
 		adv_preds, adv_atk_preds, adv_softmax_robustness, adv_successful_idxs, adv_failed_idxs = evaluate_attack(net=advnet, 
 						x_test=images, x_attack=adv_attack, y_test=y_test, device=args.device, return_classification_idxs=True)
 		adv_softmax_robustness = adv_softmax_robustness.detach().cpu().numpy()
@@ -231,6 +233,7 @@ for topk in topk_list:
 											axis_norm=1).detach().cpu().numpy()
 		adv_failed_norm = lrp_distances(adv_lrp[adv_failed_idxs], adv_attack_lrp[adv_failed_idxs], 
 										axis_norm=1).detach().cpu().numpy()
+
 
 		bay_preds=[]
 		bay_atk_preds=[]

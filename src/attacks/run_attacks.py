@@ -84,7 +84,7 @@ def run_attack(net, image, label, method, device, hyperparams=None):
 
 	if method == "fgsm":
 		adversary = FGSM
-		adversary_params = {'epsilon': 0.2, 'order': np.inf, 'clip_max': 1.0, 'clip_min': 0.0}
+		adversary_params = {'epsilon': 0.2, 'order': np.inf, 'clip_max':None, 'clip_min':None}
 		adv = adversary(net, device)
 		perturbed_image = adv.generate(image, label, **adversary_params)
 

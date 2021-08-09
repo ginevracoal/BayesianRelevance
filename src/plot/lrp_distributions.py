@@ -608,7 +608,7 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, adv_lrp_robustness, ba
     topk_idx=len(topk_list)-1
     topk=topk_list[-1]
 
-    print(topk_idx, topk)
+    # print(topk_idx, topk)
 
     for layer_idx, layer in enumerate(learnable_layers_idxs):
         # for topk_idx, topk in enumerate(topk_list):
