@@ -342,6 +342,8 @@ def main():
         model.load_state_dict(state_dict)
         evaluate(args, model, val_loader, n_samples=args.n_samples)
 
+        # model = convert_resnet(model).to(device)
+
         # Adversarial attacks
 
         method=args.attack_method
@@ -360,6 +362,9 @@ def main():
         save_attack(inputs=images, attacks=bay_attack, method=method, model_savedir=args.save_dir, n_samples=n_samples)
         # bay_attack = load_attack(method=method, model_savedir=args.save_dir, n_samples=n_samples)
 
+        # print(images.min(), images.max(), bay_attack.min(), bay_attack.max())
+
+        evaluate(args, model, DataLoader(dataset=list(zip(images, labels))), n_samples=n_samples)
         evaluate(args, model, DataLoader(dataset=list(zip(bay_attack, labels))), n_samples=n_samples)
 
         # LRP
@@ -381,17 +386,62 @@ def main():
                 save_to_pickle(bay_lrp, path=savedir, filename="bay_lrp_samp="+str(n_samples))
                 save_to_pickle(bay_attack_lrp, path=savedir, filename="bay_attack_lrp_samp="+str(n_samples))
 
-                set_seed(0)
-                idxs = np.random.choice(len(images), 10, replace=False)
-                original_images_plot = torch.stack([images[i].squeeze() for i in idxs])
-                adversarial_images_plot = torch.stack([bay_attack[i].squeeze() for i in idxs])
-                bay_lrp_heatmaps_plot = torch.stack([bay_lrp[i].squeeze() for i in idxs])
-                bay_attack_lrp_heatmaps_plot = torch.stack([bay_attack_lrp[i].squeeze() for i in idxs])
-                plot_lrp_grid(original_images=original_images_plot.detach().cpu(), 
-                              adversarial_images=adversarial_images_plot.detach().cpu(),
-                              bay_lrp_heatmaps=bay_lrp_heatmaps_plot.detach().cpu(),
-                              bay_attack_lrp_heatmaps=bay_attack_lrp_heatmaps_plot.detach().cpu(), 
-                              filename="lrp_samp="+str(n_samples), savedir=savedir)
+            set_seed(0)
+            idxs = np.random.choice(len(images), 10, replace=False)
+            original_images_plot = torch.stack([images[i].squeeze() for i in idxs])
+            adversarial_images_plot = torch.stack([bay_attack[i].squeeze() for i in idxs])
+            bay_lrp_heatmaps_plot = torch.stack([bay_lrp[i].squeeze() for i in idxs])
+            bay_attack_lrp_heatmaps_plot = torch.stack([bay_attack_lrp[i].squeeze() for i in idxs])
+            plot_lrp_grid(original_images=original_images_plot.detach().cpu(), 
+                          adversarial_images=adversarial_images_plot.detach().cpu(),
+                          bay_lrp_heatmaps=bay_lrp_heatmaps_plot.detach().cpu(),
+                          bay_attack_lrp_heatmaps=bay_attack_lrp_heatmaps_plot.detach().cpu(), 
+                          filename="lrp_samp="+str(n_samples), savedir=savedir)
+
+def convert_resnet(module, modules=None):
+    import torch
+    from lrp.sequential import Sequential 
+    from lrp.linear import Linear
+    from lrp.conv import Conv2d
+
+    conversion_table = { 
+        'Linear': Linear,
+        'Conv2d': Conv2d
+    }
+
+    # First time
+    if modules is None: 
+        modules = []
+        for m in module.children():
+            convert_resnet(m, modules=modules)
+
+            # Vgg model has a flatten, which is not represented as a module
+            # so this loop doesn't pick it up.
+            # This is a hack to make things work.
+            if isinstance(m, torch.nn.AdaptiveAvgPool2d): 
+                modules.append(torch.nn.Flatten())
+
+        sequential = Sequential(*modules)
+        return sequential
+
+    # Recursion
+    if isinstance(module, torch.nn.Sequential): 
+        for m in module.children():
+            convert_vgg(m, modules=modules)
+
+    elif isinstance(module, torch.nn.Linear) or isinstance(module, torch.nn.Conv2d):
+        class_name = module.__class__.__name__
+        lrp_module = conversion_table[class_name].from_torch(module)
+        modules.append(lrp_module)
+    # maxpool is handled with gradient for the moment
+
+    elif isinstance(module, torch.nn.ReLU): 
+        # avoid inplace operations. They might ruin PatternNet pattern
+        # computations
+        modules.append(torch.nn.ReLU())
+    else:
+        modules.append(module)
+
 
 
 def train(args,
@@ -506,9 +556,9 @@ def plot_lrp_grid(original_images, adversarial_images, bay_lrp_heatmaps, bay_att
         bay_attack_lrp_heatmap = bay_attack_lrp_heatmaps[i].permute(1,2,0) if len(bay_attack_lrp_heatmaps[i].shape) > 2 else bay_attack_lrp_heatmaps[i]
 
         axes[0, i].imshow(torch.clamp(original_image, 0., 1.))
-        axes[1, i].imshow(bay_lrp_heatmap)
+        axes[1, i].imshow(torch.clamp(bay_lrp_heatmap, 0., 1.))
         axes[2, i].imshow(torch.clamp(adversarial_image, 0., 1.))
-        axes[3, i].imshow(bay_attack_lrp_heatmap)
+        axes[3, i].imshow(torch.clamp(bay_attack_lrp_heatmap, 0., 1.))
         
     os.makedirs(os.path.dirname(savedir+"/"), exist_ok=True)
     plt.savefig(os.path.join(savedir, filename+".png"))
@@ -605,6 +655,7 @@ def evaluate(args, model, val_loader, n_samples):
                 data, target = data.cpu(), target.cpu()
             output_mc = []
             for mc_run in range(n_samples):
+                random.seed(mc_run)
                 output, _ = model.forward(data)
                 output_mc.append(output)
 
@@ -652,13 +703,16 @@ def attack(model, dataset, n_samples, method):
             random.seed(idx)
             perturbed_image = run_attack(net=model, image=data, label=target, method=method, 
                                          device=device, hyperparams=None).squeeze()
+            # print(perturbed_image[0,0,:5])
             perturbed_image = torch.clamp(perturbed_image, 0., 1.)
-            samples_attacks.append(perturbed_image)
+            samples_attacks.append(perturbed_image.unsqueeze(0))
+        # exit()
 
         adversarial_attack = torch.stack(samples_attacks).mean(0)
         adversarial_attacks.append(adversarial_attack)
 
-    return torch.stack(adversarial_attacks)
+    adversarial_attacks = torch.cat(adversarial_attacks)
+    return adversarial_attacks
 
 def compute_lrp(x_test, network, rule, device, n_samples, avg_posterior=False):
 
@@ -667,9 +721,8 @@ def compute_lrp(x_test, network, rule, device, n_samples, avg_posterior=False):
     explanations = []
     for x in tqdm(x_test):
 
-        x = torch.clamp(x, 0., 1.)
-
         post_explanations = []
+
         for idx in range(n_samples):
 
             # Forward pass
@@ -689,7 +742,6 @@ def compute_lrp(x_test, network, rule, device, n_samples, avg_posterior=False):
             post_explanations.append(lrp)
 
         post_explanations = torch.stack(post_explanations).mean(0).squeeze()
-        post_explanations = torch.clamp(post_explanations, 0., 1.)
         explanations.append(post_explanations)
 
     return torch.stack(explanations) 
@@ -737,3 +789,4 @@ def accuracy(output, target, topk=(1, )):
 
 if __name__ == '__main__':
     main()
+

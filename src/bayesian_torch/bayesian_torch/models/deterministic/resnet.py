@@ -42,14 +42,14 @@ class BasicBlock(nn.Module):
 
     def __init__(self, in_planes, planes, stride=1, option='A'):
         super(BasicBlock, self).__init__()
-        self.conv1 = Conv2d(in_planes,
+        self.conv1 = Conv2d(in_planes, # <------
                                planes,
                                kernel_size=3,
                                stride=stride,
                                padding=1,
                                bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = Conv2d(planes,
+        self.conv2 = Conv2d(planes, # <------
                                planes,
                                kernel_size=3,
                                stride=1,
@@ -57,15 +57,15 @@ class BasicBlock(nn.Module):
                                bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
 
-        self.shortcut = Sequential()
+        self.shortcut = Sequential() # <------
         if stride != 1 or in_planes != planes:
             if option == 'A':
                 self.shortcut = LambdaLayer(lambda x: F.pad(
                     x[:, :, ::2, ::2],
                     (0, 0, 0, 0, planes // 4, planes // 4), "constant", 0))
             elif option == 'B':
-                self.shortcut = Sequential(
-                    Conv2d(in_planes,
+                self.shortcut = Sequential( # <------
+                    Conv2d(in_planes, # <------
                               self.expansion * planes,
                               kernel_size=1,
                               stride=stride,
@@ -85,7 +85,7 @@ class ResNet(nn.Module):
         super(ResNet, self).__init__()
         self.in_planes = 16
 
-        self.conv1 = Conv2d(3,
+        self.conv1 = Conv2d(3, # <------
                                16,
                                kernel_size=3,
                                stride=1,

@@ -73,7 +73,7 @@ class BasicBlock(nn.Module):
             bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
 
-        self.shortcut = Sequential()
+        self.shortcut = Sequential() #<--------
         if stride != 1 or in_planes != planes:
             if option == 'A':
                 """
@@ -153,10 +153,9 @@ class ResNet(nn.Module):
         kl_sum = 0
         out, kl = self.conv1(x, explain, rule) # <-----------------------
 
-        # print(self.conv1.mu_kernel[0,0,0].cpu().detach(), "\t", self.conv1.rho_kernel[0,0,0].cpu().detach())
-        # print(self.conv1.mu_kernel.mean().item(), self.conv1.mu_kernel.std().item())
-        # print(self.conv1.rho_kernel.mean().item(), self.conv1.rho_kernel.std().item())
-        # exit()
+        # print(self.state_dict().keys())
+        # print(self.conv1.mu_kernel[0,0,0].cpu().detach(), "\t", self.conv1.rho_kernel[0,0,0].cpu().detach(), "\t",
+        #       self.conv1.eps_kernel[0,0,0].cpu().detach())
 
         kl_sum += kl
         out = self.bn1(out)
