@@ -70,11 +70,6 @@ advnet.load(savedir=adv_model_savedir, device=args.device)
 
 adv_attack = load_attack(method=args.attack_method, model_savedir=adv_model_savedir)
 
-# # provvisorio:
-# adv_model_savedir = det_model_savedir
-# advnet = detnet
-# adv_attack = det_attack
-
 ### fullBNN
 
 m = fullBNN_settings["model_"+str(args.model_idx)]
