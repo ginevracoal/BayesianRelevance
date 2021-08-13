@@ -350,7 +350,24 @@ filename=args.rule+"_lrp_robustness_"+m["dataset"]+"_"+str(bayesnet.inference)+"
 if args.normalize:
 	filename+="_norm"
 
-plot_lrp.lrp_layers_robustness_distributions(
+# plot_lrp.lrp_layers_robustness_distributions(
+# 						det_lrp_robustness=det_lrp_robustness_topk,
+# 						det_successful_lrp_robustness=det_successful_lrp_robustness_topk,
+# 						det_failed_lrp_robustness=det_failed_lrp_robustness_topk,
+# 						adv_lrp_robustness=adv_lrp_robustness_topk,
+# 						adv_successful_lrp_robustness=adv_successful_lrp_robustness_topk,
+# 						adv_failed_lrp_robustness=adv_failed_lrp_robustness_topk,
+# 						bay_lrp_robustness=bay_lrp_robustness_topk,
+# 						bay_successful_lrp_robustness=bay_successful_lrp_robustness_topk,
+# 						bay_failed_lrp_robustness=bay_failed_lrp_robustness_topk,
+# 						n_samples_list=n_samples_list,
+# 						topk_list=topk_list,
+# 						n_original_images=len(images),
+# 						learnable_layers_idxs=detnet.learnable_layers_idxs,
+# 						savedir=savedir, 
+# 						filename="dist_"+filename+"_layers")
+
+plot_lrp.lrp_layers_robustness_differences(
 						det_lrp_robustness=det_lrp_robustness_topk,
 						det_successful_lrp_robustness=det_successful_lrp_robustness_topk,
 						det_failed_lrp_robustness=det_failed_lrp_robustness_topk,
@@ -365,7 +382,7 @@ plot_lrp.lrp_layers_robustness_distributions(
 						n_original_images=len(images),
 						learnable_layers_idxs=detnet.learnable_layers_idxs,
 						savedir=savedir, 
-						filename="dist_"+filename+"_layers")
+						filename="diff_"+filename+"_layers")
 
 plot_lrp.lrp_layers_robustness_scatterplot(
 						det_lrp_robustness=det_lrp_robustness_topk,
