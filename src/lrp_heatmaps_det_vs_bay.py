@@ -124,10 +124,11 @@ print("bay distance =", torch.norm(images[im_idx]-bay_attacks[im_idx], 2).item()
 
 ### Plots
 
-savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
-                         rule=args.rule, lrp_method=args.lrp_method)
+# savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
+#                          rule=args.rule, lrp_method=args.lrp_method)
 
-filename=args.rule+"_heatmaps_det_vs_bay_"+m["dataset"]+"_topk="+str(args.topk)+"_failed_atk="+str(args.attack_method)
+filename="heatmaps_det_vs_bay_"+m["dataset"]+"_topk="+str(args.topk)+"_rule="+str(args.rule)\
+         +"_failed_atk="+str(args.attack_method)+"_model_idx="+str(args.model_idx)
 
 if args.normalize:
     filename+="_norm"
@@ -143,4 +144,4 @@ plot_heatmaps_det_vs_bay(image=images[im_idx].detach().cpu().numpy(),
                          bay_explanation=bay_lrp[im_idx],
                          bay_attack_explanation=bay_attack_lrp[im_idx],
                          lrp_rob_method=lrp_robustness_method, 
-                         topk=args.topk, rule=args.rule, savedir=savedir, filename=filename)
+                         topk=args.topk, rule=args.rule, savedir=os.path.join(TESTS,'figures'), filename=filename)

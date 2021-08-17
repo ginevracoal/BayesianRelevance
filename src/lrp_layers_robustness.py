@@ -48,7 +48,7 @@ if args.device=="cuda":
 
 ### Load models and attacks
 
-### baseNN
+## baseNN
 
 model = baseNN_settings["model_"+str(args.model_idx)]
 
@@ -61,16 +61,16 @@ detnet.load(savedir=det_model_savedir, device=args.device)
 
 det_attack = load_attack(method=args.attack_method, model_savedir=det_model_savedir)
 
-### advNN
+## advNN
 
 adv_model_savedir = get_model_savedir(model="advNN", dataset=model["dataset"], architecture=model["architecture"], 
-                            debug=args.debug, model_idx=args.model_idx, attack_method=args.attack_method)
-advnet = advNN(inp_shape, num_classes, *list(model.values()), attack_method=args.attack_method)
+                            debug=args.debug, model_idx=args.model_idx, attack_method='fgsm')
+advnet = advNN(inp_shape, num_classes, *list(model.values()), attack_method='fgsm')
 advnet.load(savedir=adv_model_savedir, device=args.device)
 
 adv_attack = load_attack(method=args.attack_method, model_savedir=adv_model_savedir)
 
-### fullBNN
+## fullBNN
 
 m = fullBNN_settings["model_"+str(args.model_idx)]
 
@@ -91,24 +91,16 @@ images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
 
 det_lrp_robustness_topk=[]
-det_successful_lrp_robustness_topk=[]
-det_failed_lrp_robustness_topk=[]
 adv_lrp_robustness_topk=[]
-adv_successful_lrp_robustness_topk=[]
-adv_failed_lrp_robustness_topk=[]
 bay_lrp_robustness_topk=[]
-bay_successful_lrp_robustness_topk=[]
-bay_failed_lrp_robustness_topk=[]
+
+det_failed_idxs_topk=[]
+adv_failed_idxs_topk=[]
+bay_failed_idxs_topk=[]
 
 det_norm_topk=[]
-det_successful_norm_topk=[]
-det_failed_norm_topk=[]
 adv_norm_topk=[]
-adv_successful_norm_topk=[]
-adv_failed_norm_topk=[]
 bay_norm_topk=[]
-bay_successful_norm_topk=[]
-bay_failed_norm_topk=[]
 
 det_softmax_robustness_topk=[]
 adv_softmax_robustness_topk=[]
@@ -117,24 +109,16 @@ bay_softmax_robustness_topk=[]
 for topk in topk_list:
 
 	det_lrp_robustness_layers=[]
-	det_successful_lrp_robustness_layers=[]
-	det_failed_lrp_robustness_layers=[]
 	adv_lrp_robustness_layers=[]
-	adv_successful_lrp_robustness_layers=[]
-	adv_failed_lrp_robustness_layers=[]
 	bay_lrp_robustness_layers=[]
-	bay_successful_lrp_robustness_layers=[]
-	bay_failed_lrp_robustness_layers=[]
+
+	det_failed_idxs_layers=[]
+	adv_failed_idxs_layers=[]
+	bay_failed_idxs_layers=[]
 
 	det_norm_layers=[]
-	det_successful_norm_layers=[]
-	det_failed_norm_layers=[]
 	adv_norm_layers=[]
-	adv_successful_norm_layers=[]
-	adv_failed_norm_layers=[]
 	bay_norm_layers=[]
-	bay_successful_norm_layers=[]
-	bay_failed_norm_layers=[]
 
 	det_softmax_robustness_layers=[]
 	adv_softmax_robustness_layers=[]
@@ -192,21 +176,8 @@ for topk in topk_list:
 		det_lrp_robustness, det_lrp_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp, 
 															  adversarial_heatmaps=det_attack_lrp, 
 															  topk=topk, method=lrp_robustness_method)
-
-		succ_det_lrp_robustness, succ_det_lrp_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp[det_successful_idxs], 
-																		adversarial_heatmaps=det_attack_lrp[det_successful_idxs], 
-																		topk=topk, method=lrp_robustness_method)
-		fail_det_lrp_robustness, fail_det_lrp_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp[det_failed_idxs], 
-																		adversarial_heatmaps=det_attack_lrp[det_failed_idxs], 
-																		topk=topk, method=lrp_robustness_method)
 		
 		det_norm = lrp_distances(det_lrp, det_attack_lrp, axis_norm=1).detach().cpu().numpy()
-		det_successful_norm = lrp_distances(det_lrp[det_successful_idxs], det_attack_lrp[det_successful_idxs], 
-											axis_norm=1).detach().cpu().numpy()
-		det_failed_norm = lrp_distances(det_lrp[det_failed_idxs], det_attack_lrp[det_failed_idxs], 
-										axis_norm=1).detach().cpu().numpy()
-
-
 
 		adv_preds, adv_atk_preds, adv_softmax_robustness, adv_successful_idxs, adv_failed_idxs = evaluate_attack(net=advnet, 
 						x_test=images, x_attack=adv_attack, y_test=y_test, device=args.device, return_classification_idxs=True)
@@ -215,120 +186,62 @@ for topk in topk_list:
 		adv_lrp_robustness, adv_lrp_pxl_idxs = lrp_robustness(original_heatmaps=adv_lrp, 
 															  adversarial_heatmaps=adv_attack_lrp, 
 															  topk=topk, method=lrp_robustness_method)
-
-		succ_adv_lrp_robustness, succ_adv_lrp_pxl_idxs = lrp_robustness(original_heatmaps=adv_lrp[adv_successful_idxs], 
-																		adversarial_heatmaps=adv_attack_lrp[adv_successful_idxs], 
-																		topk=topk, method=lrp_robustness_method)
-		fail_adv_lrp_robustness, fail_adv_lrp_pxl_idxs = lrp_robustness(original_heatmaps=adv_lrp[adv_failed_idxs], 
-																		adversarial_heatmaps=adv_attack_lrp[adv_failed_idxs], 
-																		topk=topk, method=lrp_robustness_method)
 		
 		adv_norm = lrp_distances(adv_lrp, adv_attack_lrp, axis_norm=1).detach().cpu().numpy()
-		adv_successful_norm = lrp_distances(adv_lrp[adv_successful_idxs], adv_attack_lrp[adv_successful_idxs], 
-											axis_norm=1).detach().cpu().numpy()
-		adv_failed_norm = lrp_distances(adv_lrp[adv_failed_idxs], adv_attack_lrp[adv_failed_idxs], 
-										axis_norm=1).detach().cpu().numpy()
-
 
 		bay_preds=[]
 		bay_atk_preds=[]
 		bay_softmax_robustness=[]
-		bay_successful_idxs=[]
 		bay_failed_idxs=[]
-
 		bay_lrp_robustness=[]
-		bay_lrp_pxl_idxs=[]
-		succ_bay_lrp_robustness=[]
-		succ_bay_lrp_pxl_idxs=[]
-		fail_bay_lrp_robustness=[]
-		fail_bay_lrp_pxl_idxs=[]
-
 		bay_norm=[]
-		bay_successful_norm=[]
-		bay_failed_norm=[]
 
 		for samp_idx, n_samples in enumerate(n_samples_list):
 
-				preds, atk_preds, softmax_rob, successf_idxs, failed_idxs = evaluate_attack(net=bayesnet, x_test=images, 
-															 x_attack=bay_attack[samp_idx], y_test=y_test, device=args.device, 
-															 n_samples=n_samples, return_classification_idxs=True)
-				bay_preds.append(preds)
-				bay_atk_preds.append(atk_preds)
-				bay_softmax_robustness.append(softmax_rob.detach().cpu().numpy())
-				bay_successful_idxs.append(successf_idxs)
-				bay_failed_idxs.append(failed_idxs)
+			preds, atk_preds, softmax_rob, successf_idxs, failed_idxs = evaluate_attack(net=bayesnet, x_test=images, 
+														 x_attack=bay_attack[samp_idx], y_test=y_test, device=args.device, 
+														 n_samples=n_samples, return_classification_idxs=True)
+			bay_preds.append(preds)
+			bay_atk_preds.append(atk_preds)
+			bay_softmax_robustness.append(softmax_rob.detach().cpu().numpy())
+			bay_failed_idxs.append(failed_idxs)
 
-				robustness, pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx], 
-													 adversarial_heatmaps=bay_attack_lrp[samp_idx], 
-													 topk=topk, method=lrp_robustness_method)
-				bay_lrp_robustness.append(robustness)
-				bay_lrp_pxl_idxs.append(pxl_idxs)
+			robustness, pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx], 
+												 adversarial_heatmaps=bay_attack_lrp[samp_idx], 
+												 topk=topk, method=lrp_robustness_method)
+			bay_lrp_robustness.append(robustness)
 
-				robustness, pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx][successf_idxs], 
-													 adversarial_heatmaps=bay_attack_lrp[samp_idx][successf_idxs], 
-													 topk=topk, method=lrp_robustness_method)
-				succ_bay_lrp_robustness.append(robustness)
-				succ_bay_lrp_pxl_idxs.append(pxl_idxs)
-
-				robustness, pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx][failed_idxs], 
-													 adversarial_heatmaps=bay_attack_lrp[samp_idx][failed_idxs], 
-													 topk=topk, method=lrp_robustness_method)
-				fail_bay_lrp_robustness.append(robustness)
-				fail_bay_lrp_pxl_idxs.append(pxl_idxs)
-
-				bay_norm.append(lrp_distances(bay_lrp[samp_idx], 
-												bay_attack_lrp[samp_idx], 
-												axis_norm=1).detach().cpu().numpy())
-				bay_successful_norm.append(lrp_distances(bay_lrp[samp_idx][successf_idxs], 
-														bay_attack_lrp[samp_idx][successf_idxs], 
-														axis_norm=1).detach().cpu().numpy())
-				bay_failed_norm.append(lrp_distances(bay_lrp[samp_idx][failed_idxs], 
-													bay_attack_lrp[samp_idx][failed_idxs], 
-													axis_norm=1).detach().cpu().numpy())
+			bay_norm.append(lrp_distances(bay_lrp[samp_idx], 
+											bay_attack_lrp[samp_idx], 
+											axis_norm=1).detach().cpu().numpy())
 
 		det_lrp_robustness_layers.append(det_lrp_robustness)
-		det_successful_lrp_robustness_layers.append(succ_det_lrp_robustness)
-		det_failed_lrp_robustness_layers.append(fail_det_lrp_robustness)
 		adv_lrp_robustness_layers.append(adv_lrp_robustness)
-		adv_successful_lrp_robustness_layers.append(succ_adv_lrp_robustness)
-		adv_failed_lrp_robustness_layers.append(fail_adv_lrp_robustness)
 		bay_lrp_robustness_layers.append(bay_lrp_robustness)
-		bay_successful_lrp_robustness_layers.append(succ_bay_lrp_robustness)
-		bay_failed_lrp_robustness_layers.append(fail_bay_lrp_robustness)
+
+		det_failed_idxs_layers.append(det_failed_idxs)
+		adv_failed_idxs_layers.append(adv_failed_idxs)
+		bay_failed_idxs_layers.append(bay_failed_idxs)
 
 		det_norm_layers.append(det_norm)
-		det_successful_norm_layers.append(det_successful_norm)
-		det_failed_norm_layers.append(det_failed_norm)
 		adv_norm_layers.append(adv_norm)
-		adv_successful_norm_layers.append(adv_successful_norm)
-		adv_failed_norm_layers.append(adv_failed_norm)
 		bay_norm_layers.append(bay_norm)
-		bay_successful_norm_layers.append(bay_successful_norm)
-		bay_failed_norm_layers.append(bay_failed_norm)
 
 		det_softmax_robustness_layers.append(det_softmax_robustness)
 		adv_softmax_robustness_layers.append(adv_softmax_robustness)
 		bay_softmax_robustness_layers.append(bay_softmax_robustness)
 
 	det_lrp_robustness_topk.append(det_lrp_robustness_layers)
-	det_successful_lrp_robustness_topk.append(det_successful_lrp_robustness_layers)
-	det_failed_lrp_robustness_topk.append(det_failed_lrp_robustness_layers)
 	adv_lrp_robustness_topk.append(adv_lrp_robustness_layers)
-	adv_successful_lrp_robustness_topk.append(adv_successful_lrp_robustness_layers)
-	adv_failed_lrp_robustness_topk.append(adv_failed_lrp_robustness_layers)
 	bay_lrp_robustness_topk.append(bay_lrp_robustness_layers)
-	bay_successful_lrp_robustness_topk.append(bay_successful_lrp_robustness_layers)
-	bay_failed_lrp_robustness_topk.append(bay_failed_lrp_robustness_layers)
+
+	det_failed_idxs_topk.append(det_failed_idxs_layers)
+	adv_failed_idxs_topk.append(adv_failed_idxs_layers)
+	bay_failed_idxs_topk.append(bay_failed_idxs_layers)
 
 	det_norm_topk.append(det_norm_layers)
-	det_successful_norm_topk.append(det_successful_norm_layers)
-	det_failed_norm_topk.append(det_failed_norm_layers)
 	adv_norm_topk.append(adv_norm_layers)
-	adv_successful_norm_topk.append(adv_successful_norm_layers)
-	adv_failed_norm_topk.append(adv_failed_norm_layers)
 	bay_norm_topk.append(bay_norm_layers)
-	bay_successful_norm_topk.append(bay_successful_norm_layers)
-	bay_failed_norm_topk.append(bay_failed_norm_layers)
 
 	det_softmax_robustness_topk.append(det_softmax_robustness_layers)
 	adv_softmax_robustness_topk.append(adv_softmax_robustness_layers)
@@ -339,8 +252,8 @@ for topk in topk_list:
 savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
                       	  rule=args.rule, lrp_method=args.lrp_method)
 
-filename=args.rule+"_lrp_robustness_"+m["dataset"]+"_"+str(bayesnet.inference)+"_images="+str(n_inputs)+\
-		  "_samples="+str(n_samples)+"_atk="+str(args.attack_method)
+filename="lrp_robustness_"+m["dataset"]+"_"+str(bayesnet.inference)+"_images="+str(n_inputs)+"_rule="+str(args.rule)\
+		  +"_samples="+str(n_samples)+"_atk="+str(args.attack_method)+"_model_idx="+str(args.model_idx)
 
 if args.normalize:
 	filename+="_norm"
@@ -362,21 +275,16 @@ if args.normalize:
 # 						savedir=savedir, 
 # 						filename="dist_"+filename+"_layers")
 
+
 plot_lrp.lrp_layers_robustness_differences(
 						det_lrp_robustness=det_lrp_robustness_topk,
-						det_successful_lrp_robustness=det_successful_lrp_robustness_topk,
-						det_failed_lrp_robustness=det_failed_lrp_robustness_topk,
 						adv_lrp_robustness=adv_lrp_robustness_topk,
-						adv_successful_lrp_robustness=adv_successful_lrp_robustness_topk,
-						adv_failed_lrp_robustness=adv_failed_lrp_robustness_topk,
 						bay_lrp_robustness=bay_lrp_robustness_topk,
-						bay_successful_lrp_robustness=bay_successful_lrp_robustness_topk,
-						bay_failed_lrp_robustness=bay_failed_lrp_robustness_topk,
 						n_samples_list=n_samples_list,
 						topk_list=topk_list,
 						n_original_images=len(images),
 						learnable_layers_idxs=detnet.learnable_layers_idxs,
-						savedir=savedir, 
+						savedir=os.path.join(TESTS,'figures/layers_robustness'), 
 						filename="diff_"+filename+"_layers")
 
 plot_lrp.lrp_layers_robustness_scatterplot(
@@ -390,5 +298,5 @@ plot_lrp.lrp_layers_robustness_scatterplot(
 						topk_list=topk_list,
 						n_original_images=len(images),
 						learnable_layers_idxs=detnet.learnable_layers_idxs,
-						savedir=savedir, 
+						savedir=os.path.join(TESTS,'figures/layers_robustness'), 
 						filename="scatterplot_"+filename+"_layers_topk="+str(topk_list[-1]))

@@ -63,9 +63,9 @@ elif args.model=="advNN":
     x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], n_inputs=n_inputs)[2:]
 
     savedir = get_model_savedir(model=args.model, dataset=model["dataset"], architecture=model["architecture"], 
-                                debug=args.debug, model_idx=args.model_idx, attack_method=args.attack_method)
+                                debug=args.debug, model_idx=args.model_idx, attack_method='fgsm')
     
-    net = advNN(inp_shape, out_size, *list(model.values()), attack_method=args.attack_method)
+    net = advNN(inp_shape, out_size, *list(model.values()), attack_method='fgsm')
     net.load(savedir=savedir, device=args.device)
 
     if args.load:

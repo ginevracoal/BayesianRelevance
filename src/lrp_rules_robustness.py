@@ -45,7 +45,7 @@ print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
 
 if args.device=="cuda":
-        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+		torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 ### Load models and attacks
 
@@ -56,37 +56,36 @@ m = baseNN_settings["model_"+str(args.model_idx)]
 x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=m["dataset"], shuffle=False, n_inputs=n_inputs)[2:]
 
 det_model_savedir = get_model_savedir(model="baseNN", dataset=m["dataset"], architecture=m["architecture"], 
-                                            debug=args.debug, model_idx=args.model_idx)
+											debug=args.debug, model_idx=args.model_idx)
 detnet = baseNN(inp_shape, num_classes, *list(m.values()))
 detnet.load(savedir=det_model_savedir, device=args.device)
 
 det_attacks = load_attack(method=args.attack_method, model_savedir=det_model_savedir)
 
 det_predictions, det_atk_predictions, det_softmax_robustness, det_successful_idxs, det_failed_idxs = \
-            evaluate_attack(net=detnet, x_test=x_test, x_attack=det_attacks, y_test=y_test, 
-                            device=args.device, return_classification_idxs=True)
+			evaluate_attack(net=detnet, x_test=x_test, x_attack=det_attacks, y_test=y_test, 
+							device=args.device, return_classification_idxs=True)
 
 ## advNN
 
 adv_model_savedir = get_model_savedir(model="advNN", dataset=m["dataset"], architecture=m["architecture"], 
-                            debug=args.debug, model_idx=args.model_idx, attack_method=args.attack_method)
-advnet = advNN(inp_shape, num_classes, *list(m.values()), attack_method=args.attack_method)
+							debug=args.debug, model_idx=args.model_idx, attack_method='fgsm')
+advnet = advNN(inp_shape, num_classes, *list(m.values()), attack_method='fgsm')
 advnet.load(savedir=adv_model_savedir, device=args.device)
 
 adv_attacks = load_attack(method=args.attack_method, model_savedir=adv_model_savedir)
 
 adv_predictions, adv_atk_predictions, adv_softmax_robustness, adv_successful_idxs, adv_failed_idxs = \
-            evaluate_attack(net=advnet, x_test=x_test, x_attack=adv_attacks, y_test=y_test, 
-                            device=args.device, return_classification_idxs=True)
+			evaluate_attack(net=advnet, x_test=x_test, x_attack=adv_attacks, y_test=y_test, 
+							device=args.device, return_classification_idxs=True)
 
 
 ## fullBNN
 
 m = fullBNN_settings["model_"+str(args.model_idx)]
-# x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=m["dataset"], shuffle=False, n_inputs=n_inputs)[2:]
 
 bay_model_savedir = get_model_savedir(model="fullBNN", dataset=m["dataset"], architecture=m["architecture"], 
-                                                        model_idx=args.model_idx, debug=args.debug)
+														model_idx=args.model_idx, debug=args.debug)
 
 bayesnet = BNN(m["dataset"], *list(m.values())[1:], inp_shape, num_classes)
 bayesnet.load(savedir=bay_model_savedir, device=args.device)
@@ -94,127 +93,141 @@ bayesnet.load(savedir=bay_model_savedir, device=args.device)
 bay_attacks = load_attack(method=args.attack_method, model_savedir=bay_model_savedir, n_samples=args.n_samples)
 
 bay_predictions, bay_atk_predictions, bay_softmax_robustness, bay_successful_idxs, bay_failed_idxs = \
-            evaluate_attack(net=bayesnet, n_samples=args.n_samples, x_test=x_test, x_attack=bay_attacks, y_test=y_test, 
-                            device=args.device, return_classification_idxs=True)
+			evaluate_attack(net=bayesnet, n_samples=args.n_samples, x_test=x_test, x_attack=bay_attacks, y_test=y_test, 
+							device=args.device, return_classification_idxs=True)
 
 ### Load or fill the dataframe
+
+# failed_atks_im_idxs = np.intersect1d(bay_failed_idxs, np.intersect1d(adv_failed_idxs, det_failed_idxs))
+# failed_atks_im_idxs = np.intersect1d(bay_failed_idxs, adv_failed_idxs)
+# print("\nN. of common failed atks idxs =", len(failed_atks_im_idxs))
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
 
 plot_savedir = os.path.join(bay_model_savedir, str(args.attack_method))
-filename="rules_robustness_"+m["dataset"]+"_"+str(bayesnet.inference)+"_"+str(args.attack_method)+\
-            "_images="+str(n_inputs)+"_samples="+str(args.n_samples)+"_topk="+str(args.topk)
+filename="rules_robustness_"+m["dataset"]+"_"+str(bayesnet.inference)+"_"+str(args.attack_method)\
+			+"_images="+str(n_inputs)+"_samples="+str(args.n_samples)+"_topk="+str(args.topk)\
+			+"_model_idx="+str(args.model_idx)
 
 if args.load:
-    df = load_from_pickle(path=plot_savedir, filename=filename)
+	df = load_from_pickle(path=plot_savedir, filename=filename)
 
 else:
-    df = pd.DataFrame()
-    rules_list = ['epsilon','gamma','alpha1beta0']
+	df = pd.DataFrame()
+	rules_list = ['epsilon','gamma','alpha1beta0']
 
-    for rule in rules_list: 
-        for layer_idx in detnet.learnable_layers_idxs:
+	for rule in rules_list: 
+		for layer_idx in detnet.learnable_layers_idxs:
 
-            savedir = get_lrp_savedir(model_savedir=det_model_savedir, attack_method=args.attack_method, rule=rule, 
-                                        layer_idx=layer_idx)
-            det_lrp = load_from_pickle(path=savedir, filename="det_lrp")
-            det_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
+			savedir = get_lrp_savedir(model_savedir=det_model_savedir, attack_method=args.attack_method, rule=rule, 
+										layer_idx=layer_idx)
+			det_lrp = load_from_pickle(path=savedir, filename="det_lrp")
+			det_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
 
-            savedir = get_lrp_savedir(model_savedir=adv_model_savedir, attack_method=args.attack_method, rule=rule, 
-                                        layer_idx=layer_idx)
-            adv_lrp = load_from_pickle(path=savedir, filename="det_lrp")
-            adv_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
+			savedir = get_lrp_savedir(model_savedir=adv_model_savedir, attack_method=args.attack_method, rule=rule, 
+										layer_idx=layer_idx)
+			adv_lrp = load_from_pickle(path=savedir, filename="det_lrp")
+			adv_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
 
-            savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
-                                      rule=rule, layer_idx=layer_idx, lrp_method=args.lrp_method)
-            bay_lrp = load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(args.n_samples))
-            bay_attack_lrp = load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(args.n_samples))
+			savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
+									  rule=rule, layer_idx=layer_idx, lrp_method=args.lrp_method)
+			bay_lrp = load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(args.n_samples))
+			bay_attack_lrp = load_from_pickle(path=savedir, filename="bay_attack_lrp_samp="+str(args.n_samples))
 
-            det_robustness, det_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp, adversarial_heatmaps=det_attack_lrp, 
-                                          topk=args.topk, method=lrp_robustness_method)
-            adv_robustness, adv_pxl_idxs = lrp_robustness(original_heatmaps=adv_lrp, adversarial_heatmaps=adv_attack_lrp, 
-                                          topk=args.topk, method=lrp_robustness_method)
-            bay_robustness, bay_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp, adversarial_heatmaps=bay_attack_lrp, 
-                                          topk=args.topk, method=lrp_robustness_method)
+			det_robustness, det_pxl_idxs = lrp_robustness(
+												original_heatmaps=det_lrp, 
+												adversarial_heatmaps=det_attack_lrp, 
+												topk=args.topk, method=lrp_robustness_method)
+			adv_robustness, adv_pxl_idxs = lrp_robustness(
+												original_heatmaps=adv_lrp, 
+												adversarial_heatmaps=adv_attack_lrp, 
+												topk=args.topk, method=lrp_robustness_method)
+			bay_robustness, bay_pxl_idxs = lrp_robustness(
+												original_heatmaps=bay_lrp, 
+												adversarial_heatmaps=bay_attack_lrp, 
+										  		topk=args.topk, method=lrp_robustness_method)
 
-            # for robustness in det_robustness:
-            #     df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':'Det.', 
-            #                     'robustness':robustness}, ignore_index=True)
+			# for robustness in det_robustness:
+			#     df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':'Det.', 
+			#                     'robustness':robustness}, ignore_index=True)
 
-            # for robustness in bay_robustness:
-            #     df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':f'Bay. samp={args.n_samples}', 
-            #                     'robustness':robustness}, ignore_index=True)
+			# for robustness in bay_robustness:
+			#     df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':f'Bay. samp={args.n_samples}', 
+			#                     'robustness':robustness}, ignore_index=True)
 
-            for robustness_diff in adv_robustness-det_robustness:
-                df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':'Adv.', 
-                                'robustness_diff':robustness_diff}, ignore_index=True)
+			for im_idx in range(len(det_robustness)):
+			# for im_idx in failed_atks_im_idxs:
 
-            for robustness_diff in bay_robustness-det_robustness:
-                df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':f'Bay. samp={args.n_samples}', 
-                                'robustness_diff':robustness_diff}, ignore_index=True)
+				df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':'Adv.', 
+								'robustness_diff':adv_robustness[im_idx]-det_robustness[im_idx]}, 
+								ignore_index=True)
 
-    save_to_pickle(data=df, path=plot_savedir, filename=filename)
+				df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':f'Bay. samp={args.n_samples}', 
+								'robustness_diff':bay_robustness[im_idx]-det_robustness[im_idx]}, 
+								ignore_index=True)
+
+	save_to_pickle(data=df, path=plot_savedir, filename=filename)
 
 ### Plots
 
 def plot_rules_robustness_diff(df, n_samples, learnable_layers_idxs, savedir, filename):
 
-    os.makedirs(savedir, exist_ok=True) 
-    sns.set_style("darkgrid")
-    matplotlib.rc('font', **{'size': 10})
+	os.makedirs(savedir, exist_ok=True) 
+	sns.set_style("darkgrid")
+	matplotlib.rc('font', **{'size': 10})
 
-    adv_col =  plt.cm.get_cmap('rocket', 100)(np.linspace(0, 1, 13))[3:]
-    bay_col = plt.cm.get_cmap('crest', 100)(np.linspace(0, 1, 10))[3:]
-    palettes = [adv_col, bay_col]
+	adv_col =  plt.cm.get_cmap('rocket', 100)(np.linspace(0, 1, 13))[3:]
+	bay_col = plt.cm.get_cmap('crest', 100)(np.linspace(0, 1, 10))[3:]
+	palettes = [adv_col, bay_col]
 
-    fig, ax = plt.subplots(len(learnable_layers_idxs), 2, figsize=(4.5, 5), sharex=True, sharey=True, dpi=150, 
-                            facecolor='w', edgecolor='k') 
-    fig.tight_layout()
-    fig.subplots_adjust(bottom=0.1)
+	fig, ax = plt.subplots(len(learnable_layers_idxs), 2, figsize=(4.5, 5), sharex=True, sharey=True, dpi=150, 
+							facecolor='w', edgecolor='k') 
+	fig.tight_layout()
+	fig.subplots_adjust(bottom=0.1)
 
-    for col_idx, model in enumerate(list(df.model.unique())):
-        palette = {"epsilon":palettes[col_idx][2], "gamma":palettes[col_idx][4], "alpha1beta0":palettes[col_idx][6]}
+	for col_idx, model in enumerate(list(df['model'].unique())):
+		palette = {"epsilon":palettes[col_idx][2], "gamma":palettes[col_idx][4], "alpha1beta0":palettes[col_idx][6]}
 
-        for row_idx, layer_idx in enumerate(learnable_layers_idxs):
+		for row_idx, layer_idx in enumerate(learnable_layers_idxs):
 
-            temp_df = df[df['layer_idx']==layer_idx]
-            temp_df = temp_df[temp_df['model']==model]
+			temp_df = df[df['layer_idx']==layer_idx]
+			temp_df = temp_df[temp_df['model']==model]
 
-            sns.boxplot(data=temp_df, ax=ax[row_idx, col_idx], x='rule', y='robustness_diff', orient='v', hue='rule', 
-                        palette=palette, dodge=False)
+			sns.boxplot(data=temp_df, ax=ax[row_idx, col_idx], x='rule', y='robustness_diff', orient='v', hue='rule', 
+						palette=palette, dodge=False)
 
-            for i, patch in enumerate(ax[row_idx, col_idx].artists):
-                
-                r, g, b, a = patch.get_facecolor()
-                col = (r, g, b, a) 
-                patch.set_facecolor((r, g, b, .7))
-                patch.set_edgecolor(col)
+			for i, patch in enumerate(ax[row_idx, col_idx].artists):
+				
+				r, g, b, a = patch.get_facecolor()
+				col = (r, g, b, a) 
+				patch.set_facecolor((r, g, b, .7))
+				patch.set_edgecolor(col)
 
-                for j in range(i*6, i*6+6):
-                    line = ax[row_idx, col_idx].lines[j]
-                    line.set_color(col)
-                    line.set_mfc(col)
-                    line.set_mec(col)
+				for j in range(i*6, i*6+6):
+					line = ax[row_idx, col_idx].lines[j]
+					line.set_color(col)
+					line.set_mfc(col)
+					line.set_mec(col)
 
-            ax[0, col_idx].xaxis.set_label_position("top")
-            ax[0, col_idx].set_xlabel(model, weight='bold', size=10)
-            ax[row_idx, col_idx].set_ylabel("")
-            ax[1, 0].set_ylabel("LRP robustness diff.")
-            ax[row_idx, 1].yaxis.set_label_position("right")
-            ax[row_idx, 1].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=15, weight='bold', size=8)
-            ax[row_idx, col_idx].get_legend().remove()
-            ax[row_idx, col_idx].set_xlabel("")
-            ax[2, col_idx].set_xlabel("LRP rule")
-            ax[row_idx, col_idx].set_xticklabels([r'$\epsilon$',r'$\gamma$',r'$\alpha\beta$'])
+			ax[0, col_idx].xaxis.set_label_position("top")
+			ax[0, col_idx].set_xlabel(model, weight='bold', size=10)
+			ax[row_idx, col_idx].set_ylabel("")
+			ax[1, 0].set_ylabel("LRP robustness diff.")
+			ax[row_idx, 1].yaxis.set_label_position("right")
+			ax[row_idx, 1].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=15, weight='bold', size=8)
+			ax[row_idx, col_idx].get_legend().remove()
+			ax[row_idx, col_idx].set_xlabel("")
+			ax[2, col_idx].set_xlabel("LRP rule")
+			ax[row_idx, col_idx].set_xticklabels([r'$\epsilon$',r'$\gamma$',r'$\alpha\beta$'])
 
-    fig.subplots_adjust(left=0.15)
-    print("\nSaving: ", os.path.join(savedir, filename+".png"))                                        
-    fig.savefig(os.path.join(savedir, filename+".png"))
-    plt.close(fig)
+	fig.subplots_adjust(left=0.15)
+	print("\nSaving: ", os.path.join(savedir, filename+".png"))                                        
+	fig.savefig(os.path.join(savedir, filename+".png"))
+	plt.close(fig)
 
 plot_rules_robustness_diff(df=df,
-                      n_samples=args.n_samples,
-                      learnable_layers_idxs=detnet.learnable_layers_idxs,
-                      savedir=plot_savedir,
-                      filename=filename)
+					  n_samples=args.n_samples,
+					  learnable_layers_idxs=detnet.learnable_layers_idxs,
+					  savedir=os.path.join(TESTS,'figures/rules_robustness'),
+					  filename=filename)

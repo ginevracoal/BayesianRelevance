@@ -547,9 +547,7 @@ def lrp_layers_robustness_distributions(
         plt.close(fig)
 
 def lrp_layers_robustness_differences(
-        det_lrp_robustness, det_successful_lrp_robustness, det_failed_lrp_robustness,
-        adv_lrp_robustness, adv_successful_lrp_robustness, adv_failed_lrp_robustness,
-        bay_lrp_robustness, bay_successful_lrp_robustness, bay_failed_lrp_robustness,
+        det_lrp_robustness, adv_lrp_robustness, bay_lrp_robustness, 
         n_samples_list, topk_list,
         n_original_images, learnable_layers_idxs, savedir, filename):
 
@@ -618,7 +616,7 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, adv_lrp_robustness, ba
     det_col =  plt.cm.get_cmap('flare', 100)(np.linspace(0, 1, 10))[6]
     adv_col =  plt.cm.get_cmap('rocket', 100)(np.linspace(0, 1, 10))[7]
     bay_col = plt.cm.get_cmap('crest', 100)(np.linspace(0, 1, len(n_samples_list)+1))[1:]
-    alpha = 0.6
+    alpha = 0.5
 
     topk_idx=len(topk_list)-1
     topk=topk_list[-1]

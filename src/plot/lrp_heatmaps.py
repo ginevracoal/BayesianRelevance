@@ -291,7 +291,7 @@ def plot_attacks_explanations_layers(images, explanations, attacks, attacks_expl
 
     rows = 2
     cols = n_layers+1
-    fig, axes = plt.subplots(rows, cols, figsize=(7, 3.5), dpi=150)
+    fig, axes = plt.subplots(rows, cols, figsize=(7, 4), dpi=150)
     fig.tight_layout()
 
     fig.text(0.035, 0.63, f"Image", ha='center', rotation=90, weight='bold')
@@ -324,12 +324,12 @@ def plot_attacks_explanations_layers(images, explanations, attacks, attacks_expl
 
     cbar_ax = fig.add_axes([0.91, 0.61, 0.01, 0.32])
     cbar = fig.colorbar(expl, ax=axes[0, :].ravel().tolist(), cax=cbar_ax)
-    cbar.set_label('LRP', labelpad=-50)
+    cbar.set_label('LRP', labelpad=-53)
     cbar.outline.set_visible(False)
 
     cbar_ax = fig.add_axes([0.91, 0.12, 0.01, 0.32])
     cbar = fig.colorbar(atk_expl, ax=axes[1, :].ravel().tolist(), cax=cbar_ax)
-    cbar.set_label('LRP', labelpad=-50)
+    cbar.set_label('LRP', labelpad=-53)
     cbar.outline.set_visible(False)
 
     os.makedirs(savedir, exist_ok=True)
@@ -362,7 +362,7 @@ def plot_heatmaps_det_vs_bay(image, det_attack, bay_attack, det_prediction, bay_
                 min(det_attack_explanation.flatten()), min(bay_attack_explanation.flatten()), -0.000001])
     norm = colors.TwoSlopeNorm(vcenter=0., vmax=vmax, vmin=vmin)
 
-    fig, axes = plt.subplots(2, 3, figsize=(5, 3), dpi=150, sharex=True, sharey=True)
+    fig, axes = plt.subplots(2, 3, figsize=(5.2, 3), dpi=150, sharex=True, sharey=True)
     fig.tight_layout()
 
     # axes[0, 0].imshow(np.squeeze(image), cmap=images_cmap)

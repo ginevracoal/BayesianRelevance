@@ -28,7 +28,7 @@ import seaborn as sns
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
-parser.add_argument("--topk", default=5, type=int, help="Choose model idx from pre defined settings")
+parser.add_argument("--topk", default=10, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--n_samples", default=100, type=int)
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
@@ -50,6 +50,9 @@ learnable_layers_idxs = [38]
 
 det_savedir = '../experiments/baseNN/cifar_resnet/'
 det_attacks = load_attack(method=args.attack_method, model_savedir=det_savedir)
+
+adv_savedir = '../experiments/adVNN/cifar_resnet/'
+adv_attacks = load_attack(method=args.attack_method, model_savedir=adv_savedir)
 
 bay_savedir = '../experiments/fullBNN/cifar_resnet/'
 bay_attacks = load_attack(method=args.attack_method, model_savedir=bay_savedir, n_samples=args.n_samples)
@@ -73,6 +76,11 @@ else:
             det_lrp = load_from_pickle(path=savedir, filename="det_lrp")
             det_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
 
+            savedir = get_lrp_savedir(model_savedir=adv_savedir, attack_method=args.attack_method, 
+                                    layer_idx=layer_idx, rule=rule)
+            adv_lrp = load_from_pickle(path=savedir, filename="det_lrp")
+            adv_attack_lrp = load_from_pickle(path=savedir, filename="det_attack_lrp")
+
             savedir = get_lrp_savedir(model_savedir=bay_savedir, attack_method=args.attack_method, 
                                         layer_idx=layer_idx, rule=rule)
             bay_lrp = load_from_pickle(path=savedir, filename="bay_lrp_samp="+str(args.n_samples))
@@ -80,18 +88,22 @@ else:
 
             det_robustness, det_pxl_idxs = lrp_robustness(original_heatmaps=det_lrp, adversarial_heatmaps=det_attack_lrp, 
                                           topk=args.topk, method=lrp_robustness_method)
+            adv_robustness, adv_pxl_idxs = lrp_robustness(original_heatmaps=adv_lrp, adversarial_heatmaps=adv_attack_lrp, 
+                                          topk=args.topk, method=lrp_robustness_method)
             bay_robustness, bay_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp, adversarial_heatmaps=bay_attack_lrp, 
                                           topk=args.topk, method=lrp_robustness_method)
 
-            for robustness in det_robustness:
+            for im_idx in range(len(det_robustness)):
+            # for im_idx in failed_atks_im_idxs:
 
-                df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':'Det.', 
-                                'robustness':robustness}, ignore_index=True)
-
-            for robustness in bay_robustness:
+                df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':'Adv.', 
+                                'robustness_diff':adv_robustness[im_idx]-det_robustness[im_idx]}, 
+                                ignore_index=True)
 
                 df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':f'Bay. samp={args.n_samples}', 
-                                'robustness':robustness}, ignore_index=True)
+                                'robustness_diff':bay_robustness[im_idx]-det_robustness[im_idx]}, 
+                                ignore_index=True)
+
 
     save_to_pickle(data=df, path=plot_savedir, filename=filename)
 
@@ -114,7 +126,7 @@ def plot_rules_robustness(df, n_samples, learnable_layers_idxs, savedir, filenam
     fig.tight_layout()
     fig.subplots_adjust(bottom=0.1)
 
-    for col_idx, model in enumerate(list(df.model.unique())):
+    for col_idx, model in enumerate(list(df['model'].unique())):
         palette = {"epsilon":palettes[col_idx][2], "gamma":palettes[col_idx][4], "alpha1beta0":palettes[col_idx][6]}
 
         for row_idx, layer_idx in enumerate(learnable_layers_idxs):
@@ -158,5 +170,5 @@ def plot_rules_robustness(df, n_samples, learnable_layers_idxs, savedir, filenam
 plot_rules_robustness(df=df,
                       n_samples=args.n_samples,
                       learnable_layers_idxs=learnable_layers_idxs,
-                      savedir=plot_savedir,
+                      savedir=os.path.join(TESTS,'figures/rules_robustness'),
                       filename=filename)

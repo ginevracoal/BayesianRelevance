@@ -26,7 +26,7 @@ from attacks.run_attacks import *
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points.")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings.")
-parser.add_argument("--topk", default=20, type=int, help="Percentage of pixels for computing the LRP.") # 200
+parser.add_argument("--topk", default=30, type=int, help="Percentage of pixels for computing the LRP.") # 200
 parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, redBNN")
 parser.add_argument("--n_samples", default=50, type=int)
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
@@ -134,11 +134,11 @@ pxl_idxs_layers=np.array(pxl_idxs_layers)
 ### Plots
 
 lrp_method=None if args.model=="baseNN" else args.lrp_method
-savedir = get_lrp_savedir(model_savedir=model_savedir, rule=args.rule, 
-                        attack_method=args.attack_method, lrp_method=lrp_method)
+# savedir = get_lrp_savedir(model_savedir=model_savedir, rule=args.rule, 
+#                         attack_method=args.attack_method, lrp_method=lrp_method)
 
-filename=args.rule+"_layers_heatmaps_"+m["dataset"]+"_images="+str(n_inputs)+\
-                "_atk="+str(args.attack_method)
+filename="layers_heatmaps_"+m["dataset"]+"_topk="+str(args.topk)+"_rule="+str(args.rule)\
+                +"_atk="+str(args.attack_method)+"_model_idx="+str(args.model_idx)
 if args.normalize:
     filename+="_norm"
 
@@ -154,4 +154,4 @@ plot_attacks_explanations_layers(images=images,
                                  pxl_idxs=pxl_idxs_layers, 
                                  learnable_layers_idxs=learnable_layers_idxs,
                                  lrp_rob_method=lrp_robustness_method, 
-                                 rule=args.rule, savedir=savedir, filename=filename)
+                                 rule=args.rule, savedir=os.path.join(TESTS,'figures'), filename=filename)

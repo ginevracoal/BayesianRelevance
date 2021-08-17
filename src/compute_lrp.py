@@ -63,8 +63,8 @@ if args.model in ["baseNN", "advNN"]:
         x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], shuffle=False, n_inputs=n_inputs)[2:]
 
         det_model_savedir = get_model_savedir(model=args.model, dataset=model["dataset"], architecture=model["architecture"], 
-                                    debug=args.debug, model_idx=args.model_idx, attack_method=args.attack_method)
-        detnet = advNN(inp_shape, num_classes, *list(model.values()), attack_method=args.attack_method)
+                                    debug=args.debug, model_idx=args.model_idx, attack_method='fgsm')
+        detnet = advNN(inp_shape, num_classes, *list(model.values()), attack_method='fgsm')
         detnet.load(savedir=det_model_savedir, device=args.device)
 
         det_attack = load_attack(method=args.attack_method, model_savedir=det_model_savedir)

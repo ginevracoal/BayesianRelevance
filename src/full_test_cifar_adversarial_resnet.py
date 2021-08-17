@@ -96,7 +96,7 @@ parser.add_argument('--half',
 parser.add_argument('--save-dir',
                     dest='save_dir',
                     help='The directory used to save the trained models',
-                    default='../experiments/advNN/cifar_resnet/',
+                    default='../experiments/advNN/cifar_resnet_atk=fgsm/',
                     type=str)
 parser.add_argument(
     '--save-every',
