@@ -29,7 +29,7 @@ import seaborn as sns
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
-parser.add_argument("--topk", default=10, type=int)
+parser.add_argument("--topk", default=20, type=int)
 parser.add_argument("--n_samples", default=100, type=int)
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
@@ -146,7 +146,7 @@ else:
 			bay_robustness, bay_pxl_idxs = lrp_robustness(
 												original_heatmaps=bay_lrp, 
 												adversarial_heatmaps=bay_attack_lrp, 
-										  		topk=args.topk, method=lrp_robustness_method)
+												topk=args.topk, method=lrp_robustness_method)
 
 			# for robustness in det_robustness:
 			#     df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':'Det.', 
@@ -159,11 +159,11 @@ else:
 			for im_idx in range(len(det_robustness)):
 			# for im_idx in failed_atks_im_idxs:
 
-				df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':'Adv.', 
+				df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':'Adv - Det', 
 								'robustness_diff':adv_robustness[im_idx]-det_robustness[im_idx]}, 
 								ignore_index=True)
 
-				df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':f'Bay. samp={args.n_samples}', 
+				df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':f'Bay - Det   samp={args.n_samples}', 
 								'robustness_diff':bay_robustness[im_idx]-det_robustness[im_idx]}, 
 								ignore_index=True)
 
@@ -175,7 +175,7 @@ def plot_rules_robustness_diff(df, n_samples, learnable_layers_idxs, savedir, fi
 
 	os.makedirs(savedir, exist_ok=True) 
 	sns.set_style("darkgrid")
-	matplotlib.rc('font', **{'size': 10})
+	matplotlib.rc('font', **{'size': 9})
 
 	adv_col =  plt.cm.get_cmap('rocket', 100)(np.linspace(0, 1, 13))[3:]
 	bay_col = plt.cm.get_cmap('crest', 100)(np.linspace(0, 1, 10))[3:]
@@ -211,16 +211,18 @@ def plot_rules_robustness_diff(df, n_samples, learnable_layers_idxs, savedir, fi
 					line.set_mec(col)
 
 			ax[0, col_idx].xaxis.set_label_position("top")
-			ax[0, col_idx].set_xlabel(model, weight='bold', size=10)
+			ax[0, col_idx].set_xlabel(model, weight='bold', size=9)
 			ax[row_idx, col_idx].set_ylabel("")
-			ax[1, 0].set_ylabel("LRP robustness diff.")
+			ax[1, 0].set_ylabel("LRP robustness diff.", size=9)
 			ax[row_idx, 1].yaxis.set_label_position("right")
-			ax[row_idx, 1].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=15, weight='bold', size=8)
+			ax[row_idx, 1].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=15, weight='bold', size=9)
 			ax[row_idx, col_idx].get_legend().remove()
 			ax[row_idx, col_idx].set_xlabel("")
-			ax[2, col_idx].set_xlabel("LRP rule")
+			ax[2, col_idx].set_xlabel("LRP rule", weight='bold')
 			ax[row_idx, col_idx].set_xticklabels([r'$\epsilon$',r'$\gamma$',r'$\alpha\beta$'])
 
+	plt.subplots_adjust(hspace=0.05)
+	plt.subplots_adjust(wspace=0.05)
 	fig.subplots_adjust(left=0.15)
 	print("\nSaving: ", os.path.join(savedir, filename+".png"))                                        
 	fig.savefig(os.path.join(savedir, filename+".png"))

@@ -28,7 +28,7 @@ import seaborn as sns
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
-parser.add_argument("--topk", default=10, type=int, help="Choose model idx from pre defined settings")
+parser.add_argument("--topk", default=20, type=int, help="Choose model idx from pre defined settings")
 parser.add_argument("--n_samples", default=100, type=int)
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
@@ -51,7 +51,7 @@ learnable_layers_idxs = [38]
 det_savedir = '../experiments/baseNN/cifar_resnet/'
 det_attacks = load_attack(method=args.attack_method, model_savedir=det_savedir)
 
-adv_savedir = '../experiments/adVNN/cifar_resnet/'
+adv_savedir = '../experiments/adVNN/cifar_resnet_atk=fgsm/'
 adv_attacks = load_attack(method=args.attack_method, model_savedir=adv_savedir)
 
 bay_savedir = '../experiments/fullBNN/cifar_resnet/'
@@ -94,7 +94,6 @@ else:
                                           topk=args.topk, method=lrp_robustness_method)
 
             for im_idx in range(len(det_robustness)):
-            # for im_idx in failed_atks_im_idxs:
 
                 df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':'Adv.', 
                                 'robustness_diff':adv_robustness[im_idx]-det_robustness[im_idx]}, 

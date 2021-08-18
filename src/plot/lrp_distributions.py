@@ -554,7 +554,7 @@ def lrp_layers_robustness_differences(
     os.makedirs(savedir, exist_ok=True) 
 
     sns.set_style("darkgrid")
-    matplotlib.rc('font', **{'weight': 'bold', 'size': 10})
+    matplotlib.rc('font', **{'weight': 'bold', 'size': 9})
 
     det_col =  plt.cm.get_cmap('flare', 100)(np.linspace(0, 1, 10))[6]
     adv_col =  plt.cm.get_cmap('rocket', 100)(np.linspace(0, 1, 10))[7]
@@ -562,40 +562,81 @@ def lrp_layers_robustness_differences(
     clip=(None, None)
     alpha = 0.6
 
-    fig, ax = plt.subplots(len(learnable_layers_idxs), len(topk_list), figsize=(5, 5), sharex=True, dpi=150, 
-                            facecolor='w', edgecolor='k', sharey=True) 
-    fig.tight_layout()
-    fig.subplots_adjust(bottom=0.08) 
+    if len(n_samples_list) > 1 and len(topk_list) > 1: # split cols 
 
-    for row_idx, layer_idx in enumerate(learnable_layers_idxs):
+        fig, ax = plt.subplots(len(learnable_layers_idxs), len(topk_list), figsize=(5, 5), sharex=True, dpi=150, 
+                                facecolor='w', edgecolor='k', sharey=True) 
+        fig.tight_layout()
+        fig.subplots_adjust(bottom=0.08) 
 
-        ax[row_idx,len(topk_list)-1].yaxis.set_label_position("right")
-        ax[row_idx,len(topk_list)-1].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=10, 
-                                                weight='bold', size=9)
+        for row_idx, layer_idx in enumerate(learnable_layers_idxs):
 
-        for topk_idx, topk in enumerate(topk_list):
+            ax[row_idx,len(topk_list)-1].yaxis.set_label_position("right")
+            ax[row_idx,len(topk_list)-1].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=10, 
+                                                    weight='bold', size=9)
 
-            differences = [adv_rob-det_rob for adv_rob, det_rob
-                         in zip(adv_lrp_robustness[topk_idx][row_idx], det_lrp_robustness[topk_idx][row_idx])]
+            for topk_idx, topk in enumerate(topk_list):
 
-            sns.kdeplot(differences, ax=ax[row_idx, topk_idx], label=f"Adv.", 
-                        color=adv_col, alpha=alpha, fill=True, linewidth=0, clip=clip)
+                differences = [adv_rob-det_rob for adv_rob, det_rob
+                             in zip(adv_lrp_robustness[topk_idx][row_idx], det_lrp_robustness[topk_idx][row_idx])]
 
-            for samp_idx, n_samples in enumerate(n_samples_list):
+                sns.kdeplot(differences, ax=ax[row_idx, topk_idx], label=f"Adv.", 
+                            color=adv_col, alpha=alpha, fill=True, linewidth=0, clip=clip)
 
-                differences = [bay_rob-det_rob for bay_rob, det_rob
-                    in zip(bay_lrp_robustness[topk_idx][row_idx][samp_idx], det_lrp_robustness[topk_idx][row_idx])]
+                for samp_idx, n_samples in enumerate(n_samples_list):
 
-                sns.kdeplot(differences, ax=ax[row_idx, topk_idx], color=bay_col[samp_idx], 
-                    label=f"Bay. samp={n_samples} ",  alpha=alpha,
-                    fill=True, linewidth=0, clip=clip)
+                    differences = [bay_rob-det_rob for bay_rob, det_rob
+                        in zip(bay_lrp_robustness[topk_idx][row_idx][samp_idx], det_lrp_robustness[topk_idx][row_idx])]
 
-            ax[0, topk_idx].set_title('topk='+str(topk),fontdict={'fontsize':10, 'fontweight':'bold'})
-            ax[len(learnable_layers_idxs)-1, topk_idx].set_xlabel("LRP Robustness diff.") 
+                    sns.kdeplot(differences, ax=ax[row_idx, topk_idx], color=bay_col[samp_idx], 
+                        label=f"Bay. samp={n_samples} ",  alpha=alpha,
+                        fill=True, linewidth=0, clip=clip)
 
-    plt.subplots_adjust(hspace=0.05)
-    plt.subplots_adjust(wspace=0.05)
-    ax[0,0].legend(prop={'size': 8})
+                ax[0, topk_idx].set_title('topk='+str(topk),fontdict={'fontsize':10, 'fontweight':'bold'})
+                ax[len(learnable_layers_idxs)-1, topk_idx].set_xlabel("LRP Robustness diff.") 
+
+        plt.subplots_adjust(hspace=0.05)
+        plt.subplots_adjust(wspace=0.05)
+        ax[0,0].legend(prop={'size': 9})
+
+    else:
+
+        fig, ax = plt.subplots(len(learnable_layers_idxs), 1, figsize=(3, 5.5), sharex=True, dpi=150, 
+                                facecolor='w', edgecolor='k', sharey=True) 
+        fig.tight_layout()
+        fig.subplots_adjust(bottom=0.08) 
+
+        for row_idx, layer_idx in enumerate(learnable_layers_idxs):
+
+            ax[row_idx].yaxis.set_label_position("right")
+            ax[row_idx].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=10, 
+                                                    weight='bold', size=9)
+
+            for topk_idx, topk in enumerate(topk_list):
+
+                differences = [adv_rob-det_rob for adv_rob, det_rob
+                             in zip(adv_lrp_robustness[topk_idx][row_idx], det_lrp_robustness[topk_idx][row_idx])]
+
+                sns.kdeplot(differences, ax=ax[row_idx], label=f"Adv - Det", 
+                            color=adv_col, alpha=alpha, fill=True, linewidth=0, clip=clip)
+
+                for samp_idx, n_samples in enumerate(n_samples_list):
+
+                    differences = [bay_rob-det_rob for bay_rob, det_rob
+                        in zip(bay_lrp_robustness[topk_idx][row_idx][samp_idx], det_lrp_robustness[topk_idx][row_idx])]
+
+                    sns.kdeplot(differences, ax=ax[row_idx], color=bay_col[samp_idx], 
+                        label=f"Bay - Det\nsamp={n_samples}",  alpha=alpha,
+                        fill=True, linewidth=0, clip=clip)
+
+                # ax[0].set_title('topk='+str(topk),fontdict={'fontsize':10, 'fontweight':'bold'})
+                ax[len(learnable_layers_idxs)-1].set_xlabel("LRP Robustness diff.") 
+
+        plt.subplots_adjust(hspace=0.05)
+        # plt.subplots_adjust(wspace=0.05)
+        ax[0].legend(prop={'size':8}, bbox_to_anchor=(0.3, 1.1))
+
+        filename+="_topk="+str(topk)
 
     print("\nSaving: ", os.path.join(savedir, filename+".png"))                                
     fig.savefig(os.path.join(savedir, filename+".png"))
@@ -630,7 +671,7 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, adv_lrp_robustness, ba
 
         sns.scatterplot(det_lrp_robustness[topk_idx][layer_idx], 
                         det_softmax_robustness[topk_idx][layer_idx],
-                        ax=ax[layer_idx], label=r"Det. $\rho$="+str(round(rho,2)), 
+                        ax=ax[layer_idx], label=r"Det $\rho$="+str(round(rho,2)), 
                         alpha=alpha, linewidth=0,
                         legend=legend, color=det_col)
 
@@ -639,7 +680,7 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, adv_lrp_robustness, ba
 
         sns.scatterplot(adv_lrp_robustness[topk_idx][layer_idx], 
                         adv_softmax_robustness[topk_idx][layer_idx],
-                        ax=ax[layer_idx], label=r"Adv. $\rho$="+str(round(rho,2)), 
+                        ax=ax[layer_idx], label=r"Adv $\rho$="+str(round(rho,2)), 
                         alpha=alpha, linewidth=0,
                         legend=legend, color=adv_col)
         
@@ -650,7 +691,7 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, adv_lrp_robustness, ba
 
             sns.scatterplot(bay_lrp_robustness[topk_idx][layer_idx][samp_idx], 
                             bay_softmax_robustness[topk_idx][layer_idx][samp_idx], 
-                            ax=ax[layer_idx], label=r"Bay. $\rho$="+str(round(rho,2))+" samp="+str(n_samples), 
+                            ax=ax[layer_idx], label=r"Bay $\rho$="+str(round(rho,2))+" samp="+str(n_samples), 
                             alpha=alpha, linewidth=0,
                             legend=legend, color=bay_col[samp_idx])
 
@@ -662,7 +703,7 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, adv_lrp_robustness, ba
     ax[len(learnable_layers_idxs)-1].set_xlabel("LRP Robustness", size=10)
 
     fig.text(0.04, 0.4, "Softmax Robustness", ha='center', weight='normal', rotation=90)
-    ax[0].legend(prop={'size': 9})
+    ax[0].legend(prop={'size': 8})
 
     # ax[int(len(learnable_layers_idxs)/2)].set_ylabel("Softmax robustness")
 

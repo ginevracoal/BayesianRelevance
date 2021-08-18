@@ -1,9 +1,9 @@
 #!/bin/bash
 
-ATTACK_METHOD="pgd" # fgsm, pgd
+ATTACK_METHOD="fgsm" # fgsm, pgd
 TEST_INPUTS=500
 ATK_SAMPLES=100
-TOPK=10
+TOPK=20
 DEVICE="cuda" # cpu, cuda
 DEBUG="False"
 

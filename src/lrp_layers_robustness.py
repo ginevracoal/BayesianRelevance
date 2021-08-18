@@ -37,7 +37,7 @@ args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
 n_samples_list=[10,50,100]
-topk_list = [10, 20]
+topk_list = [20]
 n_inputs=100 if args.debug else args.n_inputs
 
 print("PyTorch Version: ", torch.__version__)

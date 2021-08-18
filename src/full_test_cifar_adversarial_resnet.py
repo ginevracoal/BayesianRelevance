@@ -43,7 +43,7 @@ parser.add_argument('-j',
                     metavar='N',
                     help='number of data loading workers (default: 8)')
 parser.add_argument('--epochs',
-                    default=200,
+                    default=150,
                     type=int,
                     metavar='N',
                     help='number of total epochs to run')
@@ -265,6 +265,7 @@ def main():
             checkpoint = torch.load(checkpoint_file,
                                     map_location=torch.device('cpu'))
             device="cpu"
+            
         model.load_state_dict(checkpoint['state_dict'])
         evaluate(args, model, val_loader)
 
