@@ -61,11 +61,10 @@ def select_informative_pixels(lrp_heatmaps, topk):
 	chosen_pxl_idxs = [sorted_flat_lrp_idxs[-half_topk_percentage:], sorted_flat_lrp_idxs[:half_topk_percentage]]
 	chosen_pxl_idxs = torch.cat(chosen_pxl_idxs)
 
-	chosen_pxls_lrp = flat_lrp_heatmaps[..., chosen_pxl_idxs] 
+	chosen_pxls_lrp = flat_lrp_heatmaps[..., chosen_pxl_idxs]
 
 	if DEBUG:
-		print("out shape =", chosen_pxls_lrp.shape)#, end="\t")
-		# print("chosen pixels idxs =", chosen_pxl_idxs)
+		print("out shape =", chosen_pxls_lrp.shape)
 
 	return chosen_pxls_lrp, chosen_pxl_idxs
 

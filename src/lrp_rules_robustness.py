@@ -181,7 +181,7 @@ def plot_rules_robustness_diff(df, n_samples, learnable_layers_idxs, savedir, fi
 	bay_col = plt.cm.get_cmap('crest', 100)(np.linspace(0, 1, 10))[3:]
 	palettes = [adv_col, bay_col]
 
-	fig, ax = plt.subplots(len(learnable_layers_idxs), 2, figsize=(3, 4), sharex=True, sharey=True, dpi=150, 
+	fig, ax = plt.subplots(len(learnable_layers_idxs), 2, figsize=(3, 4.5), sharex=True, sharey=True, dpi=150, 
 							facecolor='w', edgecolor='k') 
 	fig.tight_layout()
 	fig.subplots_adjust(bottom=0.1)
@@ -215,7 +215,7 @@ def plot_rules_robustness_diff(df, n_samples, learnable_layers_idxs, savedir, fi
 			ax[row_idx, col_idx].set_ylabel("")
 			ax[1, 0].set_ylabel("LRP robustness diff.", size=9)
 			ax[row_idx, 1].yaxis.set_label_position("right")
-			ax[row_idx, 1].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=10, weight='bold', size=8)
+			ax[row_idx, 1].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=10, weight='bold', size=9)
 			ax[row_idx, col_idx].get_legend().remove()
 			ax[row_idx, col_idx].set_xlabel("")
 			ax[2, col_idx].set_xlabel("LRP rule", weight='bold', labelpad=5)

@@ -16,6 +16,9 @@ parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings.")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
+parser.add_argument("--attack_iters", default=10, type=int, help="Number of iterations in iterative attacks.")
+parser.add_argument("--beta_attack_lrp_rule", default='epsilon', type=str, help="LRP rule used in beta attack.")
+parser.add_argument("--epsilon", default=0.2, type=int, help="Strenght of a perturbation.")
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points to be attacked.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
@@ -25,6 +28,7 @@ MODE_ATKS = False
 
 n_inputs=100 if args.debug else args.n_inputs
 bayesian_attack_samples=[10, 50, 100]
+hyperparams={'epsilon':args.epsilon, 'iters':args.attack_iters, 'lrp_rule':args.beta_attack_lrp_rule}
 
 print("PyTorch Version: ", torch.__version__)
 
@@ -37,7 +41,6 @@ if args.device=="cuda":
 if args.model=="baseNN":
 
     model = baseNN_settings["model_"+str(args.model_idx)]
-
     x_test, y_test, inp_shape, out_size = load_dataset(dataset_name=model["dataset"], n_inputs=n_inputs)[2:]
 
     savedir = get_model_savedir(model=args.model, dataset=model["dataset"], architecture=model["architecture"], 
@@ -50,7 +53,7 @@ if args.model=="baseNN":
         x_attack = load_attack(method=args.attack_method, model_savedir=savedir)
     
     else:
-        x_attack = attack(net=net, x_test=x_test, y_test=y_test,
+        x_attack = attack(net=net, x_test=x_test, y_test=y_test, hyperparams=hyperparams,
                           device=args.device, method=args.attack_method)
         save_attack(x_test, x_attack, method=args.attack_method, model_savedir=savedir)
 
@@ -72,7 +75,7 @@ elif args.model=="advNN":
         x_attack = load_attack(method=args.attack_method, model_savedir=savedir)
     
     else:
-        x_attack = attack(net=net, x_test=x_test, y_test=y_test,
+        x_attack = attack(net=net, x_test=x_test, y_test=y_test, hyperparams=hyperparams,
                           device=args.device, method=args.attack_method)
         save_attack(x_test, x_attack, method=args.attack_method, model_savedir=savedir)
 
@@ -117,7 +120,7 @@ else:
 
         for n_samples in bayesian_attack_samples:
             x_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device,
-                              method=args.attack_method, n_samples=n_samples)
+                              method=args.attack_method, n_samples=n_samples, hyperparams=hyperparams)
             save_attack(x_test, x_attack, method=args.attack_method, 
                              model_savedir=savedir, n_samples=n_samples)
             evaluate_attack(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
@@ -125,7 +128,7 @@ else:
 
         if MODE_ATKS:
             if m["inference"]=="svi":
-                mode_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device,
+                mode_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device, hyperparams=hyperparams,
                                   method=args.attack_method, n_samples=n_samples, avg_posterior=True)
                 save_attack(x_test, mode_attack, method=args.attack_method,   
                                  model_savedir=savedir, n_samples=n_samples, atk_mode=True)

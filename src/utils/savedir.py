@@ -37,7 +37,7 @@ def get_model_savedir(model, dataset, architecture, iters=None, inference=None, 
     else:
         return os.path.join(TESTS, savedir)
 
-def get_lrp_savedir(model_savedir, attack_method, rule, lrp_method=None, layer_idx=None):
+def get_lrp_savedir(model_savedir, rule, attack_method, lrp_method=None, layer_idx=None):
     """
     model_savedir: original model directory.
     attack_method: method used for computing the attacks.

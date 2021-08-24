@@ -19,6 +19,7 @@ from torch.utils.data import Subset, DataLoader
 import bayesian_torch.bayesian_torch.models.deterministic.resnet as resnet
 from attacks.run_attacks import run_attack, save_attack, load_attack
 from utils.lrp import *
+from full_test_cifar_bayesian_resnet import plot_lrp_grid
 
 
 model_names = sorted(
@@ -285,12 +286,12 @@ def main():
 		save_attack(inputs=images, attacks=attacks, method=method, model_savedir=args.save_dir)
 		# attacks = load_attack(method=method, model_savedir=args.save_dir)
 
-		evaluate(args, model, DataLoader(dataset=list(zip(attacks, labels))))
+		# evaluate(args, model, DataLoader(dataset=list(zip(attacks, labels))))
 
 		# LRP
 
 		for rule in ['epsilon','gamma','alpha1beta0']:
-			learnable_layers_idxs=[38] #[0,2,14,26,38]
+			learnable_layers_idxs=[38] 
 
 			for layer_idx in learnable_layers_idxs:
 
@@ -304,6 +305,18 @@ def main():
 
 				save_to_pickle(det_lrp, path=savedir, filename="det_lrp")
 				save_to_pickle(det_attack_lrp, path=savedir, filename="det_attack_lrp")
+
+			set_seed(0)
+			idxs = np.random.choice(len(images), 10, replace=False)
+			original_images_plot = torch.stack([images[i].squeeze() for i in idxs])
+			adversarial_images_plot = torch.stack([attacks[i].squeeze() for i in idxs])
+			lrp_heatmaps_plot = torch.stack([det_lrp[i].squeeze() for i in idxs])
+			attack_lrp_heatmaps_plot = torch.stack([det_attack_lrp[i].squeeze() for i in idxs])
+			plot_lrp_grid(original_images=original_images_plot.detach().cpu(), 
+						  adversarial_images=adversarial_images_plot.detach().cpu(),
+						  bay_lrp_heatmaps=lrp_heatmaps_plot.detach().cpu(),
+						  bay_attack_lrp_heatmaps=attack_lrp_heatmaps_plot.detach().cpu(), 
+						  filename="lrp", savedir=savedir)
 
 
 def convert_resnet(module, modules=None):

@@ -51,7 +51,7 @@ learnable_layers_idxs = [38]
 det_savedir = '../experiments/baseNN/cifar_resnet/'
 det_attacks = load_attack(method=args.attack_method, model_savedir=det_savedir)
 
-adv_savedir = '../experiments/adVNN/cifar_resnet_atk=fgsm/'
+adv_savedir = '../experiments/advNN/cifar_resnet_atk=fgsm/'
 adv_attacks = load_attack(method=args.attack_method, model_savedir=adv_savedir)
 
 bay_savedir = '../experiments/fullBNN/cifar_resnet/'
@@ -95,11 +95,11 @@ else:
 
             for im_idx in range(len(det_robustness)):
 
-                df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':'Adv.', 
+                df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':'Adv - Det', 
                                 'robustness_diff':adv_robustness[im_idx]-det_robustness[im_idx]}, 
                                 ignore_index=True)
 
-                df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':f'Bay. samp={args.n_samples}', 
+                df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':f'Bay - Det', #samp={args.n_samples}', 
                                 'robustness_diff':bay_robustness[im_idx]-det_robustness[im_idx]}, 
                                 ignore_index=True)
 
@@ -114,16 +114,15 @@ def plot_rules_robustness(df, n_samples, learnable_layers_idxs, savedir, filenam
 
     os.makedirs(savedir, exist_ok=True) 
     sns.set_style("darkgrid")
-    matplotlib.rc('font', **{'size': 10})
+    matplotlib.rc('font', **{'size': 9})
 
     det_col =  plt.cm.get_cmap('rocket', 100)(np.linspace(0, 1, 13))[3:]
     bay_col = plt.cm.get_cmap('crest', 100)(np.linspace(0, 1, 10))[3:]
     palettes = [det_col, bay_col]
 
-    fig, ax = plt.subplots(len(learnable_layers_idxs), 2, figsize=(4.5, 2.5), sharex=True, sharey=True, dpi=150, 
+    fig, ax = plt.subplots(len(learnable_layers_idxs), 2, figsize=(3, 1.9), sharex=True, sharey=True, dpi=150, 
                             facecolor='w', edgecolor='k') 
     fig.tight_layout()
-    fig.subplots_adjust(bottom=0.1)
 
     for col_idx, model in enumerate(list(df['model'].unique())):
         palette = {"epsilon":palettes[col_idx][2], "gamma":palettes[col_idx][4], "alpha1beta0":palettes[col_idx][6]}
@@ -133,7 +132,7 @@ def plot_rules_robustness(df, n_samples, learnable_layers_idxs, savedir, filenam
             temp_df = df[df['layer_idx']==layer_idx]
             temp_df = temp_df[temp_df['model']==model]
 
-            sns.boxplot(data=temp_df, ax=ax[col_idx], x='rule', y='robustness', orient='v', hue='rule', 
+            sns.boxplot(data=temp_df, ax=ax[col_idx], x='rule', y='robustness_diff', orient='v', hue='rule', 
                         palette=palette, dodge=False)
 
             for i, patch in enumerate(ax[col_idx].artists):
@@ -150,18 +149,21 @@ def plot_rules_robustness(df, n_samples, learnable_layers_idxs, savedir, filenam
                     line.set_mec(col)
 
             ax[col_idx].xaxis.set_label_position("top")
-            ax[col_idx].set_xlabel(model, weight='bold', size=10)
+            ax[col_idx].set_xlabel(model, weight='bold', size=9)
             ax[col_idx].set_ylabel("")
-            ax[0].set_ylabel("LRP robustness")
+            ax[0].set_ylabel("LRP robustness diff.")
             ax[1].yaxis.set_label_position("right")
-            ax[1].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=15, weight='bold', size=8)
+            ax[1].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=10, weight='bold', size=9)
             ax[col_idx].get_legend().remove()
             ax[col_idx].set_xlabel("")
-            ax[0].set_xlabel("Det.")
-            ax[1].set_xlabel("Bay. samp="+str(n_samples))
+            ax[0].set_xlabel("Adv - Det")
+            ax[1].set_xlabel("Bay - Det") # samp="+str(n_samples))
             ax[col_idx].set_xticklabels([r'$\epsilon$',r'$\gamma$',r'$\alpha\beta$'])
 
+    plt.subplots_adjust(hspace=0.05)
+    plt.subplots_adjust(wspace=0.05)
     fig.subplots_adjust(left=0.15)
+    fig.subplots_adjust(bottom=0.15)
     print("\nSaving: ", os.path.join(savedir, filename+".png"))                                        
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)

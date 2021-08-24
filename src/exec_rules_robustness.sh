@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ATTACK_METHOD="fgsm" # fgsm, pgd
+ATTACK_METHOD="pgd" # fgsm, pgd
 TEST_INPUTS=500
 ATK_SAMPLES=100
 TOPK=20

@@ -43,7 +43,6 @@ if args.device=="cuda":
 
 if args.model in ["baseNN", "advNN"]:
 
-
     if args.model=="baseNN":
 
         model = baseNN_settings["model_"+str(args.model_idx)]
