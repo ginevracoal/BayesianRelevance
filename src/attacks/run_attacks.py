@@ -133,7 +133,11 @@ def run_attack(net, image, label, method, device, hyperparams=None):
 		perturbed_image=DeepFool(image, net=net, num_classes=10, overshoot=0.02, max_iter=10)[-1].squeeze(0)
 
 	elif method == "beta":
-		net.model = relu_to_softplus(net.model)
+		if hasattr(net, "basenet"):
+			net.basenet = relu_to_softplus(net.basenet)
+		else:
+			net.model = relu_to_softplus(net.model)
+			
 		perturbed_image = Beta(image, model=net, target_image=hyperparams['target_image'], 
 							   iters=hyperparams['iters'], lrp_rule=hyperparams['lrp_rule'],
 							   data_mean=hyperparams['data_mean'], data_std=hyperparams['data_std'])

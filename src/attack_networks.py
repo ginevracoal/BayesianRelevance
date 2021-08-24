@@ -27,7 +27,7 @@ args = parser.parse_args()
 MODE_ATKS = False
 
 n_inputs=100 if args.debug else args.n_inputs
-bayesian_attack_samples=[10, 50, 100]
+bayesian_attack_samples=[100] # 10, 50, 100]
 hyperparams={'epsilon':args.epsilon, 'iters':args.attack_iters, 'lrp_rule':args.beta_attack_lrp_rule}
 
 print("PyTorch Version: ", torch.__version__)

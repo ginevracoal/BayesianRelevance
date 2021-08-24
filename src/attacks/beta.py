@@ -56,7 +56,12 @@ def Beta(image, model, target_image, data_mean, data_std, lrp_rule, iters, gamma
 	optimizer = torch.optim.Adam([x_adv], lr=lr)
 
 	for i in range(iters):
-		model.model = change_beta(model.model, get_beta(i, iters))
+
+		if hasattr(model, "basenet"):
+			model.basenet = change_beta(model.basenet, get_beta(i, iters))
+		else:
+			model.model = change_beta(model.model, get_beta(i, iters))
+
 		optimizer.zero_grad()
 
 		# calculate loss
