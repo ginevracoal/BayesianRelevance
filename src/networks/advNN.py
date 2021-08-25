@@ -55,7 +55,7 @@ class advNN(baseNN):
         learnable_params = self.model.state_dict()
         self.n_learnable_layers = int(len(learnable_params)/2)
 
-    def train(self, train_loader, savedir, device):
+    def train(self, train_loader, savedir, device, hyperparams={}):
         print("\n == advNN training ==")
         self.to(device)
 
@@ -72,7 +72,7 @@ class advNN(baseNN):
                 y_batch = y_batch.to(device)
 
                 self.model.eval()
-                x_attack = attack(net=self, x_test=x_batch, y_test=y_batch, device=device, 
+                x_attack = attack(net=self, x_test=x_batch, y_test=y_batch, device=device, hyperparams=hyperparams,
                                     method=self.attack_method, verbose=False)
                 outputs = self.forward(x_attack)
                 

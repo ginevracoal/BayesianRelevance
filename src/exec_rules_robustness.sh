@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ATTACK_METHOD="pgd" # fgsm, pgd
+ATTACK_METHOD="beta" # fgsm, pgd
 TEST_INPUTS=500
 ATK_SAMPLES=100
 TOPK=20
@@ -15,29 +15,29 @@ LOGS="../experiments/logs/"
 mkdir -p $LOGS
 OUT="${LOGS}${DATE}_${TIME}_out.txt"
 
-for MODEL_IDX in 0 1 2 3
+for MODEL_IDX in 3 #0 1 2 3
 do
 
-	# for MODEL in "baseNN" "fullBNN" 
-	# do
+	for MODEL in "baseNN" #"advNN" "fullBNN" 
+	do
 
-	# 	python train_networks.py --model=$MODEL --model_idx=$MODEL_IDX --attack_method=$ATTACK_METHOD --debug=$DEBUG \
-	# 						 	 --device=$DEVICE >> $OUT
+		# python train_networks.py --model=$MODEL --model_idx=$MODEL_IDX --attack_method=$ATTACK_METHOD --debug=$DEBUG \
+		# 					 	 --device=$DEVICE >> $OUT
 
-	# 	python attack_networks.py --model=$MODEL --model_idx=$MODEL_IDX --attack_method=$ATTACK_METHOD --debug=$DEBUG \
-	# 							 --device=$DEVICE --n_inputs=$TEST_INPUTS >> $OUT
+		python attack_networks.py --model=$MODEL --model_idx=$MODEL_IDX --attack_method=$ATTACK_METHOD --debug=$DEBUG \
+								 --device=$DEVICE --n_inputs=$TEST_INPUTS >> $OUT
 
-	# 	for RULE in "epsilon" "gamma" "alpha1beta0"
-	# 	do
-	# 		python compute_lrp.py --model=$MODEL --model_idx=$MODEL_IDX --attack_method=$ATTACK_METHOD --debug=$DEBUG \
-	# 					 	 		--device=$DEVICE --n_inputs=$TEST_INPUTS --rule=$RULE >> $OUT
-	# 	done
+		for RULE in "epsilon" "gamma" "alpha1beta0"
+		do
+			python compute_lrp.py --model=$MODEL --model_idx=$MODEL_IDX --attack_method=$ATTACK_METHOD --debug=$DEBUG \
+						 	 		--device=$DEVICE --n_inputs=$TEST_INPUTS --rule=$RULE >> $OUT
+		done
 
-	# done
+	done
 
-	python lrp_rules_robustness.py --model_idx=$MODEL_IDX --attack_method=$ATTACK_METHOD --debug=$DEBUG \
-									--device=$DEVICE --n_inputs=$TEST_INPUTS --n_samples=$ATK_SAMPLES \
-									--topk=$TOPK >> $OUT
+	# python lrp_rules_robustness.py --model_idx=$MODEL_IDX --attack_method=$ATTACK_METHOD --debug=$DEBUG \
+	# 								--device=$DEVICE --n_inputs=$TEST_INPUTS --n_samples=$ATK_SAMPLES \
+	# 								--topk=$TOPK >> $OUT
 
 done
 

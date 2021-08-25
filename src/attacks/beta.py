@@ -31,7 +31,7 @@ def clamp_image(x, mean, std):
 		x = torch.clamp(x, min=lower[0], max=upper[0])
 	return x
 
-def Beta(image, model, target_image, data_mean, data_std, lrp_rule, iters, gamma=1., lr=0.001):
+def Beta(image, model, target_image, data_mean, data_std, lrp_rule, iters, gamma=1., lr=0.01):
 
 	x = image.detach()
 	x_target = target_image.detach()

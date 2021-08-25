@@ -18,9 +18,14 @@ parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings.")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
+# parser.add_argument("--attack_iters", default=3, type=int, help="Number of iterations in iterative attacks.")
+# parser.add_argument("--epsilon", default=0.2, type=int, help="Strength of a perturbation.")
+# parser.add_argument("--attack_lrp_rule", default='epsilon', type=str, help="LRP rule used for the attacks.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
+
+# attack_hyperparams={'epsilon':args.epsilon, 'iters':args.attack_iters, 'lrp_rule':args.attack_lrp_rule}
 
 n_inputs=100 if args.debug else None
 
@@ -65,7 +70,7 @@ elif args.model=="advNN":
         net.load(savedir=savedir, device=args.device)
     
     else:
-        net.train(train_loader=train_loader, savedir=savedir, device=args.device)
+        net.train(train_loader=train_loader, savedir=savedir, device=args.device, hyperparams=attack_hyperparams)
 
     net.evaluate(test_loader=test_loader, device=args.device)
 

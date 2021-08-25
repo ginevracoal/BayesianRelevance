@@ -16,6 +16,7 @@ from attacks.deeprobust.pgd import PGD
 from attacks.deeprobust.cw import CarliniWagner
 from attacks.deepfool import DeepFool
 from attacks.beta import Beta
+from attacks.topk import Topk
 
 from deeprobust.image.attack.Nattack import NATTACK
 from deeprobust.image.attack.YOPOpgd import FASTPGD
@@ -141,6 +142,10 @@ def run_attack(net, image, label, method, device, hyperparams=None):
 		perturbed_image = Beta(image, model=net, target_image=hyperparams['target_image'], 
 							   iters=hyperparams['iters'], lrp_rule=hyperparams['lrp_rule'],
 							   data_mean=hyperparams['data_mean'], data_std=hyperparams['data_std'])
+
+	elif method == "topk":
+		perturbed_image = Topk(image, model=net, epsilon=hyperparams['epsilon'], iters=hyperparams['iters'], 
+								lrp_rule=hyperparams['lrp_rule'])
 
 	return perturbed_image
 

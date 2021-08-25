@@ -10,13 +10,13 @@ import torch.optim as torchopt
 import torch.nn.functional as F
 
 from utils.data import *
-from utils.networks import *
+from utils.model_settings import *
 from utils.savedir import *
 from utils.seeding import *
 
 from networks.baseNN import *
 from networks.fullBNN import *
-from networks.redBNN import *
+from networks.advNN import *
 
 from utils.lrp import *
 from attacks.gradient_based import evaluate_attack
@@ -36,6 +36,8 @@ parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_p
 parser.add_argument("--load", type=eval, default="False", help="If True load dataframe else build it.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
+
+rules_list = ['epsilon','gamma','alpha1beta0']
 
 args = parser.parse_args()
 lrp_robustness_method = "imagewise"
@@ -115,7 +117,6 @@ if args.load:
 
 else:
 	df = pd.DataFrame()
-	rules_list = ['epsilon','gamma','alpha1beta0']
 
 	for rule in rules_list: 
 		for layer_idx in detnet.learnable_layers_idxs:
@@ -148,14 +149,6 @@ else:
 												adversarial_heatmaps=bay_attack_lrp, 
 												topk=args.topk, method=lrp_robustness_method)
 
-			# for robustness in det_robustness:
-			#     df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':'Det.', 
-			#                     'robustness':robustness}, ignore_index=True)
-
-			# for robustness in bay_robustness:
-			#     df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':f'Bay. samp={args.n_samples}', 
-			#                     'robustness':robustness}, ignore_index=True)
-
 			for im_idx in range(len(det_robustness)):
 			# for im_idx in failed_atks_im_idxs:
 
@@ -186,45 +179,89 @@ def plot_rules_robustness_diff(df, n_samples, learnable_layers_idxs, savedir, fi
 	fig.tight_layout()
 	fig.subplots_adjust(bottom=0.1)
 
-	for col_idx, model in enumerate(list(df['model'].unique())):
-		palette = {"epsilon":palettes[col_idx][2], "gamma":palettes[col_idx][4], "alpha1beta0":palettes[col_idx][6]}
+	if len(list(df['rule'].unique()))>1:
 
-		for row_idx, layer_idx in enumerate(learnable_layers_idxs):
+		for col_idx, model in enumerate(list(df['model'].unique())):
+			palette = {"epsilon":palettes[col_idx][2], "gamma":palettes[col_idx][4], "alpha1beta0":palettes[col_idx][6]}
 
-			temp_df = df[df['layer_idx']==layer_idx]
-			temp_df = temp_df[temp_df['model']==model]
+			for row_idx, layer_idx in enumerate(learnable_layers_idxs):
 
-			sns.boxplot(data=temp_df, ax=ax[row_idx, col_idx], x='rule', y='robustness_diff', orient='v', hue='rule', 
-						palette=palette, dodge=False)
+				temp_df = df[df['layer_idx']==layer_idx]
+				temp_df = temp_df[temp_df['model']==model]
 
-			for i, patch in enumerate(ax[row_idx, col_idx].artists):
-				
-				r, g, b, a = patch.get_facecolor()
-				col = (r, g, b, a) 
-				patch.set_facecolor((r, g, b, .7))
-				patch.set_edgecolor(col)
+				sns.boxplot(data=temp_df, ax=ax[row_idx, col_idx], x='rule', y='robustness_diff', orient='v', hue='rule', 
+							palette=palette, dodge=False)
 
-				for j in range(i*6, i*6+6):
-					line = ax[row_idx, col_idx].lines[j]
-					line.set_color(col)
-					line.set_mfc(col)
-					line.set_mec(col)
+				for i, patch in enumerate(ax[row_idx, col_idx].artists):
+					
+					r, g, b, a = patch.get_facecolor()
+					col = (r, g, b, a) 
+					patch.set_facecolor((r, g, b, .7))
+					patch.set_edgecolor(col)
 
-			ax[0, col_idx].xaxis.set_label_position("top")
-			ax[0, col_idx].set_xlabel(model, weight='bold', size=9)
-			ax[row_idx, col_idx].set_ylabel("")
-			ax[1, 0].set_ylabel("LRP robustness diff.", size=9)
-			ax[row_idx, 1].yaxis.set_label_position("right")
-			ax[row_idx, 1].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=10, weight='bold', size=9)
-			ax[row_idx, col_idx].get_legend().remove()
-			ax[row_idx, col_idx].set_xlabel("")
-			ax[2, col_idx].set_xlabel("LRP rule", weight='bold', labelpad=5)
-			ax[row_idx, col_idx].set_xticklabels([r'$\epsilon$',r'$\gamma$',r'$\alpha\beta$'])
+					for j in range(i*6, i*6+6):
+						line = ax[row_idx, col_idx].lines[j]
+						line.set_color(col)
+						line.set_mfc(col)
+						line.set_mec(col)
 
-	plt.subplots_adjust(hspace=0.05)
-	plt.subplots_adjust(wspace=0.05)
-	fig.subplots_adjust(left=0.15)
-	fig.subplots_adjust(bottom=0.12)
+				ax[0, col_idx].xaxis.set_label_position("top")
+				ax[0, col_idx].set_xlabel(model, weight='bold', size=9)
+				ax[row_idx, col_idx].set_ylabel("")
+				ax[1, 0].set_ylabel("LRP robustness diff.", size=9)
+				ax[row_idx, 1].yaxis.set_label_position("right")
+				ax[row_idx, 1].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=10, weight='bold', size=9)
+				ax[row_idx, col_idx].get_legend().remove()
+				ax[row_idx, col_idx].set_xlabel("")
+				ax[2, col_idx].set_xlabel("LRP rule", weight='bold', labelpad=5)
+				ax[row_idx, col_idx].set_xticklabels([r'$\epsilon$',r'$\gamma$',r'$\alpha\beta$'])
+
+		plt.subplots_adjust(hspace=0.05)
+		plt.subplots_adjust(wspace=0.05)
+		fig.subplots_adjust(left=0.15)
+		fig.subplots_adjust(bottom=0.12)
+
+	else:
+		for col_idx, model in enumerate(list(df['model'].unique())):
+			palette = {"epsilon":palettes[col_idx][2], "gamma":palettes[col_idx][4], "alpha1beta0":palettes[col_idx][6]}
+
+			for row_idx, layer_idx in enumerate(learnable_layers_idxs):
+
+				temp_df = df[df['layer_idx']==layer_idx]
+				temp_df = temp_df[temp_df['model']==model]
+
+				sns.boxplot(data=temp_df, ax=ax[row_idx, col_idx], x='rule', y='robustness_diff', orient='v', hue='rule', 
+							palette=palette, dodge=False)
+
+				for i, patch in enumerate(ax[row_idx, col_idx].artists):
+					
+					r, g, b, a = patch.get_facecolor()
+					col = (r, g, b, a) 
+					patch.set_facecolor((r, g, b, .7))
+					patch.set_edgecolor(col)
+
+					for j in range(i*6, i*6+6):
+						line = ax[row_idx, col_idx].lines[j]
+						line.set_color(col)
+						line.set_mfc(col)
+						line.set_mec(col)
+
+				ax[0, col_idx].xaxis.set_label_position("top")
+				ax[0, col_idx].set_xlabel(model, weight='bold', size=9)
+				ax[row_idx, col_idx].set_ylabel("")
+				ax[1, 0].set_ylabel("LRP robustness diff.", size=9)
+				ax[row_idx, 1].yaxis.set_label_position("right")
+				ax[row_idx, 1].set_ylabel("Layer idx="+str(layer_idx), rotation=270, labelpad=10, weight='bold', size=9)
+				ax[row_idx, col_idx].get_legend().remove()
+				ax[row_idx, col_idx].set_xlabel("")
+				ax[2, col_idx].set_xlabel("LRP rule", weight='bold', labelpad=5)
+				ax[row_idx, col_idx].set_xticklabels([r'$\epsilon$',r'$\gamma$',r'$\alpha\beta$'])
+
+		plt.subplots_adjust(hspace=0.05)
+		plt.subplots_adjust(wspace=0.05)
+		fig.subplots_adjust(left=0.15)
+		fig.subplots_adjust(bottom=0.12)
+		
 	print("\nSaving: ", os.path.join(savedir, filename+".png"))                                        
 	fig.savefig(os.path.join(savedir, filename+".png"))
 	plt.close(fig)

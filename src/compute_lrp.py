@@ -10,9 +10,12 @@ import torch.optim as torchopt
 import torch.nn.functional as F
 
 from utils.data import *
-from utils.networks import *
+from utils.model_settings import *
 from utils.savedir import *
 from utils.seeding import *
+from networks.baseNN import *
+from networks.fullBNN import *
+from networks.advNN import *
 
 from utils.lrp import *
 from plot.lrp_heatmaps import plot_vanishing_explanations
@@ -33,7 +36,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 n_inputs=100 if args.debug else args.n_inputs
-n_samples_list=[10,50,100]
+n_samples_list=[100]#10,50,100]
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
@@ -70,7 +73,7 @@ if args.model in ["baseNN", "advNN"]:
 
     ### Deterministic explanations
 
-    images = x_test.to(args.device)
+    images = x_test.to(args.device).detach()
     labels = y_test.argmax(-1).to(args.device)
 
     for layer_idx in detnet.learnable_layers_idxs:
@@ -120,7 +123,7 @@ elif args.model=="fullBNN":
         bay_attack.append(load_attack(method=args.attack_method, model_savedir=bay_model_savedir, 
                                       n_samples=n_samples))
 
-    images = x_test.to(args.device)
+    images = x_test.to(args.device).detach()
     labels = y_test.argmax(-1).to(args.device)
 
     for layer_idx in bayesnet.basenet.learnable_layers_idxs:
