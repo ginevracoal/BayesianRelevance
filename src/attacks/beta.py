@@ -31,7 +31,8 @@ def clamp_image(x, mean, std):
 		x = torch.clamp(x, min=lower[0], max=upper[0])
 	return x
 
-def Beta(image, model, target_image, data_mean, data_std, lrp_rule, iters, gamma=1., lr=0.01):
+def Beta(image, model, target_image, data_mean, data_std, lrp_rule, iters, 
+		 delta=1e11, gamma=1e6, lr=0.001, beta_growth=False):
 
 	x = image.detach()
 	x_target = target_image.detach()
@@ -57,10 +58,11 @@ def Beta(image, model, target_image, data_mean, data_std, lrp_rule, iters, gamma
 
 	for i in range(iters):
 
-		if hasattr(model, "basenet"):
-			model.basenet = change_beta(model.basenet, get_beta(i, iters))
-		else:
-			model.model = change_beta(model.model, get_beta(i, iters))
+		if beta_growth:
+			if hasattr(model, "basenet"):
+				model.basenet = change_beta(model.basenet, get_beta(i, iters))
+			else:
+				model.model = change_beta(model.model, get_beta(i, iters))
 
 		optimizer.zero_grad()
 
@@ -72,7 +74,7 @@ def Beta(image, model, target_image, data_mean, data_std, lrp_rule, iters, gamma
 
 		loss_expl = nnf.mse_loss(x_adv_expl, x_target_expl)
 		loss_output = nnf.mse_loss(x_adv_probs, x_probs.detach())
-		total_loss = loss_expl + gamma*loss_output
+		total_loss = delta*loss_expl + gamma*loss_output
 
 		# update adversarial example
 		total_loss.backward()

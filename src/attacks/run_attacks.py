@@ -17,6 +17,7 @@ from attacks.deeprobust.cw import CarliniWagner
 from attacks.deepfool import DeepFool
 from attacks.beta import Beta
 from attacks.topk import Topk
+from attacks.target_region import TargetRegion
 
 from deeprobust.image.attack.Nattack import NATTACK
 from deeprobust.image.attack.YOPOpgd import FASTPGD
@@ -39,6 +40,11 @@ def attack(net, x_test, y_test, device, method, hyperparams={}, n_samples=None, 
 			data_mean[i], data_std[i] = x_test[:,i].mean().item(), x_test[:,i].std().item()
 	else:
 		data_mean, data_std = x_test.mean().item(), x_test.std().item()
+
+	if method=='region':
+		random.seed(0)
+		total_n_pxls = len(x_test[0].flatten())
+		hyperparams['target_pxls'] = random.sample(list(range(total_n_pxls)), int(total_n_pxls*0.2))
 
 	adversarial_attacks = []
 
@@ -135,9 +141,9 @@ def run_attack(net, image, label, method, device, hyperparams=None):
 
 	elif method == "beta":
 		if hasattr(net, "basenet"):
-			net.basenet = relu_to_softplus(net.basenet)
+			net.basenet = relu_to_softplus(net.basenet, beta=10)
 		else:
-			net.model = relu_to_softplus(net.model)
+			net.model = relu_to_softplus(net.model, beta=10)
 			
 		perturbed_image = Beta(image, model=net, target_image=hyperparams['target_image'], 
 							   iters=hyperparams['iters'], lrp_rule=hyperparams['lrp_rule'],
@@ -146,6 +152,10 @@ def run_attack(net, image, label, method, device, hyperparams=None):
 	elif method == "topk":
 		perturbed_image = Topk(image, model=net, epsilon=hyperparams['epsilon'], iters=hyperparams['iters'], 
 								lrp_rule=hyperparams['lrp_rule'])
+
+	elif method == "region":		
+		perturbed_image = TargetRegion(image, model=net, epsilon=hyperparams['epsilon'], iters=hyperparams['iters'], 
+								lrp_rule=hyperparams['lrp_rule'], target_pxls=hyperparams['target_pxls'])
 
 	return perturbed_image
 

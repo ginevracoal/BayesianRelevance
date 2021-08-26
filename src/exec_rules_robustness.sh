@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ATTACK_METHOD="beta" # fgsm, pgd
+ATTACK_METHOD="region" # fgsm, pgd, beta, topk
 TEST_INPUTS=500
 ATK_SAMPLES=100
 TOPK=20
@@ -15,10 +15,10 @@ LOGS="../experiments/logs/"
 mkdir -p $LOGS
 OUT="${LOGS}${DATE}_${TIME}_out.txt"
 
-for MODEL_IDX in 3 #0 1 2 3
+for MODEL_IDX in 1 #0 1 2 3
 do
 
-	for MODEL in "baseNN" #"advNN" "fullBNN" 
+	for MODEL in "fullBNN" # "baseNN" advNN" "fullBNN" 
 	do
 
 		# python train_networks.py --model=$MODEL --model_idx=$MODEL_IDX --attack_method=$ATTACK_METHOD --debug=$DEBUG \
@@ -35,9 +35,9 @@ do
 
 	done
 
-	# python lrp_rules_robustness.py --model_idx=$MODEL_IDX --attack_method=$ATTACK_METHOD --debug=$DEBUG \
-	# 								--device=$DEVICE --n_inputs=$TEST_INPUTS --n_samples=$ATK_SAMPLES \
-	# 								--topk=$TOPK >> $OUT
+	python lrp_rules_robustness.py --model_idx=$MODEL_IDX --attack_method=$ATTACK_METHOD --debug=$DEBUG \
+									--device=$DEVICE --n_inputs=$TEST_INPUTS --n_samples=$ATK_SAMPLES \
+									--topk=$TOPK >> $OUT
 
 done
 

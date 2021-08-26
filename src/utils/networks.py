@@ -2,10 +2,10 @@ import torch
 import torch.nn as nn
 
 
-def relu_to_softplus(model):
+def relu_to_softplus(model, beta):
 	for child_name, child in model.named_children():
-		if isinstance(child, nn.ReLU):
-			setattr(model, child_name, nn.Softplus())
+		if isinstance(child, nn.LeakyReLU):
+			setattr(model, child_name, nn.Softplus(beta=beta))
 		else:
 			relu_to_softplus(child)
 

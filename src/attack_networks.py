@@ -16,7 +16,7 @@ parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings.")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-parser.add_argument("--attack_iters", default=50, type=int, help="Number of iterations in iterative attacks.")
+parser.add_argument("--attack_iters", default=100, type=int, help="Number of iterations in iterative attacks.")
 parser.add_argument("--attack_lrp_rule", default='epsilon', type=str, help="LRP rule used for the attacks.")
 parser.add_argument("--epsilon", default=0.2, type=int, help="Strength of a perturbation.")
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points to be attacked.")
