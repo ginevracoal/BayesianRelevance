@@ -1,27 +1,25 @@
-import os
 import argparse
 import numpy as np
 
 import torch
-import torchvision
-from torch import nn
+import torch.nn.functional as F
 import torch.nn.functional as nnf
 import torch.optim as torchopt
-import torch.nn.functional as F
+import torchvision
 
+from networks.advNN import *
+from networks.baseNN import *
+from networks.fullBNN import *
 from utils.data import *
 from utils.model_settings import *
 from utils.savedir import *
 from utils.seeding import *
-from networks.baseNN import *
-from networks.fullBNN import *
-from networks.advNN import *
 
-from utils.lrp import *
-from plot.lrp_heatmaps import plot_vanishing_explanations
 import plot.lrp_distributions as plot_lrp
+
 from attacks.gradient_based import evaluate_attack
 from attacks.run_attacks import *
+from utils.lrp import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings")
@@ -96,14 +94,6 @@ if args.model in ["baseNN", "advNN"]:
             save_to_pickle(det_attack_lrp, path=savedir, filename="det_attack_lrp")
 
 elif args.model=="fullBNN":
-
-    # model = baseNN_settings["model_"+str(args.model_idx)]
-
-    # x_test, y_test, inp_shape, num_classes = load_dataset(dataset_name=model["dataset"], shuffle=False, n_inputs=n_inputs)[2:]
-    
-    # det_model_savedir = get_model_savedir(model="baseNN", dataset=model["dataset"], architecture=model["architecture"], 
-    #                                   debug=args.debug, model_idx=args.model_idx)
-    # detnet = baseNN(inp_shape, num_classes, *list(model.values()))
 
     m = fullBNN_settings["model_"+str(args.model_idx)]
 

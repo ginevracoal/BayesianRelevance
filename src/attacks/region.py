@@ -1,14 +1,5 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as nnf
-import torch.optim as optim
-import torch.utils.data as data_utils
-import torchvision
-import numpy as np
-import math
-import copy
-import os
-import random
 
 
 def TargetRegion(image, model, epsilon, lrp_rule, iters, target_pxls, step_size=0.5, lr=0.01):

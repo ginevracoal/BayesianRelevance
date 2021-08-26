@@ -1,26 +1,27 @@
-import torch
-import numpy as np
-from tqdm import tqdm
 import copy
+import numpy as np
+import torch
+
 from torch import autograd
+from tqdm import tqdm
 
-from utils.data import *
-from utils.seeding import *
-from utils.savedir import *
+# from attacks.robustness_measures import softmax_robustness
 from plot.attacks import plot_grid_attacks
-from attacks.robustness_measures import softmax_robustness
 from torch.autograd.gradcheck import zero_gradients
+from utils.data import *
+from utils.savedir import *
+from utils.seeding import *
 
+from attacks.beta import Beta
+from attacks.deepfool import DeepFool
+from attacks.deeprobust.cw import CarliniWagner
 from attacks.deeprobust.fgsm import FGSM
 from attacks.deeprobust.pgd import PGD
-from attacks.deeprobust.cw import CarliniWagner
-from attacks.deepfool import DeepFool
-from attacks.beta import Beta
+from attacks.region import TargetRegion
 from attacks.topk import Topk
-from attacks.target_region import TargetRegion
 
-from deeprobust.image.attack.Nattack import NATTACK
-from deeprobust.image.attack.YOPOpgd import FASTPGD
+# from deeprobust.image.attack.Nattack import NATTACK
+# from deeprobust.image.attack.YOPOpgd import FASTPGD
 
 from utils.networks import relu_to_softplus
 

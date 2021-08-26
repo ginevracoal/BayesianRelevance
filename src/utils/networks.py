@@ -7,7 +7,7 @@ def relu_to_softplus(model, beta):
 		if isinstance(child, nn.LeakyReLU):
 			setattr(model, child_name, nn.Softplus(beta=beta))
 		else:
-			relu_to_softplus(child)
+			relu_to_softplus(child, beta)
 
 	return model
 

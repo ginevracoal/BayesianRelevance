@@ -3,32 +3,35 @@ Bayesian Neural Network model
 """
 
 import argparse
-import os
+import copy
 import keras
 import numpy as np
+import os
 import pandas as pd 
-import copy
+
 from collections import OrderedDict
 
 import torch
-from torch import nn
+import torch.distributions.constraints as constraints
 import torch.nn.functional as nnf
 import torch.optim as torchopt
-import torch.distributions.constraints as constraints
+
+from torch import nn
 softplus = torch.nn.Softplus()
 
 import pyro
-from pyro import poutine
-from pyro.infer import SVI, Trace_ELBO, TraceMeanField_ELBO, Predictive
 import pyro.optim as pyroopt
-from pyro.infer.mcmc import MCMC, HMC, NUTS
-from pyro.distributions import OneHotCategorical, Normal, Categorical, Uniform
+
+from pyro import poutine
+from pyro.distributions import Categorical, Normal, OneHotCategorical, Uniform
+from pyro.infer import Predictive, SVI, TraceMeanField_ELBO, Trace_ELBO
+from pyro.infer.mcmc import HMC, MCMC, NUTS
 from pyro.nn import PyroModule
 
-from utils.data import *
-from utils.savedir import *
-from utils.model_settings import fullBNN_settings
 from networks.baseNN import baseNN
+from utils.data import *
+from utils.model_settings import fullBNN_settings
+from utils.savedir import *
 
 
 DEBUG=False

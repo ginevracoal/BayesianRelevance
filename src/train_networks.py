@@ -1,17 +1,18 @@
-import os
-import torch
 import argparse
 import numpy as np
+import os
+import torch
 
-from utils.data import *
-from utils import savedir
-from utils.seeding import *
-import attacks.gradient_based as grad_based
 import attacks.deeprobust as deeprobust
+import attacks.gradient_based as grad_based
 
+from utils import savedir
+from utils.data import *
+from utils.seeding import *
+
+from networks.advNN import *
 from networks.baseNN import *
 from networks.fullBNN import *
-from networks.advNN import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, advNN")

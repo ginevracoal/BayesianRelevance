@@ -3,24 +3,25 @@ Deterministic Neural Network model.
 Last layer is separated from the others.
 """
 
-import os
 import argparse
 import numpy as np
+import os
 import torch
-from torch import nn
+import torch.nn.functional as F
 import torch.nn.functional as nnf
 import torch.optim as torchopt
-import torch.nn.functional as F
+
+from torch import nn
 
 from utils.data import *
+from utils.model_settings import baseNN_settings
 from utils.savedir import *
 from utils.seeding import *
-from utils.model_settings import baseNN_settings
 
-from lrp.linear import Linear 
-from lrp.maxpool import MaxPool2d 
-from lrp.conv import Conv2d 
-from lrp.sequential import Sequential 
+from lrp.conv import Conv2d
+from lrp.linear import Linear
+from lrp.maxpool import MaxPool2d
+from lrp.sequential import Sequential
 
 DEBUG = False
 

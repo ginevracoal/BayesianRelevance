@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ATTACK_METHOD="region" # fgsm, pgd, beta, topk
+ATTACK_METHOD="topk" # fgsm, pgd, beta, topk, region
 TEST_INPUTS=500
 ATK_SAMPLES=100
 TOPK=20
@@ -15,10 +15,10 @@ LOGS="../experiments/logs/"
 mkdir -p $LOGS
 OUT="${LOGS}${DATE}_${TIME}_out.txt"
 
-for MODEL_IDX in 1 #0 1 2 3
+for MODEL_IDX in 0 #0 1 2 3
 do
 
-	for MODEL in "fullBNN" # "baseNN" advNN" "fullBNN" 
+	for MODEL in "baseNN" "advNN" "fullBNN" 
 	do
 
 		# python train_networks.py --model=$MODEL --model_idx=$MODEL_IDX --attack_method=$ATTACK_METHOD --debug=$DEBUG \

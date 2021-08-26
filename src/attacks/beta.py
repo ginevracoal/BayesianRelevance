@@ -1,15 +1,16 @@
+import copy
+import math
+import numpy as np
+import os 
 import torch
 import torch.nn as nn
 import torch.nn.functional as nnf
 import torch.optim as optim
 import torch.utils.data as data_utils
 import torchvision
-import torchvision.transforms as transforms
 import torchvision.models as models
-import numpy as np
-import math
-import copy
-import os
+import torchvision.transforms as transforms
+
 from utils.networks import change_beta
 
 

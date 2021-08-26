@@ -2,25 +2,26 @@
 Deterministic Neural Network model with adversarial training.
 """
 
-import os
-import torch
 import argparse
 import numpy as np
-from torch import nn
-from tqdm import tqdm
+import os
+import torch
+import torch.nn.functional as F
 import torch.nn.functional as nnf
 import torch.optim as torchopt
-import torch.nn.functional as F
+
+from torch import nn
+from tqdm import tqdm
 
 from utils.data import *
+from utils.model_settings import baseNN_settings
 from utils.savedir import *
 from utils.seeding import *
-from utils.model_settings import baseNN_settings
 
-from lrp.linear import Linear 
-from lrp.maxpool import MaxPool2d 
-from lrp.conv import Conv2d 
-from lrp.sequential import Sequential 
+from lrp.conv import Conv2d
+from lrp.linear import Linear
+from lrp.maxpool import MaxPool2d
+from lrp.sequential import Sequential
 
 from attacks.run_attacks import attack
 from networks.baseNN import baseNN
