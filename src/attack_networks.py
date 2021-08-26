@@ -15,12 +15,13 @@ from utils.seeding import *
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", default="baseNN", type=str, help="baseNN, fullBNN, advNN")
 parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx from pre defined settings.")
-parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
+parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points to be attacked.")
+parser.add_argument("--n_samples", default=100, type=int)
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
 parser.add_argument("--attack_iters", default=10, type=int, help="Number of iterations in iterative attacks.")
 parser.add_argument("--attack_lrp_rule", default='epsilon', type=str, help="LRP rule used for the attacks.")
 parser.add_argument("--epsilon", default=0.2, type=int, help="Strength of a perturbation.")
-parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points to be attacked.")
+parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
@@ -28,7 +29,7 @@ args = parser.parse_args()
 MODE_ATKS = False
 
 n_inputs=100 if args.debug else args.n_inputs
-bayesian_attack_samples=[100] # 10, 50, 100]
+n_samples=2 if args.debug else args.n_samples
 hyperparams={'epsilon':args.epsilon, 'iters':args.attack_iters, 'lrp_rule':args.attack_lrp_rule}
 
 print("PyTorch Version: ", torch.__version__)
@@ -102,11 +103,9 @@ else:
 
     if args.load:
 
-        for n_samples in bayesian_attack_samples:
-
-            x_attack = load_attack(method=args.attack_method, model_savedir=savedir, n_samples=n_samples)
-            evaluate_attack(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
-                              device=args.device, n_samples=n_samples)
+        x_attack = load_attack(method=args.attack_method, model_savedir=savedir, n_samples=n_samples)
+        evaluate_attack(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
+                          device=args.device, n_samples=n_samples)
 
         if MODE_ATKS:
             if m["inference"]=="svi":
@@ -119,13 +118,12 @@ else:
         batch_size = 4000 if m["inference"] == "hmc" else 128 
         num_workers = 0 if args.device=="cuda" else 4
 
-        for n_samples in bayesian_attack_samples:
-            x_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device,
-                              method=args.attack_method, n_samples=n_samples, hyperparams=hyperparams)
-            save_attack(x_test, x_attack, method=args.attack_method, 
-                             model_savedir=savedir, n_samples=n_samples)
-            evaluate_attack(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
-                              device=args.device, n_samples=n_samples)
+        x_attack = attack(net=net, x_test=x_test, y_test=y_test, device=args.device,
+                          method=args.attack_method, n_samples=n_samples, hyperparams=hyperparams)
+        save_attack(x_test, x_attack, method=args.attack_method, 
+                         model_savedir=savedir, n_samples=n_samples)
+        evaluate_attack(net=net, x_test=x_test, x_attack=x_attack, y_test=y_test, 
+                          device=args.device, n_samples=n_samples)
 
         if MODE_ATKS:
             if m["inference"]=="svi":
