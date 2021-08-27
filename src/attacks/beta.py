@@ -33,7 +33,7 @@ def clamp_image(x, mean, std):
 	return x
 
 def Beta(image, model, target_image, data_mean, data_std, lrp_rule, iters, 
-		 delta=1e11, gamma=1e6, lr=0.001, beta_growth=False):
+		 delta=1, gamma=1, lr=0.001, beta_growth=False):
 
 	x = image.detach()
 	x_target = target_image.detach()

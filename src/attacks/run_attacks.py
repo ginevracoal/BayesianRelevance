@@ -62,7 +62,8 @@ def attack(net, x_test, y_test, device, method, hyperparams={}, n_samples=None, 
 
 			if method=='beta':
 				random.seed(idx)
-				hyperparams['target_image'] = random.choice(x_test).unsqueeze(0)
+				target_image = random.choice(x_test[idx+1:]) if idx<len(x_test)/2 else random.choice(x_test[:,idx-1])
+				hyperparams['target_image'] = target_image.unsqueeze(0)
 				hyperparams['data_mean'] = data_mean
 				hyperparams['data_std'] = data_std
 
@@ -91,7 +92,8 @@ def attack(net, x_test, y_test, device, method, hyperparams={}, n_samples=None, 
 
 			if method=='beta':
 				random.seed(idx)
-				hyperparams['target_image'] = random.choice(x_test).unsqueeze(0)
+				target_image = random.choice(x_test[idx+1:]) if idx<len(x_test)/2 else random.choice(x_test[:,idx-1])
+				hyperparams['target_image'] = target_image.unsqueeze(0)
 				hyperparams['data_mean'] = data_mean
 				hyperparams['data_std'] = data_std
 
