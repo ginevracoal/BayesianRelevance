@@ -18,7 +18,7 @@ parser.add_argument("--model_idx", default=0, type=int, help="Choose model idx f
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points to be attacked.")
 parser.add_argument("--n_samples", default=100, type=int)
 parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm, pgd")
-parser.add_argument("--attack_iters", default=10, type=int, help="Number of iterations in iterative attacks.")
+# parser.add_argument("--attack_iters", default=10, type=int, help="Number of iterations in iterative attacks.")
 parser.add_argument("--attack_lrp_rule", default='epsilon', type=str, help="LRP rule used for the attacks.")
 parser.add_argument("--epsilon", default=0.2, type=int, help="Strength of a perturbation.")
 parser.add_argument("--load", default=False, type=eval, help="Load saved computations and evaluate them.")
@@ -30,8 +30,9 @@ MODE_ATKS = False
 
 n_inputs=100 if args.debug else args.n_inputs
 n_samples=2 if args.debug else args.n_samples
+attack_iters=10 if args.attack_method=='beta' else 10
 
-hyperparams={'epsilon':args.epsilon, 'iters':args.attack_iters, 'lrp_rule':args.attack_lrp_rule}
+hyperparams={'epsilon':args.epsilon, 'iters':attack_iters, 'lrp_rule':args.attack_lrp_rule}
 
 print("PyTorch Version: ", torch.__version__)
 

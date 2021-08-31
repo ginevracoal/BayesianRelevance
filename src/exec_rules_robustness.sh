@@ -15,7 +15,7 @@ LOGS="../experiments/logs/"
 mkdir -p $LOGS
 OUT="${LOGS}${DATE}_${TIME}_out.txt"
 
-for MODEL_IDX in 3 #0 1 2 3
+for MODEL_IDX in 2 3 #0 1 2 3
 do
 
 	for MODEL in "baseNN" "advNN" "fullBNN" 

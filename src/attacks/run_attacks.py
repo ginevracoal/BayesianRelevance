@@ -62,7 +62,7 @@ def attack(net, x_test, y_test, device, method, hyperparams={}, n_samples=None, 
 
 			if method=='beta':
 				random.seed(idx)
-				target_image = random.choice(x_test[idx+1:]) if idx<len(x_test)/2 else random.choice(x_test[:,idx-1])
+				target_image = random.choice(x_test[idx+1:]) if idx<len(x_test)/2 else random.choice(x_test[:idx-1])
 				hyperparams['target_image'] = target_image.unsqueeze(0)
 				hyperparams['data_mean'] = data_mean
 				hyperparams['data_std'] = data_std
@@ -92,7 +92,7 @@ def attack(net, x_test, y_test, device, method, hyperparams={}, n_samples=None, 
 
 			if method=='beta':
 				random.seed(idx)
-				target_image = random.choice(x_test[idx+1:]) if idx<len(x_test)/2 else random.choice(x_test[:,idx-1])
+				target_image = random.choice(x_test[idx+1:]) if idx<len(x_test)/2 else random.choice(x_test[:idx-1])
 				hyperparams['target_image'] = target_image.unsqueeze(0)
 				hyperparams['data_mean'] = data_mean
 				hyperparams['data_std'] = data_std
@@ -144,9 +144,9 @@ def run_attack(net, image, label, method, device, hyperparams=None):
 
 	elif method == "beta":
 		if hasattr(net, "basenet"):
-			net.basenet = relu_to_softplus(net.basenet, beta=10)
+			net.basenet = relu_to_softplus(net.basenet, beta=100)
 		else:
-			net.model = relu_to_softplus(net.model, beta=10)
+			net.model = relu_to_softplus(net.model, beta=100)
 			
 		perturbed_image = Beta(image, model=net, target_image=hyperparams['target_image'], 
 							   iters=hyperparams['iters'], lrp_rule=hyperparams['lrp_rule'],
