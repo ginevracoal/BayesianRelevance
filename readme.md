@@ -22,20 +22,21 @@ cd src/
 
 ### Train and attack models 
 
-Set model architecture and parameters in `utils/model_settings.py`. 
+Set model architecture and parameters in `utils/model_settings.py`.
+To choose your device pass --device="cpu" or --device="cuda" to the script.
 
-Train a deterministic network and a Bayesian network with the same architecture (`model_0` from settings) on MNIST:
+***Example:***
+
+Train a deterministic network with a convolutional architecture (`model_0` from settings) on MNIST:
 
 ```
 python train_networks.py --model=baseNN --model_idx=0
-python train_networks.py --model=fullBNN --model_idx=0
 ```
 
-Attack both networks with FGSM on 500 test points:
+Attack with FGSM on 500 test points:
 
 ```
 python attack_networks.py --model=baseNN --model_idx=0 --attack_method=fgsm --n_inputs=500
-python attack_networks.py --model=fullBNN --model_idx=0 --attack_method=fgsm --n_inputs=500
 ```
 
 ### Compute LRP heatmaps
@@ -43,12 +44,22 @@ python attack_networks.py --model=fullBNN --model_idx=0 --attack_method=fgsm --n
 Compute LRP heatmaps on all learnable layers using epsilon rule:
 
 ```
-python compute_lrp.py --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=baseNN --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=epsilon
 ```
 
 ### Reproduce plots
 
+Plots are saved in `experiments/figures/`.
+
+*For fully automated executions please check*: `exec_layers_robustness.sh`,  `exec_rules_robustness.sh`, `exec_cifar.sh`
+
+***Fig. 1***
+
 ```
+# attack networks
+python train_networks.py --model=baseNN --model_idx=2
+python train_networks.py --model=fullBNN --model_idx=2
+
 # attack networks
 python attack_networks.py --model=baseNN --model_idx=2 --attack_method=fgsm --n_inputs=500
 python attack_networks.py --model=fullBNN --model_idx=2 --attack_method=fgsm --n_inputs=500
@@ -57,50 +68,107 @@ python attack_networks.py --model=fullBNN --model_idx=2 --attack_method=fgsm --n
 python compute_lrp.py --model_idx=2 --attack_method=fgsm --n_inputs=500 --rule=epsilon
 
 # plot
-python lrp_heatmaps_det_vs_bay.py --n_inputs=500 --model_idx=2 --topk=100 --n_samples=100 --attack_method=fgsm --lrp_method=avg_heatmap 
+python lrp_heatmaps_det_vs_bay.py --n_inputs=500 --model_idx=2 --topk=30 --n_samples=100 --attack_method=fgsm
 ```
-<img src="images/epsilon_heatmaps_det_vs_bay_mnist_topk=100_failed_atk=fgsm.png" width="400">
+<img src="images/heatmaps_det_vs_bay_mnist_topk=30_rule=epsilon_failed_atk=fgsm_model_idx=2.png" width="350">
 
+***Fig. 3***
 
 ```
-# attack networks
+# train and attack
+python train_networks.py --model=baseNN --model_idx=0
 python attack_networks.py --model=baseNN --model_idx=0 --attack_method=fgsm --n_inputs=500
 
 # compute LRP heatmaps
 python compute_lrp.py --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=epsilon
 
 # plot
-python lrp_heatmaps_layers.py --model=baseNN --model_idx=0 --n_inputs=500 --topk=100 --n_samples=50 --attack_method=fgsm --lrp_method=avg_heatmap --normalize=True
+python lrp_heatmaps_layers.py --model=baseNN --model_idx=0 --n_inputs=500 --topk=30 --n_samples=50 --attack_method=fgsm
 ```
-<img src="images/layers_heatmap_mnist_det_topk=100.png" width="500">
+<img src="images/layers_heatmaps_mnist_topk=30_rule=epsilon_atk=fgsm_model_idx=0_norm_layeridx=7.png" width="400">
+
+***Fig. 4***
 
 ```
-# attack networks
-python attack_networks.py --model=baseNN --model_idx=0 --attack_method=fgsm --n_inputs=500
-python attack_networks.py --model=fullBNN --model_idx=0 --attack_method=fgsm --n_inputs=500
+# train
+python train_networks.py --model=baseNN --model_idx=1
+python train_networks.py --model=advNN --model_idx=1
+python train_networks.py --model=fullBNN --model_idx=1
+
+python train_networks.py --model=baseNN --model_idx=3
+python train_networks.py --model=advNN --model_idx=3
+python train_networks.py --model=fullBNN --model_idx=3
+
+# attack
+python attack_networks.py --model=baseNN --model_idx=1 --attack_method=fgsm --n_inputs=500
+python attack_networks.py --model=advNN --model_idx=1 --attack_method=fgsm --n_inputs=500
+python attack_networks.py --model=fullBNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --n_samples=100
+
+python attack_networks.py --model=baseNN --model_idx=3 --attack_method=pgd --n_inputs=500
+python attack_networks.py --model=advNN --model_idx=3 --attack_method=pgd --n_inputs=500
+python attack_networks.py --model=fullBNN --model_idx=3 --attack_method=pgd --n_inputs=500 --n_samples=100
 
 # compute LRP heatmaps
-python compute_lrp.py --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=baseNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=advNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=fullBNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=epsilon --n_samples=100
+
+python compute_lrp.py --model=baseNN --model_idx=3 --attack_method=pgd --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=advNN --model_idx=3 --attack_method=pgd --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=fullBNN --model_idx=3 --attack_method=pgd --n_inputs=500 --rule=epsilon --n_samples=100
 
 # plot
-python lrp_layers_robustness.py --n_inputs=500 --model_idx=0 --model=fullBNN --attack_method=fgsm --rule=epsilon
+python lrp_layers_robustness.py --n_inputs=500 --model_idx=1 --attack_method=fgsm --rule=epsilon --plot_robustness_diff=True
+python lrp_layers_robustness.py --n_inputs=500 --model_idx=3 --attack_method=pgd --rule=epsilon --plot_robustness_diff=True
 ```
+<img src="images/diff_lrp_robustness_fashion_mnist_svi_images=500_rule=epsilon_samples=100_atk=fgsm_model_idx=1_layers_topk=20.png" width="200">
+<img src="images/diff_lrp_robustness_fashion_mnist_hmc_images=500_rule=epsilon_samples=100_atk=pgd_model_idx=3_layers_topk=20.png" width="200">
 
-<img src="images/dist_epsilon_lrp_robustness_mnist_svi_images=500_samples=100_atk=fgsm_layers.png" width="350">
-<img src="images/scatterplot_epsilon_lrp_robustness_mnist_svi_images=500_samples=100_atk=fgsm_layers_topk=100.png" width="350">
+***Fig. 5***
 
 ```
-# attack networks
-python attack_networks.py --model=baseNN --model_idx=0 --attack_method=fgsm --n_inputs=500
-python attack_networks.py --model=fullBNN --model_idx=0 --attack_method=fgsm --n_inputs=500
+# Fashion MNIST SVI target region attack
 
-# compute LRP heatmaps
-python compute_lrp.py --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=epsilon
-python compute_lrp.py --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=gamma
-python compute_lrp.py --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=alpha1beta0
+python train_networks.py --model=baseNN --model_idx=1
+python train_networks.py --model=advNN --model_idx=1
+python train_networks.py --model=fullBNN --model_idx=1
 
-# plot
-python lrp_rules_robustness.py --n_inputs=500 --model_idx=0 --topk=30 --n_samples=100 --lrp_method=avg_heatmap
+python attack_networks.py --model=baseNN --model_idx=1 --attack_method=fgsm --n_inputs=500
+python attack_networks.py --model=advNN --model_idx=1 --attack_method=fgsm --n_inputs=500
+python attack_networks.py --model=fullBNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --n_samples=100
+
+python compute_lrp.py --model=baseNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=baseNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=gamma
+python compute_lrp.py --model=baseNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=alpha1beta0
+
+python compute_lrp.py --model=advNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=advNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=gamma
+python compute_lrp.py --model=advNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=alpha1beta0
+
+python compute_lrp.py --model=fullBNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=fullBNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=gamma
+python compute_lrp.py --model=fullBNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=alpha1beta0
+
+python lrp_rules_robustness.py --n_inputs=500 --model_idx=1 --attack_method=fgsm --topk=20 --n_samples=100
+
+# CIFAR SVI FGSM + PGD attacks
+
+python full_test_cifar_resnet.py --mode=train --test_inputs=500
+python full_test_cifar_adversarial_resnet.py --mode=train --test_inputs=500
+python full_test_cifar_bayesian_resnet.py --mode=train --test_inputs=500
+
+python full_test_cifar_resnet.py --mode=test --test_inputs=500 --attack_method=fgsm
+python full_test_cifar_adversarial_resnet.py --mode=train --test_inputs=500 --attack_method=fgsm
+python full_test_cifar_bayesian_resnet.py --mode=train --test_inputs=500 --attack_method=fgsm
+
+python lrp_rules_robustness_cifar.py --n_inputs=500 --topk=20 --n_samples=100 --attack_method=fgsm
+
+python full_test_cifar_resnet.py --mode=test --test_inputs=500 --attack_method=pgd
+python full_test_cifar_adversarial_resnet.py --mode=train --test_inputs=500 --attack_method=pgd
+python full_test_cifar_bayesian_resnet.py --mode=train --test_inputs=500 --attack_method=pgd
+
+python lrp_rules_robustness_cifar.py --n_inputs=500 --topk=20 --n_samples=100 --attack_method=pgd
 ```
-
-<img src="images/rules_robustness_mnist_svi_fgsm_images=500_samples=100_topk=30.png" width="350">
+<img src="images/rules_robustness_fashion_mnist_svi_region_images=500_samples=100_topk=20_model_idx=1.png" width="200">
+<img src="images/rules_robustness_cifar_svi_fgsm_images=500_samples=100_topk=20.png" width="150">
+<img src="images/rules_robustness_cifar_svi_pgd_images=500_samples=100_topk=20.png" width="150">

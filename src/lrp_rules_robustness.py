@@ -15,8 +15,8 @@ from utils.savedir import *
 from utils.seeding import *
 
 from networks.baseNN import *
-from networks.fullBNN import *
 from networks.advNN import *
+from networks.fullBNN import *
 
 from utils.lrp import *
 from attacks.gradient_based import evaluate_attack
