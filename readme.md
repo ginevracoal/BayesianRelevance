@@ -169,3 +169,40 @@ python full_test_cifar_bayesian_resnet.py --mode=train --test_inputs=500 --attac
 python lrp_rules_robustness_cifar.py --n_inputs=500 --topk=20 --n_samples=100 --attack_method=pgd
 ```
 <img src="images/rules_robustness_fashion_mnist_svi_region_images=500_samples=100_topk=20_model_idx=1.png" width="200"/> <img src="images/rules_robustness_cifar_svi_fgsm_images=500_samples=100_topk=20.png" width="200"/><img src="images/rules_robustness_cifar_svi_pgd_images=500_samples=100_topk=20.png" width="200">
+
+***Fig. 6***
+
+```
+# train
+python train_networks.py --model=baseNN --model_idx=0
+python train_networks.py --model=advNN --model_idx=0
+python train_networks.py --model=fullBNN --model_idx=0
+
+python train_networks.py --model=baseNN --model_idx=2
+python train_networks.py --model=advNN --model_idx=2
+python train_networks.py --model=fullBNN --model_idx=2
+
+# attack
+python attack_networks.py --model=baseNN --model_idx=0 --attack_method=fgsm --n_inputs=500
+python attack_networks.py --model=advNN --model_idx=0 --attack_method=fgsm --n_inputs=500
+python attack_networks.py --model=fullBNN --model_idx=0 --attack_method=fgsm --n_inputs=500 --n_samples=100
+
+python attack_networks.py --model=baseNN --model_idx=2 --attack_method=pgd --n_inputs=500
+python attack_networks.py --model=advNN --model_idx=2 --attack_method=pgd --n_inputs=500
+python attack_networks.py --model=fullBNN --model_idx=2 --attack_method=pgd --n_inputs=500 --n_samples=100
+
+# compute LRP heatmaps
+python compute_lrp.py --model=baseNN --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=advNN --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=fullBNN --model_idx=0 --attack_method=fgsm --n_inputs=500 --rule=epsilon --n_samples=100
+
+python compute_lrp.py --model=baseNN --model_idx=2 --attack_method=pgd --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=advNN --model_idx=2 --attack_method=pgd --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=fullBNN --model_idx=2 --attack_method=pgd --n_inputs=500 --rule=epsilon --n_samples=100
+
+# plot
+python lrp_layers_robustness.py --n_inputs=500 --model_idx=0 --attack_method=fgsm --rule=epsilon --plot_scatterplot=True
+python lrp_layers_robustness.py --n_inputs=500 --model_idx=2 --attack_method=pgd --rule=epsilon --plot_scatterplot=True
+```
+
+<img src="images/scatterplot_lrp_robustness_mnist_svi_images=500_rule=epsilon_samples=100_atk=fgsm_model_idx=0_layers_topk=20.png" width="200"/> <img src="images/scatterplot_lrp_robustness_mnist_hmc_images=500_rule=epsilon_samples=100_atk=pgd_model_idx=2_layers_topk=20.png" width="200">
