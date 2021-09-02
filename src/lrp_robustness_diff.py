@@ -31,14 +31,12 @@ parser.add_argument("--attack_method", default="fgsm", type=str, help="fgsm")
 parser.add_argument("--lrp_method", default="avg_heatmap", type=str, help="avg_prediction, avg_heatmap")
 parser.add_argument("--rule", default="epsilon", type=str, help="Rule for LRP computation.")
 parser.add_argument("--normalize", default=False, type=eval, help="Normalize lrp heatmaps.")
-parser.add_argument("--plot_robustness_diff", default=False, type=eval)
-parser.add_argument("--plot_scatterplot", default=False, type=eval)
 parser.add_argument("--debug", default=False, type=eval, help="Run script in debugging mode.")
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
-n_samples_list=[10,50,100]
+n_samples_list=[5] if args.debug else [100]
 topk_list = [20]
 n_inputs=100 if args.debug else args.n_inputs
 
@@ -260,48 +258,30 @@ filename="lrp_robustness_"+m["dataset"]+"_"+str(bayesnet.inference)+"_images="+s
 if args.normalize:
 	filename+="_norm"
 
-# plot_lrp.lrp_layers_robustness_distributions(
-# 						det_lrp_robustness=det_lrp_robustness_topk,
-# 						det_successful_lrp_robustness=det_successful_lrp_robustness_topk,
-# 						det_failed_lrp_robustness=det_failed_lrp_robustness_topk,
-# 						adv_lrp_robustness=adv_lrp_robustness_topk,
-# 						adv_successful_lrp_robustness=adv_successful_lrp_robustness_topk,
-# 						adv_failed_lrp_robustness=adv_failed_lrp_robustness_topk,
-# 						bay_lrp_robustness=bay_lrp_robustness_topk,
-# 						bay_successful_lrp_robustness=bay_successful_lrp_robustness_topk,
-# 						bay_failed_lrp_robustness=bay_failed_lrp_robustness_topk,
-# 						n_samples_list=n_samples_list,
-# 						topk_list=topk_list,
-# 						n_original_images=len(images),
-# 						learnable_layers_idxs=detnet.learnable_layers_idxs,
-# 						savedir=savedir, 
-# 						filename="dist_"+filename+"_layers")
 
-if args.plot_robustness_diff:
+plot_lrp.lrp_layers_robustness_differences(
+						det_lrp_robustness=det_lrp_robustness_topk,
+						adv_lrp_robustness=adv_lrp_robustness_topk,
+						bay_lrp_robustness=bay_lrp_robustness_topk,
+						n_samples_list=n_samples_list,
+						topk_list=topk_list,
+						n_original_images=len(images),
+						learnable_layers_idxs=detnet.learnable_layers_idxs,
+						savedir=os.path.join(TESTS,'figures/layers_robustness'), 
+						filename="diff_"+filename+"_layers")
 
-	plot_lrp.lrp_layers_robustness_differences(
-							det_lrp_robustness=det_lrp_robustness_topk,
-							adv_lrp_robustness=adv_lrp_robustness_topk,
-							bay_lrp_robustness=bay_lrp_robustness_topk,
-							n_samples_list=n_samples_list,
-							topk_list=topk_list,
-							n_original_images=len(images),
-							learnable_layers_idxs=detnet.learnable_layers_idxs,
-							savedir=os.path.join(TESTS,'figures/layers_robustness'), 
-							filename="diff_"+filename+"_layers")
+# if args.plot_scatterplot:
 
-if args.plot_scatterplot:
-
-	plot_lrp.lrp_layers_robustness_scatterplot(
-							det_lrp_robustness=det_lrp_robustness_topk,
-							adv_lrp_robustness=adv_lrp_robustness_topk,
-							bay_lrp_robustness=bay_lrp_robustness_topk,
-	                      	det_softmax_robustness=det_softmax_robustness_topk,
-	                      	adv_softmax_robustness=adv_softmax_robustness_topk,
-	                      	bay_softmax_robustness=bay_softmax_robustness_topk,
-							n_samples_list=n_samples_list,
-							topk_list=topk_list,
-							n_original_images=len(images),
-							learnable_layers_idxs=detnet.learnable_layers_idxs,
-							savedir=os.path.join(TESTS,'figures/layers_robustness'), 
-							filename="scatterplot_"+filename+"_layers_topk="+str(topk_list[-1]))
+# 	plot_lrp.lrp_layers_robustness_scatterplot(
+# 							det_lrp_robustness=det_lrp_robustness_topk,
+# 							adv_lrp_robustness=adv_lrp_robustness_topk,
+# 							bay_lrp_robustness=bay_lrp_robustness_topk,
+# 	                      	det_softmax_robustness=det_softmax_robustness_topk,
+# 	                      	adv_softmax_robustness=adv_softmax_robustness_topk,
+# 	                      	bay_softmax_robustness=bay_softmax_robustness_topk,
+# 							n_samples_list=n_samples_list,
+# 							topk_list=topk_list,
+# 							n_original_images=len(images),
+# 							learnable_layers_idxs=detnet.learnable_layers_idxs,
+# 							savedir=os.path.join(TESTS,'figures/layers_robustness'), 
+# 							filename="scatterplot_"+filename+"_layers_topk="+str(topk_list[-1]))

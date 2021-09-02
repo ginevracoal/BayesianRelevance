@@ -15,7 +15,7 @@ LOGS="../experiments/logs/"
 mkdir -p $LOGS
 OUT="${LOGS}${DATE}_${TIME}_out.txt"
 
-for MODE in "test" #"train" 
+for MODE in "train" "test"
 do
 
 	python full_test_cifar_resnet.py --mode=$MODE --attack_method=$ATTACK_METHOD --test_inputs=$TEST_INPUTS >> $OUT
