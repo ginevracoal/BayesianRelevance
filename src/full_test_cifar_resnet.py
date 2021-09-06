@@ -129,7 +129,7 @@ parser.add_argument(
 	default=500)
 
 best_prec1 = 0
-
+attack_hyperparams={'epsilon':0.2}
 
 def main():
 	global args, best_prec1
@@ -282,7 +282,7 @@ def main():
 			labels.append(label)
 		images = torch.stack(images)
 
-		attacks = attack(model, dataset, method=method)
+		attacks = attack(model, dataset, method=method, hyperparams=attack_hyperparams)
 		save_attack(inputs=images, attacks=attacks, method=method, model_savedir=args.save_dir)
 		# attacks = load_attack(method=method, model_savedir=args.save_dir)
 
@@ -523,7 +523,7 @@ def evaluate(args, model, val_loader):
 	np.save('../experiments/bayesian_torch/probs_cifar_det.npy', output.data.cpu().numpy())
 	np.save('../experiments/bayesian_torch/cifar_test_labels.npy', target.data.cpu().numpy())
 
-def attack(model, dataset, method):
+def attack(model, dataset, method, hyperparams):
 
 	model.eval()
 	adversarial_attacks = []
@@ -539,8 +539,8 @@ def attack(model, dataset, method):
 			data, target = data.cpu(), target.cpu()
 			device = 'cpu'
 
-		perturbed_image = run_attack(net=model, image=data, label=target, method=method, 
-									 device=device, hyperparams=None).squeeze()
+		perturbed_image = run_attack(net=model, image=data, label=target, method=method,
+									 device=device, hyperparams=attack_hyperparams).squeeze()
 		perturbed_image = torch.clamp(perturbed_image, 0., 1.)
 		adversarial_attacks.append(perturbed_image)
 

@@ -258,7 +258,6 @@ filename="lrp_robustness_"+m["dataset"]+"_"+str(bayesnet.inference)+"_images="+s
 if args.normalize:
 	filename+="_norm"
 
-
 plot_lrp.lrp_layers_robustness_differences(
 						det_lrp_robustness=det_lrp_robustness_topk,
 						adv_lrp_robustness=adv_lrp_robustness_topk,
@@ -269,19 +268,3 @@ plot_lrp.lrp_layers_robustness_differences(
 						learnable_layers_idxs=detnet.learnable_layers_idxs,
 						savedir=os.path.join(TESTS,'figures/layers_robustness'), 
 						filename="diff_"+filename+"_layers")
-
-# if args.plot_scatterplot:
-
-# 	plot_lrp.lrp_layers_robustness_scatterplot(
-# 							det_lrp_robustness=det_lrp_robustness_topk,
-# 							adv_lrp_robustness=adv_lrp_robustness_topk,
-# 							bay_lrp_robustness=bay_lrp_robustness_topk,
-# 	                      	det_softmax_robustness=det_softmax_robustness_topk,
-# 	                      	adv_softmax_robustness=adv_softmax_robustness_topk,
-# 	                      	bay_softmax_robustness=bay_softmax_robustness_topk,
-# 							n_samples_list=n_samples_list,
-# 							topk_list=topk_list,
-# 							n_original_images=len(images),
-# 							learnable_layers_idxs=detnet.learnable_layers_idxs,
-# 							savedir=os.path.join(TESTS,'figures/layers_robustness'), 
-# 							filename="scatterplot_"+filename+"_layers_topk="+str(topk_list[-1]))

@@ -16,7 +16,6 @@ from utils.seeding import *
 
 from networks.baseNN import *
 from networks.fullBNN import *
-from networks.redBNN import *
 
 from utils.lrp import *
 from attacks.gradient_based import evaluate_attack
@@ -25,6 +24,10 @@ from attacks.run_attacks import *
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+from plot.lrp_distributions import significance_symbol
+from scipy.stats import mannwhitneyu as stat_test
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_inputs", default=500, type=int, help="Number of test points")
@@ -39,6 +42,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 lrp_robustness_method = "imagewise"
 n_inputs=100 if args.debug else args.n_inputs
+alternative = 'greater'
 
 print("PyTorch Version: ", torch.__version__)
 print("Torchvision Version: ", torchvision.__version__)
@@ -93,16 +97,22 @@ else:
             bay_robustness, bay_pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp, adversarial_heatmaps=bay_attack_lrp, 
                                           topk=args.topk, method=lrp_robustness_method)
 
+            _, adv_p = stat_test(x=det_robustness, y=adv_robustness, alternative=alternative)
+            _, bay_p = stat_test(x=det_robustness, y=bay_robustness, alternative=alternative)
+            _, p = stat_test(x=adv_robustness, y=bay_robustness, alternative=alternative)
+            print("\np values =", adv_p, bay_p, p)  
+
             for im_idx in range(len(det_robustness)):
 
                 df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':'Adv - Det', 
-                                'robustness_diff':adv_robustness[im_idx]-det_robustness[im_idx]}, 
+                                'robustness_diff':adv_robustness[im_idx]-det_robustness[im_idx],
+                                'p_value':p, 'adv_p_value':adv_p, 'bay_p_value':bay_p},
                                 ignore_index=True)
 
                 df = df.append({'rule':rule, 'layer_idx':layer_idx, 'model':f'Bay - Det', #samp={args.n_samples}', 
-                                'robustness_diff':bay_robustness[im_idx]-det_robustness[im_idx]}, 
+                                'robustness_diff':bay_robustness[im_idx]-det_robustness[im_idx],
+                                'p_value':p, 'adv_p_value':adv_p, 'bay_p_value':bay_p},
                                 ignore_index=True)
-
 
     save_to_pickle(data=df, path=plot_savedir, filename=filename)
 
@@ -120,7 +130,7 @@ def plot_rules_robustness(df, n_samples, learnable_layers_idxs, savedir, filenam
     bay_col = plt.cm.get_cmap('crest', 100)(np.linspace(0, 1, 10))[3:]
     palettes = [det_col, bay_col]
 
-    fig, ax = plt.subplots(len(learnable_layers_idxs), 2, figsize=(3, 1.9), sharex=True, sharey=True, dpi=150, 
+    fig, ax = plt.subplots(len(learnable_layers_idxs), 2, figsize=(3, 2), sharex=True, sharey=True, dpi=150, 
                             facecolor='w', edgecolor='k') 
     fig.tight_layout()
 
@@ -134,6 +144,16 @@ def plot_rules_robustness(df, n_samples, learnable_layers_idxs, savedir, filenam
 
             sns.boxplot(data=temp_df, ax=ax[col_idx], x='rule', y='robustness_diff', orient='v', hue='rule', 
                         palette=palette, dodge=False)
+
+            for rule, x in zip(temp_df['rule'].unique(), [-0.3, 0.7, 1.7]):
+                rule_df = temp_df[temp_df['rule']==rule]
+
+                p_value = rule_df['p_value'].unique()[0]
+                assert len(rule_df['p_value'].unique())==1
+                significance = significance_symbol(p_value)
+                if significance!='n.s.':
+                    y = min(temp_df['robustness_diff'])-0.12
+                    ax[row_idx, col_idx].text(x=x, y=y, s=significance, weight='bold', size=8, color=palette[rule])
 
             for i, patch in enumerate(ax[col_idx].artists):
                 
@@ -157,13 +177,14 @@ def plot_rules_robustness(df, n_samples, learnable_layers_idxs, savedir, filenam
             ax[col_idx].get_legend().remove()
             ax[col_idx].set_xlabel("")
             ax[0].set_xlabel("Adv - Det")
-            ax[1].set_xlabel("Bay - Det") # samp="+str(n_samples))
+            ax[1].set_xlabel("Bay - Det")
+            ax[col_idx].text(x=0.4, y=-0.48, s="LRP rule", weight='bold')
             ax[col_idx].set_xticklabels([r'$\epsilon$',r'$\gamma$',r'$\alpha\beta$'])
 
     plt.subplots_adjust(hspace=0.05)
     plt.subplots_adjust(wspace=0.05)
     fig.subplots_adjust(left=0.15)
-    fig.subplots_adjust(bottom=0.15)
+    fig.subplots_adjust(bottom=0.2)
     print("\nSaving: ", os.path.join(savedir, filename+".png"))                                        
     fig.savefig(os.path.join(savedir, filename+".png"))
     plt.close(fig)

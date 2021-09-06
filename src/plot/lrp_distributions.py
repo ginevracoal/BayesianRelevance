@@ -15,6 +15,24 @@ from utils.savedir import *
 from utils.seeding import set_seed
 from utils.lrp import *
 
+
+def significance_symbol(p):
+
+    if p>0.05:
+        return 'n.s.'
+
+    elif 0.01 < p <= 0.05:
+        return '*'
+
+    elif 0.001 < p <= 0.01:
+        return '**'
+
+    elif 0.0001 < p <= 0.001:
+        return '***'
+
+    else:
+        return '****'
+
 def stripplot_lrp_values(lrp_heatmaps_list, n_samples_list, savedir, filename, layer_idx=-1):
 
     matplotlib.rc('font', **{'weight': 'bold', 'size': 12})
