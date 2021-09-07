@@ -126,49 +126,62 @@ python lrp_robustness_diff.py --n_inputs=500 --model_idx=3 --attack_method=pgd -
 ***Fig. 5***
 
 ```
-# Fashion MNIST SVI target region attack
+# train 
 
-python train_networks.py --model=baseNN --model_idx=1
-python train_networks.py --model=advNN --model_idx=1
-python train_networks.py --model=fullBNN --model_idx=1
+python train_networks.py --model=baseNN --model_idx=2
+python train_networks.py --model=advNN --model_idx=2
+python train_networks.py --model=fullBNN --model_idx=2
 
-python attack_networks.py --model=baseNN --model_idx=1 --attack_method=fgsm --n_inputs=500
-python attack_networks.py --model=advNN --model_idx=1 --attack_method=fgsm --n_inputs=500
-python attack_networks.py --model=fullBNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --n_samples=100
-
-python compute_lrp.py --model=baseNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=epsilon
-python compute_lrp.py --model=baseNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=gamma
-python compute_lrp.py --model=baseNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=alpha1beta0
-
-python compute_lrp.py --model=advNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=epsilon
-python compute_lrp.py --model=advNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=gamma
-python compute_lrp.py --model=advNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=alpha1beta0
-
-python compute_lrp.py --model=fullBNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=epsilon
-python compute_lrp.py --model=fullBNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=gamma
-python compute_lrp.py --model=fullBNN --model_idx=1 --attack_method=fgsm --n_inputs=500 --rule=alpha1beta0
-
-python lrp_rules_robustness.py --n_inputs=500 --model_idx=1 --attack_method=fgsm --topk=20 --n_samples=100
-
-# CIFAR SVI FGSM + PGD attacks
+python train_networks.py --model=baseNN --model_idx=3
+python train_networks.py --model=advNN --model_idx=3
+python train_networks.py --model=fullBNN --model_idx=3
 
 python full_test_cifar_resnet.py --mode=train --test_inputs=500
 python full_test_cifar_adversarial_resnet.py --mode=train --test_inputs=500
 python full_test_cifar_bayesian_resnet.py --mode=train --test_inputs=500
 
+# attack
+
+python attack_networks.py --model=baseNN --model_idx=2 --attack_method=fgsm --n_inputs=500
+python attack_networks.py --model=advNN --model_idx=2 --attack_method=fgsm --n_inputs=500
+python attack_networks.py --model=fullBNN --model_idx=2 --attack_method=fgsm --n_inputs=500 --n_samples=100
+
+python attack_networks.py --model=baseNN --model_idx=3 --attack_method=fgsm --n_inputs=500
+python attack_networks.py --model=advNN --model_idx=3 --attack_method=fgsm --n_inputs=500
+python attack_networks.py --model=fullBNN --model_idx=3 --attack_method=fgsm --n_inputs=500 --n_samples=100
+
 python full_test_cifar_resnet.py --mode=test --test_inputs=500 --attack_method=fgsm
-python full_test_cifar_adversarial_resnet.py --mode=train --test_inputs=500 --attack_method=fgsm
-python full_test_cifar_bayesian_resnet.py --mode=train --test_inputs=500 --attack_method=fgsm
+python full_test_cifar_adversarial_resnet.py --mode=test --test_inputs=500 --attack_method=fgsm
+python full_test_cifar_bayesian_resnet.py --mode=test --test_inputs=500 --attack_method=fgsm
 
-python lrp_rules_robustness_cifar.py --n_inputs=500 --topk=20 --n_samples=100 --attack_method=fgsm
+# compute LRP
 
-python full_test_cifar_resnet.py --mode=test --test_inputs=500 --attack_method=pgd
-python full_test_cifar_adversarial_resnet.py --mode=train --test_inputs=500 --attack_method=pgd
-python full_test_cifar_bayesian_resnet.py --mode=train --test_inputs=500 --attack_method=pgd
+python compute_lrp.py --model=baseNN --model_idx=2 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=baseNN --model_idx=2 --attack_method=fgsm --n_inputs=500 --rule=gamma
+python compute_lrp.py --model=baseNN --model_idx=2 --attack_method=fgsm --n_inputs=500 --rule=alpha1beta0
+python compute_lrp.py --model=advNN --model_idx=2 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=advNN --model_idx=2 --attack_method=fgsm --n_inputs=500 --rule=gamma
+python compute_lrp.py --model=advNN --model_idx=2 --attack_method=fgsm --n_inputs=500 --rule=alpha1beta0
+python compute_lrp.py --model=fullBNN --model_idx=2 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=fullBNN --model_idx=2 --attack_method=fgsm --n_inputs=500 --rule=gamma
+python compute_lrp.py --model=fullBNN --model_idx=2 --attack_method=fgsm --n_inputs=500 --rule=alpha1beta0
 
-python lrp_rules_robustness_cifar.py --n_inputs=500 --topk=20 --n_samples=100 --attack_method=pgd
+python compute_lrp.py --model=baseNN --model_idx=3 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=baseNN --model_idx=3 --attack_method=fgsm --n_inputs=500 --rule=gamma
+python compute_lrp.py --model=baseNN --model_idx=3 --attack_method=fgsm --n_inputs=500 --rule=alpha1beta0
+python compute_lrp.py --model=advNN --model_idx=3 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=advNN --model_idx=3 --attack_method=fgsm --n_inputs=500 --rule=gamma
+python compute_lrp.py --model=advNN --model_idx=3 --attack_method=fgsm --n_inputs=500 --rule=alpha1beta0
+python compute_lrp.py --model=fullBNN --model_idx=3 --attack_method=fgsm --n_inputs=500 --rule=epsilon
+python compute_lrp.py --model=fullBNN --model_idx=3 --attack_method=fgsm --n_inputs=500 --rule=gamma
+python compute_lrp.py --model=fullBNN --model_idx=3 --attack_method=fgsm --n_inputs=500 --rule=alpha1beta0
+
+# plot
+python lrp_rules_robustness_main.py --n_inputs=500 --topk=20 --n_samples=100 --attack_method=fgsm
 ```
-<img src="images/rules_robustness_fashion_mnist_svi_region_images=500_samples=100_topk=20_model_idx=1.png" width="200"/> <img src="images/rules_robustness_cifar_svi_fgsm_images=500_samples=100_topk=20.png" width="200"/><img src="images/rules_robustness_cifar_svi_pgd_images=500_samples=100_topk=20.png" width="200">
+
+<img src="images/rules_robustness_main_fgsm_images=500_samples=100_topk=20.png" width="200"/>
+
 
 ***Fig. 6***
 
