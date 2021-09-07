@@ -180,7 +180,7 @@ python compute_lrp.py --model=fullBNN --model_idx=3 --attack_method=fgsm --n_inp
 python lrp_rules_robustness_main.py --n_inputs=500 --topk=20 --n_samples=100 --attack_method=fgsm
 ```
 
-<img src="images/rules_robustness_main_fgsm_images=500_samples=100_topk=20.png" width="200"/>
+<img src="images/rules_robustness_main_fgsm_images=500_samples=100_topk=20.png" width="400"/>
 
 
 ***Fig. 6***
