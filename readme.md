@@ -227,3 +227,17 @@ python lrp_robustness_scatterplot.py --n_inputs=500 --model_idx=2 --attack_metho
 ```
 
 <img src="images/scatterplot_lrp_robustness_mnist_svi_images=500_rule=epsilon_samples=100_atk=fgsm_model_idx=0_layers_topk=20.png" width="200"/> <img src="images/scatterplot_lrp_robustness_mnist_hmc_images=500_rule=epsilon_samples=100_atk=pgd_model_idx=2_layers_topk=20.png" width="200">
+
+### Appendix plots
+
+***Fig. 7-9, 16***
+
+`./exec_layers_robustness.sh`
+
+***Fig. 10-15***
+
+```
+./exec_rules_robustness.sh
+./exec_cifar.sh
+```
+
