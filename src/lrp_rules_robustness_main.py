@@ -49,7 +49,7 @@ print("Torchvision Version: ", torchvision.__version__)
 if args.device=="cuda":
 		torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
-df_savedir = os.path.join(TESTS,'experiments/fullBNN')
+df_savedir = os.path.join(TESTS,'debug/fullBNN') if args.debug is True else os.path.join(TESTS,'fullBNN')
 filename="rules_robustness_main_"+str(args.attack_method)+"_images="+str(n_inputs)\
 			+"_samples="+str(args.n_samples)+"_topk="+str(args.topk)
 
@@ -214,7 +214,7 @@ def plot_rules_robustness_diff(df, n_samples, datasets, savedir, filename):
 	bay_col = plt.cm.get_cmap('crest', 100)(np.linspace(0, 1, 10))[3:]
 	palettes = [adv_col, bay_col]
 
-	fig, ax = plt.subplots(len(datasets), 2, figsize=(4, 4), sharex=True, sharey=True, dpi=150, 
+	fig, ax = plt.subplots(len(datasets), 2, figsize=(4, 4), sharex=True, sharey='row', dpi=150, 
 							facecolor='w', edgecolor='k') 
 	fig.tight_layout()
 	fig.subplots_adjust(bottom=0.1)
