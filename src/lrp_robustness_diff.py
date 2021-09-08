@@ -36,7 +36,7 @@ parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")
 args = parser.parse_args()
 
 lrp_robustness_method = "imagewise"
-n_samples_list=[5] if args.debug else [100]
+n_samples_list=[5] if args.debug else [10, 50, 100]
 topk_list = [20]
 n_inputs=100 if args.debug else args.n_inputs
 
@@ -85,7 +85,10 @@ for n_samples in n_samples_list:
 		bay_attack.append(load_attack(method=args.attack_method, model_savedir=bay_model_savedir, 
 											n_samples=n_samples))
 
-### plot
+### plots
+
+filename="lrp_robustness_"+m["dataset"]+"_"+str(bayesnet.inference)+"_images="+str(n_inputs)+"_rule="+str(args.rule)\
+		  +"_samples="+str(n_samples)+"_atk="+str(args.attack_method)+"_model_idx="+str(args.model_idx)
 
 images = x_test.to(args.device)
 labels = y_test.argmax(-1).to(args.device)
@@ -192,24 +195,28 @@ for topk in topk_list:
 		bay_preds=[]
 		bay_atk_preds=[]
 		bay_softmax_robustness=[]
+		bay_successful_idxs=[]
 		bay_failed_idxs=[]
 		bay_lrp_robustness=[]
 		bay_norm=[]
+		bay_lrp_pxl_idxs=[]
 
 		for samp_idx, n_samples in enumerate(n_samples_list):
 
-			preds, atk_preds, softmax_rob, successf_idxs, failed_idxs = evaluate_attack(net=bayesnet, x_test=images, 
+			preds, atk_preds, softmax_rob, succ_idxs, failed_idxs = evaluate_attack(net=bayesnet, x_test=images, 
 														 x_attack=bay_attack[samp_idx], y_test=y_test, device=args.device, 
 														 n_samples=n_samples, return_classification_idxs=True)
 			bay_preds.append(preds)
 			bay_atk_preds.append(atk_preds)
 			bay_softmax_robustness.append(softmax_rob.detach().cpu().numpy())
+			bay_successful_idxs.append(succ_idxs)
 			bay_failed_idxs.append(failed_idxs)
 
 			robustness, pxl_idxs = lrp_robustness(original_heatmaps=bay_lrp[samp_idx], 
 												 adversarial_heatmaps=bay_attack_lrp[samp_idx], 
 												 topk=topk, method=lrp_robustness_method)
 			bay_lrp_robustness.append(robustness)
+			bay_lrp_pxl_idxs.append(pxl_idxs)
 
 			bay_norm.append(lrp_distances(bay_lrp[samp_idx], 
 											bay_attack_lrp[samp_idx], 
@@ -231,6 +238,43 @@ for topk in topk_list:
 		adv_softmax_robustness_layers.append(adv_softmax_robustness)
 		bay_softmax_robustness_layers.append(bay_softmax_robustness)
 
+	### plot last layer atk explanations
+
+	savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
+	                      	  rule=args.rule, layer_idx=layer_idx)
+
+	plot_attacks_explanations(images=images, 
+							  explanations=det_lrp, 
+							  attacks=det_attack, 
+							  attacks_explanations=det_attack_lrp, 
+							  predictions=det_preds.argmax(-1),
+							  attacks_predictions=det_atk_preds.argmax(-1),
+							  successful_attacks_idxs=det_successful_idxs,
+							  failed_attacks_idxs=det_failed_idxs,
+							  labels=labels, lrp_rob_method=lrp_robustness_method,
+							  rule=args.rule, 
+							  savedir=os.path.join(TESTS,'figures/attacks_explanations'),
+							  pxl_idxs=det_lrp_pxl_idxs,
+							  filename="det_lrp_attacks_"+filename, 
+							  layer_idx=layer_idx)
+
+	for samp_idx, n_samples in enumerate(n_samples_list):
+
+		plot_attacks_explanations(images=images, 
+								  explanations=bay_lrp[samp_idx], 
+								  attacks=bay_attack[samp_idx], 
+								  attacks_explanations=bay_attack_lrp[samp_idx],
+								  predictions=bay_preds[samp_idx].argmax(-1),
+								  attacks_predictions=bay_atk_preds[samp_idx].argmax(-1),
+								  successful_attacks_idxs=bay_successful_idxs[samp_idx],
+								  failed_attacks_idxs=bay_failed_idxs[samp_idx],
+								  labels=labels, lrp_rob_method=lrp_robustness_method,
+								  rule=args.rule, 
+	  							  savedir=os.path.join(TESTS,'figures/attacks_explanations'),
+								  pxl_idxs=bay_lrp_pxl_idxs[samp_idx],
+								  filename="bay_lrp_attacks_samp="+str(n_samples)+"_"+filename, 
+								  layer_idx=layer_idx)
+
 	det_lrp_robustness_topk.append(det_lrp_robustness_layers)
 	adv_lrp_robustness_topk.append(adv_lrp_robustness_layers)
 	bay_lrp_robustness_topk.append(bay_lrp_robustness_layers)
@@ -248,12 +292,6 @@ for topk in topk_list:
 	bay_softmax_robustness_topk.append(bay_softmax_robustness_layers)
 
 ### Plots
-
-savedir = get_lrp_savedir(model_savedir=bay_model_savedir, attack_method=args.attack_method, 
-                      	  rule=args.rule, lrp_method=args.lrp_method)
-
-filename="lrp_robustness_"+m["dataset"]+"_"+str(bayesnet.inference)+"_images="+str(n_inputs)+"_rule="+str(args.rule)\
-		  +"_samples="+str(n_samples)+"_atk="+str(args.attack_method)+"_model_idx="+str(args.model_idx)
 
 if args.normalize:
 	filename+="_norm"
