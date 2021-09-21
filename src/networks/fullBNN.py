@@ -344,7 +344,7 @@ class BNN(PyroModule):
             self._train_hmc(train_loader, self.hmc_samples, self.warmup,
                             self.step_size, self.num_steps, savedir, device)
 
-    def evaluate(self, test_loader, device, avg_posterior=False, n_samples=10):
+    def evaluate(self, test_loader, device, avg_posterior=False, n_samples=10, sample_idxs=None):
         self.to(device)
         self.basenet.to(device)
 
@@ -354,7 +354,7 @@ class BNN(PyroModule):
             for x_batch, y_batch in test_loader:
 
                 x_batch = x_batch.to(device)
-                outputs = self.forward(x_batch, n_samples=n_samples)#, avg_posterior=avg_posterior)
+                outputs = self.forward(x_batch, n_samples=n_samples, sample_idxs=sample_idxs)
                 predictions = outputs.to(device).argmax(-1)
                 labels = y_batch.to(device).argmax(-1)
                 correct_predictions += (predictions == labels).sum().item()
