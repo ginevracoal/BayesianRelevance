@@ -96,13 +96,9 @@ else:
         raise NotImplementedError
 
     if args.debug:
-        bayesian_attack_samples=[1,5]
+        bayesian_samples = [1,5]
     else:
-        if m["inference"]=="svi":
-            bayesian_attack_samples=[5,10,50]
-
-        elif m["inference"]=="hmc":
-            bayesian_attack_samples=[5,10,50]
+        bayesian_samples = [10, 50, 100]#[5,10,50]
 
     if args.load:
         net.load(savedir=savedir, device=args.device)
@@ -110,5 +106,5 @@ else:
     else:
         net.train(train_loader=train_loader, savedir=savedir, device=args.device)
 
-    for n_samples in bayesian_attack_samples:
+    for n_samples in bayesian_samples:
         net.evaluate(test_loader=test_loader, device=args.device, n_samples=n_samples)
