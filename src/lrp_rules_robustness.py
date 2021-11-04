@@ -41,7 +41,7 @@ parser.add_argument("--debug", default=False, type=eval, help="Run script in deb
 parser.add_argument("--device", default='cuda', type=str, help="cpu, cuda")  
 
 rules_list = ['epsilon','gamma','alpha1beta0']
-alternative = 'greater'
+alternative = 'less'
 
 args = parser.parse_args()
 lrp_robustness_method = "imagewise"
@@ -198,10 +198,12 @@ def plot_rules_robustness_diff(df, n_samples, learnable_layers_idxs, savedir, fi
 			for row_idx, layer_idx in enumerate(learnable_layers_idxs):
 
 				temp_df = df[df['layer_idx']==layer_idx]
+				y = min(temp_df['robustness_diff'])*1.2
+
 				temp_df = temp_df[temp_df['model']==model]
 
 				sns.boxplot(data=temp_df, ax=ax[row_idx, col_idx], x='rule', y='robustness_diff', orient='v', hue='rule', 
-							palette=palette, dodge=False)
+							palette=palette, dodge=False, flierprops={'markersize':3})
 
 				for rule, x in zip(temp_df['rule'].unique(), [-0.3, 0.7, 1.7]):
 					rule_df = temp_df[temp_df['rule']==rule]
@@ -209,9 +211,9 @@ def plot_rules_robustness_diff(df, n_samples, learnable_layers_idxs, savedir, fi
 					p_value = rule_df['p_value'].unique()[0]
 					assert len(rule_df['p_value'].unique())==1
 					significance = significance_symbol(p_value)
-					if significance!='n.s.':
-						y = min(temp_df['robustness_diff'])-0.12
-						ax[row_idx, col_idx].text(x=x, y=y, s=significance, weight='bold', size=8, color=palette[rule])
+					# if significance!='n.s.':
+					# 	y = min(temp_df['robustness_diff'])-0.12
+					ax[row_idx, col_idx].text(x=x, y=y, s=significance, weight='bold', size=8, color=palette[rule])
 
 				for i, patch in enumerate(ax[row_idx, col_idx].artists):
 					

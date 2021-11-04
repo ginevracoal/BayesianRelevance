@@ -6,6 +6,7 @@ N_SAMPLES=100
 TOPK=20
 DEVICE="cuda" # cpu, cuda
 DEBUG="False"
+LOAD="True"
 
 source ../venv/bin/activate
 
@@ -37,7 +38,7 @@ do
 
 	python lrp_rules_robustness.py --model_idx=$MODEL_IDX --attack_method=$ATTACK_METHOD --debug=$DEBUG \
 									--device=$DEVICE --n_inputs=$TEST_INPUTS --n_samples=$N_SAMPLES \
-									--topk=$TOPK --load="True" >> $OUT
+									--topk=$TOPK --load=$LOAD >> $OUT
 
 done
 

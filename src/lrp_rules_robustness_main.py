@@ -54,7 +54,7 @@ filename="rules_robustness_main_"+str(args.attack_method)+"_images="+str(n_input
 			+"_samples="+str(args.n_samples)+"_topk="+str(args.topk)
 
 datasets = ['MNIST', 'F. MNIST', 'CIFAR10']
-alternative = 'greater'
+alternative = 'less'
 
 if args.load:
 	df = load_from_pickle(path=df_savedir, filename=filename)
@@ -225,21 +225,25 @@ def plot_rules_robustness_diff(df, n_samples, datasets, savedir, filename):
 		for row_idx, dataset in enumerate(datasets):
 
 			temp_df = df[df['dataset']==dataset]
+			y = min(temp_df['robustness_diff'])*1.25
+
 			temp_df = temp_df[temp_df['model']==model]
 			assert len(temp_df['layer_idx'].unique())==1
 			layer_idx = int(temp_df['layer_idx'].unique()[0])
 
 			sns.boxplot(data=temp_df, ax=ax[row_idx, col_idx], x='rule', y='robustness_diff', orient='v', hue='rule', 
-						palette=palette, dodge=False)
+						palette=palette, dodge=False, flierprops={'markersize':3})
 
-			for rule, x in zip(temp_df['rule'].unique(), [-0.3, 0.7, 1.7]):
+			for rule, x in zip(temp_df['rule'].unique(), [-0.24, 0.75, 1.75]):
 				rule_df = temp_df[temp_df['rule']==rule]
+				assert len(df)/(6*3) == float(len(rule_df))
 
 				p_value = rule_df['p_value'].unique()[0]
 				assert len(rule_df['p_value'].unique())==1
 				significance = significance_symbol(p_value)
-				if significance!='n.s.':
-					ax[row_idx, col_idx].text(x=x, y=0, s=significance, weight='bold', size=8, color=palette[rule])
+				# if significance!='n.s.':
+				# y = min(temp_df['robustness_diff'])*1.5
+				ax[row_idx, col_idx].text(x=x, y=y, s=significance, weight='bold', size=8, color=palette[rule])
 
 			for i, patch in enumerate(ax[row_idx, col_idx].artists):
 				
@@ -267,7 +271,7 @@ def plot_rules_robustness_diff(df, n_samples, datasets, savedir, filename):
 			ax[2, col_idx].set_xlabel("LRP rule", weight='bold', labelpad=5)
 			# ax[row_idx, 1].text(x=0.5, y=0, s="Layer idx="+str(layer_idx), rotation=270, weight='bold', size=9)
 
-	plt.subplots_adjust(hspace=0.05)
+	plt.subplots_adjust(hspace=0.07)
 	plt.subplots_adjust(wspace=0.05)
 	fig.subplots_adjust(left=0.16)
 	fig.subplots_adjust(right=0.86)
