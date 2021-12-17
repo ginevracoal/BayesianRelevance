@@ -2,11 +2,12 @@ import os
 import lrp
 import copy
 import torch
-import numpy as np
-from tqdm import tqdm
 import matplotlib
+import numpy as np
 import pandas as pd
 import seaborn as sns
+from tqdm import tqdm
+from scipy import stats
 import matplotlib.colors as colors 
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
@@ -664,7 +665,8 @@ def lrp_layers_robustness_differences(
 def lrp_layers_robustness_scatterplot(det_lrp_robustness, adv_lrp_robustness, bay_lrp_robustness,
                                       det_softmax_robustness, adv_softmax_robustness, bay_softmax_robustness,
                                        n_samples_list, topk_list,
-                                       n_original_images, learnable_layers_idxs, savedir, filename):
+                                       n_original_images, learnable_layers_idxs, savedir, filename,
+                                       correlation='spearman'):
 
     os.makedirs(savedir, exist_ok=True) 
 
@@ -685,8 +687,14 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, adv_lrp_robustness, ba
 
         legend = 'brief' if layer_idx==0 else False
 
-        rho = np.corrcoef(det_lrp_robustness[topk_idx][layer_idx], 
-                          det_softmax_robustness[topk_idx][layer_idx])[0,1]
+        if correlation=='spearman':
+            rho = stats.spearmanr(det_lrp_robustness[topk_idx][layer_idx], 
+                                det_softmax_robustness[topk_idx][layer_idx])[0]
+        elif correlation=='pearson':
+            rho = np.corrcoef(det_lrp_robustness[topk_idx][layer_idx], 
+                                det_softmax_robustness[topk_idx][layer_idx])[0,1]
+        else:
+            raise NotImplementedError
 
         sns.scatterplot(det_lrp_robustness[topk_idx][layer_idx], 
                         det_softmax_robustness[topk_idx][layer_idx],
@@ -694,8 +702,14 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, adv_lrp_robustness, ba
                         alpha=alpha, linewidth=0,
                         legend=legend, color=det_col)
 
-        rho = np.corrcoef(adv_lrp_robustness[topk_idx][layer_idx], 
-                          adv_softmax_robustness[topk_idx][layer_idx])[0,1]
+        if correlation=='spearman':
+            rho = stats.spearmanr(adv_lrp_robustness[topk_idx][layer_idx], 
+                            adv_softmax_robustness[topk_idx][layer_idx])[0]
+        elif correlation=='pearson':
+            rho = np.corrcoef(adv_lrp_robustness[topk_idx][layer_idx], 
+                              adv_softmax_robustness[topk_idx][layer_idx])[0,1]
+        else:
+            raise NotImplementedError
 
         sns.scatterplot(adv_lrp_robustness[topk_idx][layer_idx], 
                         adv_softmax_robustness[topk_idx][layer_idx],
@@ -707,8 +721,14 @@ def lrp_layers_robustness_scatterplot(det_lrp_robustness, adv_lrp_robustness, ba
 
             if samp_idx!=0:
 
-                rho = np.corrcoef(bay_lrp_robustness[topk_idx][layer_idx][samp_idx], 
-                                  bay_softmax_robustness[topk_idx][layer_idx][samp_idx])[0,1]
+                if correlation=='spearman':
+                    rho = stats.spearmanr(bay_lrp_robustness[topk_idx][layer_idx][samp_idx], 
+                                  bay_softmax_robustness[topk_idx][layer_idx][samp_idx])[0]
+                elif correlation=='pearson':
+                    rho = np.corrcoef(bay_lrp_robustness[topk_idx][layer_idx][samp_idx], 
+                                      bay_softmax_robustness[topk_idx][layer_idx][samp_idx])[0,1]
+                else:
+                    raise NotImplementedError
 
                 sns.scatterplot(bay_lrp_robustness[topk_idx][layer_idx][samp_idx], 
                                 bay_softmax_robustness[topk_idx][layer_idx][samp_idx], 
